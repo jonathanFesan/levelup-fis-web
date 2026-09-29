@@ -1,0 +1,18 @@
+# Blueprint do Render — Static Site (plano gratuito, não "dorme").
+# No Render: New + → Blueprint → escolha o repositório deste site.
+services:
+  - type: web
+    name: levelup-fis-web
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /js/*
+        name: Cache-Control
+        value: no-cache
+      - path: /css/*
+        name: Cache-Control
+        value: no-cache
