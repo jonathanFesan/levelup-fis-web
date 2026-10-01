@@ -105,6 +105,11 @@ Sites estáticos do Render são gratuitos e não "dormem" (só o backend no plan
 
 ## Observações
 
+- **Ao publicar uma versão nova, troque o `?v=` em `index.html`** (CSS e os 4 scripts). O GitHub
+  Pages deixa o navegador guardar cada arquivo por 10 min; sem trocar a versão, o navegador
+  pode juntar arquivos velhos e novos. Se mesmo assim faltar algo, o `app.js` busca de novo
+  `config.js`/`api.js`/`plus.js` sozinho, e em último caso mostra um botão "Atualizar página".
+
 - **Primeiro acesso lento:** o backend está no plano gratuito do Render e dorme depois de
   ~15 min parado. A primeira requisição pode levar até ~1 minuto; o site mostra um aviso
   "Acordando o servidor…" enquanto isso.

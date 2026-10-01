@@ -11,9 +11,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261001b">
 </head>
 <body>
+  <script>
+    // Se o site não montar (ex.: navegador misturou arquivos de versões
+    // diferentes do cache), mostra um botão de atualizar em vez da tela vazia.
+    window.lupFalha = function () {
+      var a = document.getElementById('app');
+      if (!a || a.getAttribute('data-falha')) return;
+      a.setAttribute('data-falha', '1');
+      a.innerHTML = '<div style="min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;font-family:Nunito,sans-serif;color:#FCF3C8">' +
+        '<b style="font-size:20px">O site foi atualizado</b><span style="color:#7C84B8">Toque no botão para carregar a versão nova.</span>' +
+        '<button onclick="location.reload()" style="padding:14px 22px;border:0;border-radius:14px;font-weight:800;font-size:15px;background:#FFC65C;color:#0E1A40;cursor:pointer">Atualizar página</button></div>';
+    };
+    window.addEventListener('error', function () {
+      setTimeout(function () { var a = document.getElementById('app'); if (a && !a.children.length) window.lupFalha(); }, 2500);
+    }, true);
+  </script>
   <canvas id="starfield" aria-hidden="true"></canvas>
   <div id="wake-banner" class="wake-banner" hidden>
     <span class="spinner small"></span>
@@ -23,9 +38,11 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="modal-root"></div>
 
-  <script src="js/config.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/plus.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Ao publicar uma versão nova, troque o ?v= de TODOS os arquivos abaixo
+       (o GitHub Pages deixa o navegador guardar cada arquivo por 10 min). -->
+  <script src="js/config.js?v=20261001b"></script>
+  <script src="js/api.js?v=20261001b"></script>
+  <script src="js/plus.js?v=20261001b"></script>
+  <script src="js/app.js?v=20261001b"></script>
 </body>
 </html>

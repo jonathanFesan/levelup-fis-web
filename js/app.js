@@ -6,7 +6,24 @@
 // jogo continua no backend (ver js/api.js), por isso o progresso é
 // compartilhado com o app.
 
-(function () {
+(function main() {
+  // O navegador pode ter guardado arquivos de versões diferentes (o GitHub
+  // Pages manda guardar cada um por 10 min). Se faltar algo que esta versão
+  // usa, busca config/api/plus de novo, sem cache, e só então começa.
+  if (!(window.LUP_CONFIG && window.LUP_CONFIG.PLUS && window.API && API.request && window.Plus)) {
+    if (main.recarregou) return window.lupFalha && window.lupFalha();
+    main.recarregou = true;
+    const v = Date.now();
+    const carregar = (src) => new Promise((ok, falha) => {
+      const s = document.createElement('script');
+      s.src = `${src}?v=${v}`; s.onload = ok; s.onerror = falha;
+      document.head.appendChild(s);
+    });
+    carregar('js/config.js').then(() => carregar('js/api.js')).then(() => carregar('js/plus.js'))
+      .then(main, () => window.lupFalha && window.lupFalha());
+    return;
+  }
+
   const CFG = window.LUP_CONFIG;
   const $app = document.getElementById('app');
 
