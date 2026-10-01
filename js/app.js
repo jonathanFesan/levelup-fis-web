@@ -1108,7 +1108,8 @@
       $app.innerHTML = `<div class="pagehead"><h2>Perfil</h2></div>` + errorBox('Erro ao carregar o perfil.') + bottomNav('perfil');
       return bindRetry();
     }
-    const plusAtivo = (await Plus.status(u).catch(() => ({}))).ativo;
+    const plusSt = await Plus.status(u).catch(() => ({}));
+    const plusAtivo = !!plusSt.ativo;
     const xpNoNivel = (u.xp ?? 0) % CFG.XP_POR_NIVEL;
     let proxima = '';
     if ((u.vidas ?? 0) < CFG.CARGAS_MAXIMAS && u.vidas_atualizado_em) {
@@ -1138,7 +1139,7 @@
       ${proxima ? `<p class="small muted" style="text-align:center;margin:10px 0 0">${proxima}</p>` : ''}
       <a class="card plus-profile ${plusAtivo ? 'on' : ''}" href="#/plus">
         <span class="ic">${ICON.crown}</span>
-        <div style="flex:1"><b>LevelUp Plus</b><div class="small muted">${plusAtivo ? 'Assinatura ativa · dúvidas, aulas e comunidade' : 'Dúvidas com o professor, plantões e aulas com desconto'}</div></div>
+        <div style="flex:1"><b>LevelUp Plus</b><div class="small muted">${plusAtivo ? esc(validadePlus(plusSt)) : 'Dúvidas com o professor, plantões e aulas com desconto'}</div></div>
         <span class="tag ${plusAtivo ? 'ok' : ''}">${plusAtivo ? 'ATIVO' : 'CONHEÇA'}</span>
       </a>
       </div></div>
@@ -1189,9 +1190,28 @@
     return { u, st: await Plus.status(u) };
   }
   // Telas só de assinante: quem não é volta para a página de venda.
+  // Admin que NÃO é assinante pode só visualizar a área do assinante
+  // (o backend continua recusando as ações de assinante para ele).
+  const PREVIEW_KEY = 'lup.plus.preview';
+  const emPreview = (st) => {
+    try { return !!st.admin && !st.ativo && sessionStorage.getItem(PREVIEW_KEY) === '1'; } catch { return false; }
+  };
+  const setPreview = (v) => { try { if (v) sessionStorage.setItem(PREVIEW_KEY, '1'); else sessionStorage.removeItem(PREVIEW_KEY); } catch { /* ignore */ } };
+  const fmtDia = (iso) => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`; };
+  // Texto da validade do Plus, igual no Plus e no Perfil.
+  function validadePlus(st) {
+    if (!st.expira_em) return 'Assinatura ativa';
+    const ate = fmtDia(st.expira_em);
+    if (st.status === 'cancelada') return `Assinatura cancelada · acesso até ${ate}`;
+    if (st.status === 'atrasada') return `Pagamento da renovação atrasado · acesso até ${ate}`;
+    if (st.plano === 'mensal') return `Plano mensal · renova até ${ate}`;
+    if (st.plano === 'semestral') return `Plano de 6 meses · válido até ${ate}`;
+    return `Acesso liberado até ${ate}`;
+  }
+
   async function exigirPlus() {
     const r = await plusStatus();
-    if (!r.st.ativo) { go('#/plus'); return null; }
+    if (!r.st.ativo && !emPreview(r.st)) { go('#/plus'); return null; }
     return r;
   }
 
@@ -1203,7 +1223,7 @@
       $app.innerHTML = topStats(S.profile) + errorBox('Erro ao carregar o LevelUp Plus.') + bottomNav('plus');
       return bindRetry();
     }
-    if (st.ativo) return viewPlusMembro(u);
+    if (st.ativo || emPreview(st)) return viewPlusMembro(u, st);
 
     const pct = Math.round(PC.AULA_DESCONTO_PLUS * 100);
     const planos = PC.PLANOS || [];
@@ -1219,6 +1239,8 @@
     $app.innerHTML = topStats(u) + `
       <div class="plus-layout">
         <div class="plus-main">
+          ${st.admin ? `<div class="card admin-bar"><span class="small"><b>Você é o administrador</b> e não tem assinatura ativa — por isso vê a página de venda, como um aluno comum.</span>
+            <button class="btn btn-ghost" data-preview>Visualizar área do assinante</button></div>` : ''}
           <section class="plus-hero">
             <span class="plus-badge">${ICON.crown} LevelUp Plus</span>
             <h1>Física com acompanhamento de perto</h1>
@@ -1279,9 +1301,12 @@
     };
     const da = $app.querySelector('[data-demo-ativar]');
     if (da) da.onclick = async () => { await Plus.demoAtivar(true); toast('Bem-vindo ao Plus! (demonstração)'); viewPlus(); };
+    const pv = $app.querySelector('[data-preview]');
+    if (pv) pv.onclick = () => { setPreview(true); viewPlus(); };
   }
 
-  async function viewPlusMembro(u) {
+  async function viewPlusMembro(u, st = {}) {
+    const preview = !st.ativo;
     let duvidas = [], aulas = [];
     try { [duvidas, aulas] = await Promise.all([Plus.listarDuvidas(), Plus.listarAulas()]); } catch { /* cartões ficam vazios */ }
     const aguardando = duvidas.filter((d) => d.status === 'aguardando').length;
@@ -1291,10 +1316,12 @@
     const desafio = PC.DESAFIO && PC.DESAFIO.titulo ? PC.DESAFIO : null;
 
     $app.innerHTML = topStats(u) + `
+      ${preview ? `<div class="card admin-bar warn"><span class="small"><b>Visualização do administrador.</b> Você NÃO é assinante: enviar dúvidas e ter o desconto nas aulas continuam bloqueados para esta conta.</span>
+        <button class="btn btn-ghost" data-sair-preview>Sair da visualização</button></div>` : ''}
       <section class="plus-hero member">
-        <span class="plus-badge">${ICON.crown} Plus ativo</span>
+        <span class="plus-badge">${ICON.crown} ${preview ? 'Visualização' : 'Plus ativo'}</span>
         <h1>Olá, ${esc(nomeExibicao(u))}!</h1>
-        <p>Sua área de assinante. Qualquer coisa, é só chamar.</p>
+        <p>${preview ? 'É assim que os assinantes veem esta área.' : esc(validadePlus(st))}</p>
       </section>
       <div class="actions-grid">
         <a class="action-tile" href="${esc(PC.WHATSAPP_COMUNIDADE)}" target="_blank" rel="noopener">
@@ -1331,6 +1358,8 @@
       </div>
       ${Plus.demo ? `<div style="text-align:center">${demoBtn('data-demo-sair', 'Voltar a ver como não assinante')}</div>` : ''}
       ${bottomNav('plus')}`;
+    const sp = $app.querySelector('[data-sair-preview]');
+    if (sp) sp.onclick = () => { setPreview(false); viewPlus(); };
     const ds = $app.querySelector('[data-demo-sair]');
     if (ds) ds.onclick = async () => { await Plus.demoAtivar(false); viewPlus(); };
   }

@@ -404,6 +404,10 @@ body.exam-mode #starfield { display: none; }
 .price-card .v { font-size: 26px; font-weight: 900; margin: 4px 0; }
 .price-card .v small { font-size: 14px; color: var(--muted); font-weight: 700; }
 
+.admin-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 10px 0 4px; border-color: rgba(127,216,232,.45); }
+.admin-bar span { flex: 1; min-width: 220px; }
+.admin-bar .btn { padding: 10px 14px; }
+.admin-bar.warn { border-color: rgba(255,198,92,.6); background: rgba(255,198,92,.08); }
 .pending-card { margin-top: 16px; border-color: rgba(255,198,92,.5); }
 .pending-card .row, .upsell .row, .info-card .row { align-items: flex-start; }
 
