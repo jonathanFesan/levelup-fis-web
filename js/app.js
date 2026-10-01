@@ -35,6 +35,15 @@
     plus: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/></svg>',
     pencil: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.2V21h3.8L17.8 9.9l-3.7-3.7zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.7 7.9l1.5 1.5A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.7-7.9L4.8 8.6A8 8 0 0 0 12 20v3l4-4-4-4z"/></svg>',
+    crown: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 7.5l5 4 4.5-7 4.5 7 5-4L19.5 18h-15zM4.5 19.5h15V21h-15z"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm-4 9h8v2H8zm0-3.5h8v2H8zM8 14.5h5v2H8z"/></svg>',
+    question: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2zm2.1-7.7-.9.9c-.7.7-1.2 1.3-1.2 2.8h-2v-.5c0-1.1.5-2.1 1.2-2.8l1.2-1.3A2 2 0 1 0 10 9H8a4 4 0 1 1 7.1 2.3z"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14zM7 11h5v5H7z"/></svg>',
+    live: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11z"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4 11.6l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .6.2 1.1.6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-5 21a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm5-4H7V4h10z"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>',
   };
 
@@ -211,8 +220,10 @@
   function bottomNav(tab) {
     return `
       <nav class="bottomnav"><div class="inner">
+        <a class="side-brand" href="#/map"><img src="assets/logo.png" alt="">LevelUp Fís</a>
         <a href="#/map" class="${tab === 'mapa' ? 'on' : ''}">${ICON.map}Mapa</a>
         <a href="#/videos" class="${tab === 'videos' ? 'on' : ''}">${ICON.playCircle}Vídeos</a>
+        <a href="#/plus" class="plus-tab ${tab === 'plus' ? 'on' : ''}">${ICON.crown}Plus</a>
         <a href="#/profile" class="${tab === 'perfil' ? 'on' : ''}">${ICON.user}Perfil</a>
       </div></nav>`;
   }
@@ -278,6 +289,16 @@
   // ---------- Login ----------
   function viewLogin() {
     $app.innerHTML = `
+      <div class="auth-wrap">
+      <aside class="auth-side">
+        <img class="logo" src="assets/logo.png" alt="">
+        <h2>Física de um jeito que dá vontade de estudar.</h2>
+        <ul>
+          <li>${ICON.map}Trilhas por capítulo com resumo, exercícios e prova</li>
+          <li>${ICON.bolt}Ganhe Joules, suba de nível e desbloqueie conteúdos</li>
+          <li>${ICON.sync}O mesmo progresso no app e no site</li>
+        </ul>
+      </aside>
       <div class="auth center">
         <img class="logo" src="assets/logo.png" alt="">
         <h1>LevelUp Fís</h1>
@@ -291,7 +312,7 @@
           <a class="btn btn-text btn-block" href="#/register">Ainda não tem conta? Cadastre-se</a>
         </form>
         <p class="sync-note">${ICON.sync}Use a mesma conta do app — seu progresso é o mesmo.</p>
-      </div>`;
+      </div></div>`;
     const f = $app.querySelector('form');
     const err = $app.querySelector('[data-err]');
     f.onsubmit = async (e) => {
@@ -328,6 +349,16 @@
   // ---------- Cadastro ----------
   function viewRegister() {
     $app.innerHTML = `
+      <div class="auth-wrap">
+      <aside class="auth-side">
+        <img class="logo" src="assets/logo.png" alt="">
+        <h2>Física de um jeito que dá vontade de estudar.</h2>
+        <ul>
+          <li>${ICON.map}Trilhas por capítulo com resumo, exercícios e prova</li>
+          <li>${ICON.bolt}Ganhe Joules, suba de nível e desbloqueie conteúdos</li>
+          <li>${ICON.sync}O mesmo progresso no app e no site</li>
+        </ul>
+      </aside>
       <div class="auth center">
         <img class="logo" src="assets/logo.png" alt="">
         <h1>Comece sua jornada</h1>
@@ -340,7 +371,7 @@
           <button class="btn btn-primary btn-block" type="submit">Criar conta</button>
           <a class="btn btn-text btn-block" href="#/login">Já tem conta? Entrar</a>
         </form>
-      </div>`;
+      </div></div>`;
     const f = $app.querySelector('form');
     const err = $app.querySelector('[data-err]');
     f.onsubmit = async (e) => {
@@ -411,7 +442,8 @@
     }
 
     const trilhas = [];
-    topicos.forEach((t, i) => {
+    const blocos = topicos.map((t, i) => {
+      let b = '';
       const { prog, cap, att, cont } = info[i];
       const nivelMin = cont.nivel_minimo ?? t.nivel_minimo ?? 1;
       let liberado;
@@ -424,16 +456,16 @@
         const motivo = nivel < nivelMin
           ? `Disponível a partir do nível ${nivelMin}.`
           : 'Conclua a Fixação do capítulo anterior para desbloquear.';
-        html += `
+        b += `
           <div class="card topic-locked">
             <span class="lock-circle">${ICON.lock}</span>
             <div><div style="font-weight:800;color:var(--muted)">${esc(t.titulo)}</div>
             <div class="small muted">${motivo}</div></div>
           </div>`;
-        return;
+        return b;
       }
 
-      html += `<div class="topic-banner"><div class="k">${esc(modulo.titulo)}</div><div class="t">${esc(t.titulo)}</div></div>`;
+      b += `<div class="topic-banner"><div class="k">${esc(modulo.titulo)}</div><div class="t">${esc(t.titulo)}</div></div>`;
 
       const provaConcluida = (att || []).some((a) => a.finalizado_em);
       const concluido = (c) => {
@@ -449,8 +481,8 @@
       const extra = (t.capitulos || []).find((c) => c.tipo === 'extra');
 
       if (!seq.length) {
-        html += `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste tópico ainda está sendo preparado.</div>`;
-        return;
+        b += `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste tópico ainda está sendo preparado.</div>`;
+        return b;
       }
       const nodes = seq.map((c, k) => ({
         titulo: c.titulo,
@@ -461,8 +493,10 @@
           ? { icon: 'plus', on: !!prog.fixacao_concluida, title: extra.titulo } : null,
       }));
       trilhas.push({ topico: t, seq, nodes, extra });
-      html += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
+      b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
+      return b;
     });
+    html += `<div class="topics">${blocos.map((b) => `<section class="topic-block">${b}</section>`).join('')}</div>`;
 
     html += `<p class="sync-note">${ICON.sync}Progresso sincronizado com o app</p>`;
     html += bottomNav('mapa');
@@ -1025,13 +1059,13 @@
         </button>`).join('')}</div>`;
     }
     if (aulas.length) {
-      html += `<div class="section-title">Aulas completas</div>${aulas.map((v) => `
+      html += `<div class="section-title">Aulas completas</div><div class="vlist">${aulas.map((v) => `
         <button class="vtile" data-v="${v.id}">
           <span class="thumb" style="${thumb(v) ? `background-image:url('${esc(thumb(v))}')` : ''}">${thumb(v) ? '' : ICON.playCircle}</span>
           <span><span class="t">${esc(v.titulo)}</span>
           <span class="small muted" style="display:block">${v.duracao_segundos ? dur(v.duracao_segundos) : ''}${v.assistido ? ' · ✓ Assistido' : ''}</span>
           ${v.descricao ? `<span class="small muted" style="display:block">${esc(v.descricao)}</span>` : ''}</span>
-        </button>`).join('')}`;
+        </button>`).join('')}</div>`;
     }
     if (!curtas.length && !aulas.length) html += `<p class="muted" style="text-align:center;padding:32px">Nenhum vídeo disponível ainda.</p>`;
     html += bottomNav('videos');
@@ -1057,6 +1091,7 @@
       $app.innerHTML = `<div class="pagehead"><h2>Perfil</h2></div>` + errorBox('Erro ao carregar o perfil.') + bottomNav('perfil');
       return bindRetry();
     }
+    const plusAtivo = (await Plus.status(u).catch(() => ({}))).ativo;
     const xpNoNivel = (u.xp ?? 0) % CFG.XP_POR_NIVEL;
     let proxima = '';
     if ((u.vidas ?? 0) < CFG.CARGAS_MAXIMAS && u.vidas_atualizado_em) {
@@ -1067,12 +1102,14 @@
     }
     $app.innerHTML = `
       <div class="pagehead"><h2>Perfil</h2><button class="btn btn-danger" style="padding:8px 14px" data-logout>Sair</button></div>
+      <div class="profile-grid"><div class="pcol">
       <div class="profile-hero">
         <div class="avatar"><span class="lvl-badge">N${u.nivel ?? 1}</span></div>
         <div class="name">${esc(nomeExibicao(u))}<button data-edit aria-label="Editar nome">${ICON.pencil}</button></div>
         <div class="small muted">${esc(u.email || '')}</div>
       </div>
-      <div class="card" style="margin-top:14px">
+      </div><div class="pcol">
+      <div class="card xp-card">
         <div class="row"><b>Nível ${u.nivel ?? 1}</b><span class="spacer"></span><span class="small muted">${xpNoNivel} / ${CFG.XP_POR_NIVEL} J para o próximo nível</span></div>
         <div class="xpbar"><i style="width:${(xpNoNivel / CFG.XP_POR_NIVEL) * 100}%"></i></div>
       </div>
@@ -1082,14 +1119,12 @@
         <div class="card"><span style="color:var(--gold-deep)">${ICON.spark}</span><div class="v">${u.moedas ?? 0}</div><div class="k">Fótons</div></div>
       </div>
       ${proxima ? `<p class="small muted" style="text-align:center;margin:10px 0 0">${proxima}</p>` : ''}
-      <button class="btn btn-ghost btn-block" style="margin-top:12px" data-buy
-        ${(u.vidas ?? 0) >= CFG.CARGAS_MAXIMAS || (u.moedas ?? 0) < CFG.CUSTO_CARGA_EMERGENCIA ? 'disabled' : ''}>
-        Comprar Carga · ${CFG.CUSTO_CARGA_EMERGENCIA} Fótons</button>
-      <div class="section-title">Configurações</div>
-      <div class="card stack">
-        <div class="setting"><div><div class="t">Tema</div><div class="small muted">Escuro (padrão do app, por enquanto)</div></div></div>
-        <div class="setting"><div><div class="t">Sincronização</div><div class="small muted">Seu progresso é salvo na nuvem e é o mesmo no app e no site.</div></div></div>
-      </div>
+      <a class="card plus-profile ${plusAtivo ? 'on' : ''}" href="#/plus">
+        <span class="ic">${ICON.crown}</span>
+        <div style="flex:1"><b>LevelUp Plus</b><div class="small muted">${plusAtivo ? 'Assinatura ativa · dúvidas, aulas e comunidade' : 'Dúvidas com o professor, plantões e aulas com desconto'}</div></div>
+        <span class="tag ${plusAtivo ? 'ok' : ''}">${plusAtivo ? 'ATIVO' : 'CONHEÇA'}</span>
+      </a>
+      </div></div>
       ${bottomNav('perfil')}`;
 
     $app.querySelector('[data-logout]').onclick = doLogout;
@@ -1103,12 +1138,434 @@
         toast('Não foi possível salvar o nome agora.');
       }
     };
-    $app.querySelector('[data-buy]').onclick = async (e) => {
-      e.target.disabled = true;
-      try { S.profile = await API.buyCharge(); toast('Carga comprada!'); viewProfile(); } catch (ex) {
-        toast(ex.message || 'Não foi possível comprar.');
-        e.target.disabled = false;
+  }
+
+  // ================================================================
+  // LevelUp Plus (dados em js/plus.js)
+  // ================================================================
+  const PC = Plus.cfg;
+  const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const DIAS_SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const DIAS_LONGO = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const fmtSlot = (s) => {
+    const d = Plus.parseSlot(s);
+    return `${DIAS_LONGO[d.getDay()]}, ${d.getDate()} de ${MESES[d.getMonth()]} · ${s.split('T')[1]}`;
+  };
+  const fmtCurto = (iso) => {
+    const d = new Date(iso);
+    return `${d.getDate()} ${MESES[d.getMonth()]}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  const AULA_STATUS = {
+    aguardando_pagamento: { label: 'Aguardando pagamento', cls: 'wait' },
+    confirmada: { label: 'Confirmada', cls: 'ok' },
+    cancelada: { label: 'Cancelada', cls: '' },
+    expirada: { label: 'Reserva expirada', cls: '' },
+    concluida: { label: 'Concluída', cls: '' },
+    conflito: { label: 'Pagamento recebido · em análise', cls: 'wait' },
+  };
+  const demoBtn = (attr, label) => (Plus.demo
+    ? `<button class="btn btn-text demo-btn" ${attr}>${esc(label)} <span class="tag">DEMO</span></button>` : '');
+
+  async function plusStatus() {
+    const u = await loadProfile();
+    return { u, st: await Plus.status(u) };
+  }
+  // Telas só de assinante: quem não é volta para a página de venda.
+  async function exigirPlus() {
+    const r = await plusStatus();
+    if (!r.st.ativo) { go('#/plus'); return null; }
+    return r;
+  }
+
+  // ---------- Plus: venda ou área do assinante ----------
+  async function viewPlus() {
+    $app.innerHTML = topStats(S.profile) + loading() + bottomNav('plus');
+    let u, st;
+    try { ({ u, st } = await plusStatus()); } catch {
+      $app.innerHTML = topStats(S.profile) + errorBox('Erro ao carregar o LevelUp Plus.') + bottomNav('plus');
+      return bindRetry();
+    }
+    if (st.ativo) return viewPlusMembro(u);
+
+    const pct = Math.round(PC.AULA_DESCONTO_PLUS * 100);
+    const planos = PC.PLANOS || [];
+    let planoSel = planos[0];
+    const beneficios = [
+      ['phone', 'App com conteúdo e simulações', 'Tudo que você já usa no LevelUp Fís: trilhas, resumos, exercícios e simulações físicas.'],
+      ['chat', 'Comunidade de alunos', 'Grupo exclusivo no WhatsApp para trocar ideias, resoluções e se ajudar.'],
+      ['question', `Dúvidas respondidas em até ${PC.PRAZO_RESPOSTA_HORAS}h`, `Mande sua dúvida pelo site e receba a explicação do professor. ${PC.HORARIO_SUPORTE}.`],
+      ['live', '1 plantão ao vivo por mês', 'Encontro em grupo, ao vivo, para tirar dúvidas coletivas antes das provas.'],
+      ['flag', 'Desafios mensais', 'Um problema novo todo mês para manter o ritmo e testar o que você aprendeu.'],
+      ['tag', `${pct}% de desconto em aulas particulares`, 'Desconto de assinante em todas as aulas individuais com o professor.'],
+    ];
+    $app.innerHTML = topStats(u) + `
+      <div class="plus-layout">
+        <div class="plus-main">
+          <section class="plus-hero">
+            <span class="plus-badge">${ICON.crown} LevelUp Plus</span>
+            <h1>Física com acompanhamento de perto</h1>
+            <p>O app te leva pela trilha. No Plus, o professor caminha junto: dúvidas respondidas, plantões ao vivo e aulas particulares com desconto.</p>
+          </section>
+          <div class="benefits">${beneficios.map(([ic, t, d]) => `
+            <div class="benefit"><span class="ic">${ICON[ic]}</span><div><div class="t">${esc(t)}</div><div class="small muted">${esc(d)}</div></div></div>`).join('')}
+          </div>
+        </div>
+        <aside class="plus-side">
+          ${st.pendente ? `
+            <div class="card pending-card">
+              <div class="row"><span class="ic">${ICON.clock}</span><div><b>Pagamento em análise</b>
+              <div class="small muted">Assim que a Hotmart confirmar, seu acesso ao Plus é liberado nesta conta (${esc(u.email || '')}). Normalmente leva poucas horas.</div></div></div>
+              ${demoBtn('data-demo-ativar', 'Simular aprovação')}
+            </div>` : ''}
+          <div class="card checkout-card">
+            <div class="section-title" style="margin-top:0">Escolha seu plano</div>
+            <div class="prices" role="radiogroup" aria-label="Plano">${planos.map((p) => `
+              <button class="price-card ${p === planoSel ? 'on' : ''}" data-plano="${esc(p.id)}" role="radio" aria-checked="${p === planoSel}">
+                <span class="radio"></span>
+                <div class="k">${esc(p.nome)}</div>
+                <div class="v">${esc(p.preco)}<small>${esc(p.sufixo || '')}</small></div>
+                <div class="small muted">${esc(p.obs || '')}</div>
+              </button>`).join('')}
+            </div>
+            <button class="btn btn-primary btn-block btn-lg" data-assinar>${ICON.crown} <span data-cta></span></button>
+            <p class="small muted" style="text-align:center;margin:8px 0 0">Pagamento seguro pela Hotmart · Pix, cartão ou boleto.<br>Use o mesmo e-mail da sua conta: ${esc(u.email || '')}</p>
+            ${!st.pendente ? demoBtn('data-demo-ativar', 'Ver como assinante') : ''}
+          </div>
+          <div class="card upsell">
+            <div class="row"><span class="ic">${ICON.calendar}</span><div><b>Só quer uma aula particular?</b>
+            <div class="small muted">Aula avulsa por ${brl(PC.AULA_VALOR)}. Assinantes têm ${pct}% de desconto.</div></div></div>
+            <a class="btn btn-ghost btn-block" href="#/plus/agendar" style="margin-top:12px">Ver horários disponíveis</a>
+          </div>
+        </aside>
+      </div>
+      ${bottomNav('plus')}`;
+
+    const cta = $app.querySelector('[data-cta]');
+    const pintarPlano = () => {
+      $app.querySelectorAll('[data-plano]').forEach((b) => {
+        const on = b.dataset.plano === planoSel.id;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-checked', on);
+      });
+      cta.textContent = `Assinar ${planoSel.nome} · ${planoSel.preco}`;
+    };
+    pintarPlano();
+    $app.querySelectorAll('[data-plano]').forEach((b) => {
+      b.onclick = () => { planoSel = planos.find((p) => p.id === b.dataset.plano); pintarPlano(); };
+    });
+    $app.querySelector('[data-assinar]').onclick = async () => {
+      const ref = `plus-${planoSel.id}-${(API.Session.get() || {}).user_id || ''}`;
+      window.open(Plus.checkout(planoSel.checkout, { nome: u.nome, ref }), '_blank', 'noopener');
+      await Plus.marcarAssinaturaPendente();
+      viewPlus();
+    };
+    const da = $app.querySelector('[data-demo-ativar]');
+    if (da) da.onclick = async () => { await Plus.demoAtivar(true); toast('Bem-vindo ao Plus! (demonstração)'); viewPlus(); };
+  }
+
+  async function viewPlusMembro(u) {
+    let duvidas = [], aulas = [];
+    try { [duvidas, aulas] = await Promise.all([Plus.listarDuvidas(), Plus.listarAulas()]); } catch { /* cartões ficam vazios */ }
+    const aguardando = duvidas.filter((d) => d.status === 'aguardando').length;
+    const agora = Plus.slotKey(new Date());
+    const proxima = aulas.find((a) => a.inicio >= agora && ['confirmada', 'aguardando_pagamento'].includes(a.status));
+    const plantao = PC.PLANTAO && PC.PLANTAO.data ? PC.PLANTAO : null;
+    const desafio = PC.DESAFIO && PC.DESAFIO.titulo ? PC.DESAFIO : null;
+
+    $app.innerHTML = topStats(u) + `
+      <section class="plus-hero member">
+        <span class="plus-badge">${ICON.crown} Plus ativo</span>
+        <h1>Olá, ${esc(nomeExibicao(u))}!</h1>
+        <p>Sua área de assinante. Qualquer coisa, é só chamar.</p>
+      </section>
+      <div class="actions-grid">
+        <a class="action-tile" href="${esc(PC.WHATSAPP_COMUNIDADE)}" target="_blank" rel="noopener">
+          <span class="ic green">${ICON.chat}</span><span class="t">Acesse a comunidade</span><span class="small muted">Grupo de alunos no WhatsApp</span></a>
+        <a class="action-tile" href="#/plus/duvidas">
+          <span class="ic">${ICON.question}</span><span class="t">Dúvidas</span>
+          <span class="small muted">${aguardando ? `${aguardando} aguardando resposta` : `Resposta em até ${PC.PRAZO_RESPOSTA_HORAS}h`}</span></a>
+        <a class="action-tile" href="#/plus/agendar">
+          <span class="ic">${ICON.calendar}</span><span class="t">Agendar aula</span>
+          <span class="small muted">${Math.round(PC.AULA_DESCONTO_PLUS * 100)}% de desconto de assinante</span></a>
+      </div>
+
+      <div class="plus-cols">
+        <div class="card info-card">
+          <div class="row"><span class="ic">${ICON.calendar}</span><div style="flex:1"><div class="k">SUA PRÓXIMA AULA</div>
+          ${proxima
+            ? `<b>${esc(fmtSlot(proxima.inicio))}</b><div style="margin-top:6px"><span class="tag ${AULA_STATUS[proxima.status].cls}">${AULA_STATUS[proxima.status].label}</span></div>`
+            : '<b>Nenhuma aula marcada</b><div class="small muted">Agende pelo botão “Agendar aula” acima.</div>'}</div></div>
+          <a class="btn btn-ghost btn-block" href="#/plus/aulas">Minhas aulas</a>
+        </div>
+      ${plantao ? `
+        <div class="card info-card">
+          <div class="row"><span class="ic">${ICON.live}</span><div style="flex:1"><div class="k">PLANTÃO AO VIVO DO MÊS</div>
+          <b>${esc(fmtCurto(plantao.data))}</b>${plantao.tema ? `<div class="small muted">${esc(plantao.tema)}</div>` : ''}</div></div>
+          ${plantao.link ? `<a class="btn btn-ghost btn-block" href="${esc(plantao.link)}" target="_blank" rel="noopener">Entrar no plantão</a>` : ''}
+        </div>` : ''}
+      ${desafio ? `
+        <div class="card info-card wide">
+          <div class="row"><span class="ic">${ICON.flag}</span><div style="flex:1"><div class="k">DESAFIO DO MÊS${desafio.prazo ? ` · ATÉ ${esc(desafio.prazo.split('-').reverse().slice(0, 2).join('/'))}` : ''}</div>
+          <b>${esc(desafio.titulo)}</b></div></div>
+          <div class="prose" style="font-size:15px">${esc(desafio.texto)}</div>
+          <a class="btn btn-ghost btn-block" href="${esc(PC.WHATSAPP_COMUNIDADE)}" target="_blank" rel="noopener">Enviar resolução na comunidade</a>
+        </div>` : ''}
+      </div>
+      ${Plus.demo ? `<div style="text-align:center">${demoBtn('data-demo-sair', 'Voltar a ver como não assinante')}</div>` : ''}
+      ${bottomNav('plus')}`;
+    const ds = $app.querySelector('[data-demo-sair]');
+    if (ds) ds.onclick = async () => { await Plus.demoAtivar(false); viewPlus(); };
+  }
+
+  // ---------- Dúvidas ----------
+  async function viewDuvidas() {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let lista;
+    try { if (!(await exigirPlus())) return; lista = await Plus.listarDuvidas(); } catch {
+      $app.innerHTML = pageHead('Dúvidas', 'LevelUp Plus', '#/plus') + errorBox('Erro ao carregar suas dúvidas.');
+      bindBack(); return bindRetry();
+    }
+    const prazo = (d) => new Date(new Date(d.criada_em).getTime() + PC.PRAZO_RESPOSTA_HORAS * 3600e3);
+    $app.innerHTML = pageHead('Dúvidas', 'LevelUp Plus', '#/plus') + `
+      <div class="card row" style="margin:8px 0 14px"><span class="ic-sm">${ICON.clock}</span>
+        <div class="small">Respostas em até <b>${PC.PRAZO_RESPOSTA_HORAS}h</b> · ${esc(PC.HORARIO_SUPORTE)}</div></div>
+      <a class="btn btn-primary btn-block" href="#/plus/duvidas/nova">+ Nova dúvida</a>
+      <div class="section-title">Suas dúvidas (${lista.length})</div>
+      ${lista.length ? `<div class="card-list">${lista.map((d) => `
+        <a class="card doubt" href="#/plus/duvidas/${esc(d.id)}">
+          <div class="top"><span class="tag ${d.status === 'respondida' ? 'ok' : 'wait'}">${d.status === 'respondida' ? 'Respondida' : 'Aguardando'}</span>
+            ${d.topico ? `<span class="small muted">${esc(d.topico)}</span>` : ''}<span class="spacer"></span><span class="small muted">${esc(fmtCurto(d.criada_em))}</span></div>
+          <div class="txt">${esc(d.texto)}</div>
+          ${d.status !== 'respondida' ? `<div class="small muted">Resposta até ${esc(fmtCurto(prazo(d)))}</div>` : ''}
+        </a>`).join('')}</div>` : `<p class="muted" style="text-align:center;padding:24px 0">Você ainda não mandou nenhuma dúvida.<br>Travou em algum exercício? Pergunta aqui!</p>`}`;
+    bindBack();
+  }
+
+  async function viewNovaDuvida() {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    try { if (!(await exigirPlus())) return; await loadCurriculo().catch(() => {}); } catch {
+      $app.innerHTML = errorBox('Erro ao carregar.'); return bindRetry();
+    }
+    const topicos = (S.curriculo || []).flatMap((a) => (a.blocos || []).map((b) => `${a.titulo} · ${b.titulo}`));
+    $app.innerHTML = pageHead('Nova dúvida', 'LevelUp Plus', '#/plus/duvidas') + `
+      <form class="stack" novalidate style="margin-top:8px">
+        <label class="field"><span>Assunto</span>
+          <select name="topico"><option value="">Geral / outro assunto</option>${topicos.map((t) => `<option>${esc(t)}</option>`).join('')}</select></label>
+        <label class="field"><span>Sua dúvida</span>
+          <textarea name="texto" rows="8" maxlength="3000" placeholder="Descreva a dúvida com o máximo de detalhes: enunciado da questão, até onde você chegou, onde travou…"></textarea></label>
+        <p class="small muted">Dica: se for de um exercício, cole o enunciado e conte o que você já tentou. Para mandar foto da resolução, use a comunidade no WhatsApp.</p>
+        <div class="error-msg" data-err></div>
+        <button class="btn btn-primary btn-block" type="submit">Enviar dúvida</button>
+      </form>`;
+    bindBack();
+    const f = $app.querySelector('form');
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const texto = f.texto.value.trim();
+      if (texto.length < 10) return ($app.querySelector('[data-err]').textContent = 'Escreva um pouco mais sobre a sua dúvida.');
+      const btn = f.querySelector('[type=submit]');
+      btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
+      try {
+        const d = await Plus.enviarDuvida({ topico: f.topico.value, texto });
+        toast(`Dúvida enviada! Resposta em até ${PC.PRAZO_RESPOSTA_HORAS}h.`);
+        go(`#/plus/duvidas/${d.id}`);
+      } catch (ex) {
+        $app.querySelector('[data-err]').textContent = ex.message || 'Não foi possível enviar agora.';
+        btn.disabled = false; btn.textContent = 'Enviar dúvida';
       }
+    };
+  }
+
+  async function viewDuvida(id) {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let d;
+    try { if (!(await exigirPlus())) return; d = (await Plus.listarDuvidas()).find((x) => String(x.id) === String(id)); } catch {
+      $app.innerHTML = errorBox('Erro ao carregar a dúvida.'); return bindRetry();
+    }
+    if (!d) return go('#/plus/duvidas');
+    const prazo = new Date(new Date(d.criada_em).getTime() + PC.PRAZO_RESPOSTA_HORAS * 3600e3);
+    $app.innerHTML = pageHead('Dúvida', d.topico || 'LevelUp Plus', '#/plus/duvidas') + `
+      <div class="thread">
+        <div class="bubble me"><div class="who">Você · ${esc(fmtCurto(d.criada_em))}</div><div class="prose">${esc(d.texto)}</div></div>
+        ${d.status === 'respondida'
+          ? `<div class="bubble prof"><div class="who">${ICON.crown} Professor · ${esc(fmtCurto(d.respondida_em))}</div><div class="prose">${esc(d.resposta)}</div></div>`
+          : `<div class="bubble waiting"><span class="ic-sm">${ICON.clock}</span><div><b>Aguardando resposta</b>
+              <div class="small muted">O professor responde até ${esc(fmtCurto(prazo))}. ${esc(PC.HORARIO_SUPORTE)}.</div></div></div>`}
+      </div>
+      ${d.status !== 'respondida' ? demoBtn('data-demo-resp', 'Simular resposta do professor') : ''}
+      <a class="btn btn-ghost btn-block" href="#/plus/duvidas/nova" style="margin-top:16px">Mandar outra dúvida</a>`;
+    bindBack();
+    const b = $app.querySelector('[data-demo-resp]');
+    if (b) b.onclick = async () => { await Plus.demoResponder(d.id); viewDuvida(id); };
+  }
+
+  // ---------- Agendar aula ----------
+  // Passos: escolhe o dia → o horário → revisa → reserva (segura o horário
+  // por AULA_RESERVA_HORAS) → paga na Hotmart → você confere e confirma.
+  async function viewAgendar() {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let u, st, dias;
+    try { ({ u, st } = await plusStatus()); dias = await Plus.agenda(); } catch {
+      $app.innerHTML = pageHead('Agendar aula', '', '#/plus') + errorBox('Erro ao carregar a agenda.');
+      bindBack(); return bindRetry();
+    }
+    const plus = st.ativo;
+    const valor = Plus.valorAula(plus);
+    const aulaAberta = !!(plus ? PC.HOTMART_AULA_PLUS : PC.HOTMART_AULA);
+    const comHorario = dias.filter((d) => d.slots.some((s) => s.livre));
+    let diaSel = comHorario[0]?.data || null;
+    let slotSel = null;
+
+    const paint = () => {
+      const dia = dias.find((d) => d.data === diaSel);
+      $app.innerHTML = pageHead('Agendar aula', plus ? 'LevelUp Plus' : 'Aula avulsa', '#/plus') + `
+        <div class="card row" style="margin:8px 0 4px"><span class="ic-sm">${ICON.calendar}</span>
+          <div class="small" style="flex:1">Aula individual online · <b>${PC.AULA_DURACAO_MIN} min</b></div>
+          <div class="price-inline">${plus ? `<s>${brl(PC.AULA_VALOR)}</s>` : ''}<b>${brl(valor)}</b></div></div>
+        ${!plus ? `<a class="small" href="#/plus" style="display:block;text-align:center;margin:6px 0 0">Assinantes Plus têm ${Math.round(PC.AULA_DESCONTO_PLUS * 100)}% de desconto →</a>` : ''}
+
+        <div class="agenda-layout"><div class="agenda-main">
+        <div class="section-title">1. Escolha o dia</div>
+        ${comHorario.length ? `<div class="day-strip">${dias.map((d) => {
+          const livre = d.slots.some((s) => s.livre);
+          return `<button class="day-chip ${d.data === diaSel ? 'on' : ''}" data-dia="${d.data}" ${livre ? '' : 'disabled'}>
+            <span class="w">${DIAS_SEM[d.date.getDay()]}</span><span class="n">${d.date.getDate()}</span><span class="m">${MESES[d.date.getMonth()]}</span></button>`;
+        }).join('')}</div>` : `<p class="muted" style="text-align:center;padding:16px 0">Nenhum horário livre nas próximas ${PC.AULA_SEMANAS_ABERTAS} semanas.
+          <br><a href="https://wa.me/${esc(PC.WHATSAPP_PROFESSOR)}" target="_blank" rel="noopener">Fale com o professor</a></p>`}
+
+        ${dia ? `<div class="section-title">2. Escolha o horário <span class="small muted" style="font-weight:700">· ${esc(DIAS_LONGO[dia.date.getDay()])}</span></div>
+          <div class="time-grid">${dia.slots.map((s) => `
+            <button class="time-chip ${s.slot === slotSel ? 'on' : ''}" data-slot="${s.slot}" ${s.livre ? '' : 'disabled'}>${s.slot.split('T')[1]}</button>`).join('')}</div>` : ''}
+        </div><aside class="agenda-side">
+        ${slotSel ? `<div class="section-title">3. Confirme</div>
+          <div class="card summary">
+            <div class="res"><span>Quando</span><b>${esc(fmtSlot(slotSel))}</b></div>
+            <div class="res"><span>Duração</span><b>${PC.AULA_DURACAO_MIN} min</b></div>
+            <div class="res"><span>Valor</span><b>${brl(valor)}${plus ? ` <span class="tag ok">−${Math.round(PC.AULA_DESCONTO_PLUS * 100)}% Plus</span>` : ''}</b></div>
+          </div>
+          <p class="small muted">Ao continuar, o horário fica reservado por ${PC.AULA_RESERVA_HORAS || 2}h enquanto você paga na Hotmart. Depois que o pagamento for confirmado, a aula aparece como <b>Confirmada</b> e você recebe o link.</p>
+          <div class="bottom-cta"><div class="error-msg" data-err style="margin-bottom:8px"></div>
+            ${aulaAberta
+              ? '<button class="btn btn-primary btn-block" data-reservar>Reservar e ir para o pagamento</button>'
+              : `<button class="btn btn-primary btn-block" disabled>Pagamento online em breve</button>
+                 <a class="btn btn-ghost btn-block" style="margin-top:10px" href="https://wa.me/${esc(PC.WHATSAPP_PROFESSOR)}?text=${encodeURIComponent(`Oi, professor! Quero marcar uma aula em ${fmtSlot(slotSel)}.`)}" target="_blank" rel="noopener">Combinar pelo WhatsApp</a>`}</div>`
+          : `<div class="card summary-empty only-desk"><span class="ic">${ICON.clock}</span><div class="small muted">Escolha um dia e um horário para ver o resumo da aula.</div></div>`}
+        </aside></div>`;
+      bindBack();
+      $app.querySelectorAll('[data-dia]').forEach((b) => { b.onclick = () => { diaSel = b.dataset.dia; slotSel = null; paint(); }; });
+      $app.querySelectorAll('[data-slot]').forEach((b) => {
+        b.onclick = () => { slotSel = b.dataset.slot; paint(); $app.querySelector('.summary')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+      });
+      const r = $app.querySelector('[data-reservar]');
+      if (r) r.onclick = async () => {
+        r.disabled = true; r.innerHTML = '<span class="spinner small"></span>';
+        // Abre a aba já no clique (senão o navegador bloqueia o pop-up) e
+        // aponta para o checkout quando a reserva voltar.
+        const w = window.open('', '_blank');
+        try {
+          const aula = await Plus.reservarAula(slotSel, plus);
+          const url = Plus.checkout(plus ? PC.HOTMART_AULA_PLUS : PC.HOTMART_AULA, { nome: u.nome, ref: 'aula-' + aula.id });
+          if (w) { w.opener = null; w.location = url; }
+          go(`#/plus/aulas/${aula.id}${w ? '' : '?pagar=1'}`);
+        } catch (ex) {
+          if (w) w.close();
+          $app.querySelector('[data-err]').textContent = ex.message || 'Não foi possível reservar agora.';
+          r.disabled = false; r.textContent = 'Reservar e ir para o pagamento';
+        }
+      };
+    };
+    paint();
+  }
+
+  // ---------- Minhas aulas ----------
+  async function viewAulas() {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let aulas;
+    try { aulas = await Plus.listarAulas(); } catch {
+      $app.innerHTML = pageHead('Minhas aulas', '', '#/plus') + errorBox('Erro ao carregar suas aulas.');
+      bindBack(); return bindRetry();
+    }
+    const agora = Plus.slotKey(new Date());
+    const prox = aulas.filter((a) => a.inicio >= agora && ['confirmada', 'aguardando_pagamento'].includes(a.status));
+    const resto = aulas.filter((a) => !prox.includes(a)).reverse();
+    const item = (a) => `
+      <a class="card doubt" href="#/plus/aulas/${esc(a.id)}">
+        <div class="top"><span class="tag ${AULA_STATUS[a.status]?.cls || ''}">${AULA_STATUS[a.status]?.label || a.status}</span><span class="spacer"></span><b>${brl(a.valor)}</b></div>
+        <div class="txt" style="font-weight:800">${esc(fmtSlot(a.inicio))}</div>
+      </a>`;
+    $app.innerHTML = pageHead('Minhas aulas', 'LevelUp Plus', '#/plus') + `
+      <a class="btn btn-primary btn-block" href="#/plus/agendar" style="margin-top:8px">+ Agendar nova aula</a>
+      <div class="section-title">Próximas</div>
+      ${prox.length ? `<div class="card-list">${prox.map(item).join('')}</div>` : '<p class="muted">Nenhuma aula marcada.</p>'}
+      ${resto.length ? `<div class="section-title">Histórico</div><div class="card-list">${resto.map(item).join('')}</div>` : ''}`;
+    bindBack();
+  }
+
+  async function viewAula(id) {
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let u, aula;
+    try { u = await loadProfile(); aula = (await Plus.listarAulas()).find((a) => String(a.id) === String(id)); } catch {
+      $app.innerHTML = errorBox('Erro ao carregar a aula.'); return bindRetry();
+    }
+    if (!aula) return go('#/plus/aulas');
+    const pagarUrl = Plus.checkout(aula.plus ? PC.HOTMART_AULA_PLUS : PC.HOTMART_AULA, { nome: u.nome, ref: 'aula-' + aula.id });
+    const ini = Plus.parseSlot(aula.inicio);
+    const fim = new Date(ini.getTime() + aula.duracao_min * 60e3);
+    const g = (d) => `${Plus.ymd(d).replace(/-/g, '')}T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
+    const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Aula de Física — LevelUp Fís')}&dates=${g(ini)}/${g(fim)}&ctz=America/Sao_Paulo&details=${encodeURIComponent('Aula particular agendada pelo LevelUp Fís.')}`;
+    const zap = `https://wa.me/${PC.WHATSAPP_PROFESSOR}?text=${encodeURIComponent(`Oi, professor! Sou ${nomeExibicao(u)} (${u.email || ''}). Sobre a aula de ${fmtSlot(aula.inicio)} (reserva ${aula.id}).`)}`;
+    const passo = (n, t, estado, extra = '') => `<li class="${estado}"><span class="dot">${estado === 'done' ? ICON.check : n}</span><div><b>${t}</b>${extra}</div></li>`;
+    const st = aula.status;
+    const pago = st === 'confirmada' || st === 'concluida';
+
+    $app.innerHTML = pageHead('Sua aula', 'LevelUp Plus', '#/plus/aulas') + `
+      <div class="aula-layout"><div>
+      <div class="card class-hero ${pago ? 'ok' : ''}">
+        ${pago ? `<div class="badge-ok">${ICON.check}</div><h2>Aula confirmada!</h2>` : `<h2>${AULA_STATUS[st]?.label || st}</h2>`}
+        <div class="when">${esc(fmtSlot(aula.inicio))}</div>
+        <div class="small muted">${aula.duracao_min} min · ${brl(aula.valor)}</div>
+      </div>
+      </div><div>
+      ${['cancelada', 'expirada'].includes(st) ? `
+        <p class="muted" style="text-align:center">${st === 'expirada' ? `O pagamento não foi identificado em ${PC.AULA_RESERVA_HORAS || 2}h e o horário foi liberado.` : 'Esta reserva foi cancelada.'}</p>
+        <a class="btn btn-primary btn-block" href="#/plus/agendar">Escolher outro horário</a>` : `
+      <ol class="steps">
+        ${passo(1, 'Horário reservado', 'done', `<div class="small muted">${esc(fmtCurto(aula.criada_em))}</div>`)}
+        ${passo(2, 'Pagamento na Hotmart', pago ? 'done' : 'current', pago ? '' : `<div class="small muted">Use o e-mail ${esc(u.email || '')}. Reserva válida por ${PC.AULA_RESERVA_HORAS || 2}h.</div>`)}
+        ${passo(3, 'Aula confirmada', pago ? 'done' : '', pago
+          ? `<div class="small muted">${aula.link_aula ? 'O link da aula está logo abaixo.' : 'O professor coloca o link da aula aqui antes do horário.'}</div>`
+          : '<div class="small muted">Assim que a Hotmart confirmar o pagamento, sua aula aparece aqui como confirmada.</div>')}
+      </ol>
+      ${st === 'aguardando_pagamento' ? `
+        <a class="btn btn-primary btn-block" href="${esc(pagarUrl)}" target="_blank" rel="noopener">Pagar agora · ${brl(aula.valor)}</a>
+        ${demoBtn('data-demo-pagar', 'Simular pagamento aprovado')}
+        <button class="btn btn-danger btn-block" data-cancelar style="margin-top:10px">Cancelar reserva</button>` : st === 'conflito' ? `
+        <p class="muted" style="text-align:center">Seu pagamento foi recebido, mas esse horário acabou ocupado por outra aula. O professor vai falar com você para remarcar.</p>` : `
+        ${aula.link_aula ? `<a class="btn btn-primary btn-block" href="${esc(aula.link_aula)}" target="_blank" rel="noopener" style="margin-bottom:10px">${ICON.live.replace('<svg', '<svg width="18" height="18"')} Entrar na aula</a>` : ''}
+        <a class="btn ${aula.link_aula ? 'btn-ghost' : 'btn-primary'} btn-block" href="${esc(gcal)}" target="_blank" rel="noopener">${ICON.calendar.replace('<svg', '<svg width="18" height="18"')} Adicionar ao Google Agenda</a>`}
+      <a class="btn btn-ghost btn-block" href="${esc(zap)}" target="_blank" rel="noopener" style="margin-top:10px">Falar com o professor no WhatsApp</a>`}
+      </div></div>`;
+    bindBack();
+
+    if (location.hash.includes('pagar=1')) toast('Seu navegador bloqueou a nova aba. Toque em "Pagar agora".', 4500);
+    const dp = $app.querySelector('[data-demo-pagar]');
+    if (dp) dp.onclick = async () => { await Plus.demoConfirmarPagamento(aula.id); toast('Pagamento aprovado! (demonstração)'); viewAula(id); };
+    const c = $app.querySelector('[data-cancelar]');
+    if (c) c.onclick = async () => {
+      const ok = await modal({
+        title: 'Cancelar reserva?', text: 'O horário volta a ficar disponível para outros alunos. Se você já pagou, fale com o professor antes.',
+        buttons: [{ label: 'Manter', value: false }, { label: 'Cancelar reserva', value: true, cls: 'btn-danger' }],
+      });
+      if (!ok) return;
+      await Plus.cancelarAula(aula.id);
+      viewAula(id);
     };
   }
 
@@ -1122,7 +1579,7 @@
     $app.className = 'app';
     window.scrollTo(0, 0);
 
-    const hash = location.hash || '#/';
+    const hash = (location.hash || '#/').split('?')[0];
     const parts = hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
     const logged = !!API.Session.get();
 
@@ -1135,6 +1592,16 @@
       case 'map': return viewMap();
       case 'videos': return viewVideos();
       case 'profile': return viewProfile();
+      case 'plus': {
+        const [, a, b] = parts;
+        if (a === 'duvidas' && b === 'nova') return viewNovaDuvida();
+        if (a === 'duvidas' && b) return viewDuvida(b);
+        if (a === 'duvidas') return viewDuvidas();
+        if (a === 'agendar') return viewAgendar();
+        if (a === 'aulas' && b) return viewAula(b);
+        if (a === 'aulas') return viewAulas();
+        return viewPlus();
+      }
       case 't': {
         const [, topico, kind, a, b] = parts;
         if (kind === 'resumo') return viewResumo(topico);

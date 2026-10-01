@@ -25,6 +25,57 @@ no navegador: o backend corrige as respostas e aplica as recompensas.
 | Prova (modo fácil e difícil) + histórico | `exam_screen`, `exam_stats_screen` |
 | Vídeos | `videos_screen` |
 | Perfil (nome, nível, comprar Carga) | `profile_screen` |
+| **LevelUp Plus** (venda, área do assinante, dúvidas, agendamento) | *só no site, por enquanto* |
+
+## LevelUp Plus
+
+Aba **Plus** na barra inferior (`#/plus`). Arquivos: `js/plus.js` (dados), views em `js/app.js`
+(seção "LevelUp Plus"), estilos em `css/style.css`. **Tudo que você ajusta fica em
+`js/config.js → PLUS`**: planos (`PLANOS`: 1 mês R$ 49 e 6 meses R$ 340, cada um com seu
+link de checkout), aula avulsa (`AULA_VALOR`: R$ 80) e desconto de assinante
+(`AULA_DESCONTO_PLUS`: 15%), links da Hotmart, convite do WhatsApp, horário de suporte, agenda
+semanal, bloqueios, plantão do mês e desafio do mês.
+
+| Rota | Quem vê | O quê |
+|---|---|---|
+| `#/plus` | todos | Não assinante: página de venda (benefícios, escolha do plano, CTA Hotmart). Assinante: área com Comunidade / Dúvidas / Agendar aula, próxima aula, plantão e desafio do mês |
+| `#/plus/duvidas`, `/nova`, `/:id` | assinante | Lista de dúvidas, enviar nova, conversa com a resposta e o prazo de 24h |
+| `#/plus/agendar` | todos | Dia → horário → resumo → reserva → checkout Hotmart (assinante com desconto) |
+| `#/plus/aulas`, `/:id` | todos | Minhas aulas e o status de cada uma (reservado → pagamento → confirmada + Google Agenda) |
+
+### Fluxo do agendamento
+1. O aluno escolhe um horário livre (vindo de `AGENDA_SEMANAL` + `AGENDA_EXTRAS`, sem
+   `AGENDA_BLOQUEIOS`, com pelo menos `AULA_ANTECEDENCIA_HORAS` de antecedência).
+2. O horário fica **reservado por `AULA_RESERVA_HORAS`** e o site abre o checkout da Hotmart
+   com o e-mail do aluno e `sck=aula-<id da reserva>` — esse código aparece na venda da
+   Hotmart, pra você saber qual horário foi pago.
+3. Você confere o pagamento na Hotmart e confirma a aula → o aluno vê "Aula confirmada!".
+   Se ninguém pagar no prazo, a reserva expira e o horário volta a ficar livre.
+
+### Como os pagamentos são ligados (Hotmart → backend → site)
+O site abre o checkout da Hotmart com `sck` = `plus-<plano>-<user_id>` (assinatura) ou
+`aula-<id da reserva>` (aula). A Hotmart devolve esse código no **webhook**
+(`POST /plus/hotmart/webhook` do backend, em `backend/app/routes/plus.py`), que ativa o Plus
+(mensal: +1 mês a cada cobrança; 6 meses: pagamento único, sem renovação), confirma a aula,
+e desfaz tudo em reembolso/chargeback. Dúvidas, aulas e assinantes ficam no Supabase
+(`backend/sql/014_levelup_plus.sql`) e você gerencia em **`/painel` → aba Plus** (responder
+dúvidas, colocar o link da aula, confirmar/cancelar manualmente, liberar acesso por fora).
+
+Rotas usadas pelo site (`js/plus.js`, todas com o token do aluno): `GET /plus/status`,
+`GET|POST /plus/duvidas`, `GET /plus/agenda`, `GET|POST /plus/aulas`,
+`POST /plus/aulas/:id/cancelar`. Os horários livres continuam vindo de `AGENDA_SEMANAL`
+(config do site); o backend só guarda quais já estão ocupados e recusa conflitos.
+
+### Modo demonstração (`PLUS.DEMO = true`)
+Para testar o visual sem banco: os dados ficam só no navegador do aluno e aparecem botões
+**DEMO** para simular pagamento e resposta do professor. Em produção deixe `false`.
+
+## Layout no computador
+
+A partir de 1024 px de largura (`css/style.css`, seção "Layout de PC"), a barra inferior vira
+**menu lateral** e o conteúdo usa a largura da tela: Mapa com a trilha em coluna única, Perfil em duas colunas, login com painel de apresentação, Plus com benefícios à esquerda e
+planos à direita (alinhados com o fim dos benefícios), agenda com resumo fixo ao lado. Telas de foco (exercício, resumo, prova e
+as internas do Plus) ficam numa coluna central mais larga, sem menu. No celular nada muda.
 
 ## Publicar de graça
 

@@ -138,6 +138,7 @@
     Session,
     ApiError,
     refreshSession,
+    request: authed, // usado pelo js/plus.js quando PLUS.DEMO = false
 
     // --- Auth ---
     async login(email, password) {
