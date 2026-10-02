@@ -463,12 +463,12 @@
     if (livre && !user.is_admin) html += `<div class="plus-free"><span>${ICON.crown}</span>LevelUp Plus: todas as trilhas liberadas — estude na ordem que quiser.</div>`;
     html += `<div class="modstrip">${areas.map((a, i) => `
         ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}"></span>` : ''}
-        <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${a.blocos.length ? 'available' : ''}" data-mod="${esc(a.id)}">
+        <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${a.blocos.length || livre ? 'available' : ''}" data-mod="${esc(a.id)}">
           <span class="circle">${esc(a.icone || '•')}</span>${esc(a.titulo)}
         </button>`).join('')}</div>`;
 
     if (!topicos.length) {
-      html += `<div class="card muted" style="margin-top:24px">O conteúdo deste módulo ainda está sendo preparado.</div>`;
+      html += `<div class="card muted" style="margin-top:24px">O conteúdo de ${esc(modulo ? modulo.titulo : 'este módulo')} ainda está sendo preparado. Assim que os tópicos forem publicados, eles aparecem aqui${livre ? ' — já liberados pra você' : ''}.</div>`;
     }
 
     const trilhas = [];
@@ -537,7 +537,9 @@
       b.onclick = () => {
         const a = areas.find((x) => x.id === b.dataset.mod);
         if (a.id === S.moduloAtual) return window.scrollTo({ top: 0, behavior: 'smooth' });
-        if (!a.blocos.length) {
+        // Módulo ainda sem tópicos cadastrados: aluno comum vê o aviso do
+        // app; assinante do Plus entra mesmo assim (vê "em preparação").
+        if (!a.blocos.length && !livre) {
           return modal({ title: 'Quase lá!', text: 'Você ainda não chegou aqui.', icon: ICON.lock });
         }
         S.moduloAtual = a.id;
