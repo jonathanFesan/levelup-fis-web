@@ -1756,7 +1756,12 @@
     const parts = hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
     const logged = !!API.Session.get();
 
-    if (!logged && !['login', 'register', 'obrigado'].includes(parts[0])) return go('#/login');
+    if (!logged && !['login', 'register', 'obrigado'].includes(parts[0])) {
+      // Guarda para onde a pessoa ia (ex.: link da área de membros na
+      // Hotmart → #/plus) e leva ela até lá depois do login.
+      if (parts[0]) { try { sessionStorage.setItem(DEPOIS_LOGIN, hash); } catch { /* ignore */ } }
+      return go('#/login');
+    }
     if (logged && ['login', 'register', ''].includes(parts[0])) return go('#/map');
 
     switch (parts[0]) {
