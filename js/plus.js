@@ -99,6 +99,14 @@
     },
 
     async agenda() { return gerarSlots(ativos(ler().aulas).map((a) => a.inicio), agendaDoConfig()); },
+    async conteudo() {
+      const pl = P.PLANTAO || {}, de = P.DESAFIO || {};
+      return {
+        desafio: de.titulo ? { titulo: de.titulo, texto: de.texto, premio: de.premio, prazo: de.prazo } : null,
+        plantao: pl.data ? { inicio: pl.data, tema: pl.tema, link: pl.link } : null,
+        comunidade_link: P.WHATSAPP_COMUNIDADE,
+      };
+    },
     async listarAulas() { return ler().aulas.map(comExpiracao).sort((a, b) => a.inicio.localeCompare(b.inicio)); },
     async reservarAula(inicio, plus) {
       const d = ler();
@@ -143,6 +151,8 @@
       const r = await API.request('/plus/agenda'); // agenda do painel + { ocupados: [...] }
       return gerarSlots(r.ocupados || [], r);
     },
+    // Desafio, plantão e link da comunidade editados no painel (só assinante recebe).
+    conteudo: () => API.request('/plus/conteudo'),
     listarAulas: () => API.request('/plus/aulas'),
     reservarAula: (inicio) => API.request('/plus/aulas', { method: 'POST', body: { inicio } }),
     cancelarAula: (id) => API.request(`/plus/aulas/${id}/cancelar`, { method: 'POST' }),

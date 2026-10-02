@@ -1326,13 +1326,17 @@
 
   async function viewPlusMembro(u, st = {}) {
     const preview = !st.ativo;
-    let duvidas = [], aulas = [];
-    try { [duvidas, aulas] = await Promise.all([Plus.listarDuvidas(), Plus.listarAulas()]); } catch { /* cartões ficam vazios */ }
+    let duvidas = [], aulas = [], cont = {};
+    try {
+      [duvidas, aulas, cont] = await Promise.all([Plus.listarDuvidas(), Plus.listarAulas(), Plus.conteudo().catch(() => ({}))]);
+    } catch { /* cartões ficam vazios */ }
     const aguardando = duvidas.filter((d) => d.status === 'aguardando').length;
     const agora = Plus.slotKey(new Date());
     const proxima = aulas.find((a) => a.inicio >= agora && ['confirmada', 'aguardando_pagamento'].includes(a.status));
-    const plantao = PC.PLANTAO && PC.PLANTAO.data ? PC.PLANTAO : null;
-    const desafio = PC.DESAFIO && PC.DESAFIO.titulo ? PC.DESAFIO : null;
+    // Editados no painel → aba Plus (o backend só entrega para assinante).
+    const plantao = cont.plantao || null;
+    const desafio = cont.desafio || null;
+    const comunidade = cont.comunidade_link || '';
 
     $app.innerHTML = topStats(u) + `
       ${preview ? `<div class="card admin-bar warn"><span class="small"><b>Visualização do administrador.</b> Você NÃO é assinante: enviar dúvidas e ter o desconto nas aulas continuam bloqueados para esta conta.</span>
@@ -1343,8 +1347,8 @@
         <p>${preview ? 'É assim que os assinantes veem esta área.' : esc(validadePlus(st))}</p>
       </section>
       <div class="actions-grid">
-        <a class="action-tile" href="${esc(PC.WHATSAPP_COMUNIDADE)}" target="_blank" rel="noopener">
-          <span class="ic green">${ICON.chat}</span><span class="t">Acesse a comunidade</span><span class="small muted">Grupo de alunos no WhatsApp</span></a>
+        <a class="action-tile" ${comunidade ? `href="${esc(comunidade)}" target="_blank" rel="noopener"` : 'href="#/plus" data-sem-link'}>
+          <span class="ic green">${ICON.chat}</span><span class="t">Acesse a comunidade</span><span class="small muted">${comunidade ? 'Grupo de alunos no WhatsApp' : 'Link do grupo em breve'}</span></a>
         <a class="action-tile" href="#/plus/duvidas">
           <span class="ic">${ICON.question}</span><span class="t">Dúvidas</span>
           <span class="small muted">${aguardando ? `${aguardando} aguardando resposta` : `Resposta em até ${PC.PRAZO_RESPOSTA_HORAS}h`}</span></a>
@@ -1364,19 +1368,23 @@
       ${plantao ? `
         <div class="card info-card">
           <div class="row"><span class="ic">${ICON.live}</span><div style="flex:1"><div class="k">PLANTÃO AO VIVO DO MÊS</div>
-          <b>${esc(fmtCurto(plantao.data))}</b>${plantao.tema ? `<div class="small muted">${esc(plantao.tema)}</div>` : ''}</div></div>
-          ${plantao.link ? `<a class="btn btn-ghost btn-block" href="${esc(plantao.link)}" target="_blank" rel="noopener">Entrar no plantão</a>` : ''}
+          <b>${esc(fmtSlot(plantao.inicio))}</b>${plantao.tema ? `<div class="small muted">${esc(plantao.tema)}</div>` : ''}</div></div>
+          ${plantao.link ? `<a class="btn btn-ghost btn-block" href="${esc(plantao.link)}" target="_blank" rel="noopener">Entrar no plantão</a>`
+            : '<button class="btn btn-ghost btn-block" disabled>O link aparece aqui perto do horário</button>'}
         </div>` : ''}
       ${desafio ? `
         <div class="card info-card wide">
           <div class="row"><span class="ic">${ICON.flag}</span><div style="flex:1"><div class="k">DESAFIO DO MÊS${desafio.prazo ? ` · ATÉ ${esc(desafio.prazo.split('-').reverse().slice(0, 2).join('/'))}` : ''}</div>
           <b>${esc(desafio.titulo)}</b></div></div>
-          <div class="prose" style="font-size:15px">${esc(desafio.texto)}</div>
-          <a class="btn btn-ghost btn-block" href="${esc(PC.WHATSAPP_COMUNIDADE)}" target="_blank" rel="noopener">Enviar resolução na comunidade</a>
+          ${desafio.texto ? `<div class="prose" style="font-size:15px">${esc(desafio.texto)}</div>` : ''}
+          ${desafio.premio ? `<div class="premio">${ICON.trophy}<span><b>Prêmio:</b> ${esc(desafio.premio)}</span></div>` : ''}
+          ${comunidade ? `<a class="btn btn-ghost btn-block" href="${esc(comunidade)}" target="_blank" rel="noopener">Enviar resolução na comunidade</a>` : ''}
         </div>` : ''}
       </div>
       ${Plus.demo ? `<div style="text-align:center">${demoBtn('data-demo-sair', 'Voltar a ver como não assinante')}</div>` : ''}
       ${bottomNav('plus')}`;
+    const semLink = $app.querySelector('[data-sem-link]');
+    if (semLink) semLink.onclick = (e) => { e.preventDefault(); toast('O link do grupo ainda não foi cadastrado.'); };
     const sp = $app.querySelector('[data-sair-preview]');
     if (sp) sp.onclick = () => { setPreview(false); viewPlus(); };
     const ds = $app.querySelector('[data-demo-sair]');

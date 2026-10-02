@@ -42,7 +42,9 @@ window.LUP_CONFIG = {
     HOTMART_AULA: null,      // TODO: link da oferta de R$ 80
     HOTMART_AULA_PLUS: null, // TODO: link da oferta de R$ 68 (assinante)
 
-    WHATSAPP_COMUNIDADE: 'https://chat.whatsapp.com/SEU_CONVITE', // TODO
+    // Link do grupo, desafio do mês e plantão: edite no painel → aba Plus.
+    // Os valores deste arquivo só valem no modo demonstração (DEMO: true).
+    WHATSAPP_COMUNIDADE: '',
     WHATSAPP_PROFESSOR: '5500000000000', // TODO: DDI+DDD+número (só dígitos) — usado no "falar com o professor"
 
     // Suporte a dúvidas
@@ -73,13 +75,13 @@ window.LUP_CONFIG = {
     AGENDA_EXTRAS: [],
 
     // Plantão ao vivo em grupo (1 por mês)
-    PLANTAO: {
-      data: '2026-10-24T15:00', // TODO
-      link: 'https://meet.google.com/SEU-LINK', // TODO: aparece só para assinantes
+    PLANTAO: {        // só modo demonstração — o real fica no painel → aba Plus
+      data: '2026-10-24T15:00',
+      link: '',
       tema: 'Revisão de Cinemática e Leis de Newton',
     },
     // Desafio do mês
-    DESAFIO: {
+    DESAFIO: {        // só modo demonstração — o real fica no painel → aba Plus
       titulo: 'Desafio de Outubro: o elevador maluco',
       texto: 'Um elevador acelera para cima a 2 m/s². Quanto marca a balança de uma pessoa de 60 kg dentro dele? (g = 10 m/s²) Mande sua resolução na comunidade até o fim do mês — os 3 primeiros acertos ganham destaque!',
       prazo: '2026-10-31',
