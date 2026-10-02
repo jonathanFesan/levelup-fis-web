@@ -90,7 +90,12 @@
       const detail = data && typeof data === 'object' && data.detail
         ? (typeof data.detail === 'string' ? data.detail : 'Dados inválidos.')
         : `Erro ${res.status}`;
-      throw new ApiError(detail, res.status);
+      // Token vencido/inválido: o backend repassa o erro do Supabase
+      // (PGRST301/PGRST303, "JWT expired"...) como 400 em vez de 401.
+      // Tratamos como 401 para o authed() renovar a sessão — senão, ao
+      // voltar ao site depois de ~1h, todas as telas davam erro.
+      const jwt = res.status === 400 && /PGRST30\d|JWT/i.test(typeof detail === 'string' ? detail : '');
+      throw new ApiError(jwt ? 'Sessão expirada.' : detail, jwt ? 401 : res.status);
     }
     return data;
   }
