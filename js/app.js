@@ -178,6 +178,18 @@
     }
     return S.profile;
   }
+  // Assinante do LevelUp Plus (e o admin) não tem trava de trilha:
+  // tópicos, capítulos, fases e extras ficam todos abertos. Guarda o
+  // resultado por 1 min pra não consultar o backend a cada tela.
+  async function semTravas(user) {
+    if (user && user.is_admin) return true;
+    if (S.plusCache && Date.now() - S.plusCache.t < 60e3) return S.plusCache.ativo;
+    let ativo = false;
+    try { ativo = !!(await Plus.status(user)).ativo; } catch { /* sem resposta: segue com as travas */ }
+    S.plusCache = { t: Date.now(), ativo };
+    return ativo;
+  }
+
   async function loadCurriculo(force = false) {
     if (S.curriculo && !force) return S.curriculo;
     const areas = await API.getCurriculo();
@@ -203,11 +215,11 @@
 
   function doLogout() {
     API.logout();
-    Object.assign(S, { profile: null, curriculo: null, moduloAtual: null, questions: {} });
+    Object.assign(S, { profile: null, curriculo: null, moduloAtual: null, questions: {}, plusCache: null });
     go('#/login');
   }
   window.addEventListener('lup:logout', () => {
-    Object.assign(S, { profile: null, curriculo: null, questions: {} });
+    Object.assign(S, { profile: null, curriculo: null, questions: {}, plusCache: null });
     if (!location.hash.startsWith('#/login') && !location.hash.startsWith('#/register')) {
       toast('Sessão expirada. Faça login novamente.');
       go('#/login');
@@ -443,11 +455,12 @@
       return { prog, cap, att, cont };
     }));
 
-    const isAdmin = !!user.is_admin;
+    const livre = await semTravas(user);
     const nivel = user.nivel ?? 1;
     const idxAtual = areas.findIndex((a) => a.id === S.moduloAtual);
 
     let html = topStats(user);
+    if (livre && !user.is_admin) html += `<div class="plus-free"><span>${ICON.crown}</span>LevelUp Plus: todas as trilhas liberadas — estude na ordem que quiser.</div>`;
     html += `<div class="modstrip">${areas.map((a, i) => `
         ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}"></span>` : ''}
         <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${a.blocos.length ? 'available' : ''}" data-mod="${esc(a.id)}">
@@ -464,7 +477,7 @@
       const { prog, cap, att, cont } = info[i];
       const nivelMin = cont.nivel_minimo ?? t.nivel_minimo ?? 1;
       let liberado;
-      if (isAdmin) liberado = true;
+      if (livre) liberado = true;
       else if (nivel < nivelMin) liberado = false;
       else if (i === 0) liberado = true;
       else liberado = !!info[i - 1].prog.fixacao_concluida;
@@ -504,10 +517,10 @@
       const nodes = seq.map((c, k) => ({
         titulo: c.titulo,
         icon: TIPO_ICON[c.tipo] || 'bulb',
-        desbloqueado: k === 0 || concluido(seq[k - 1]),
+        desbloqueado: livre || k === 0 || concluido(seq[k - 1]),
         concluido: concluido(c),
         sideBadge: c.tipo === 'fixacao' && extra
-          ? { icon: 'plus', on: !!prog.fixacao_concluida, title: extra.titulo } : null,
+          ? { icon: 'plus', on: livre || !!prog.fixacao_concluida, title: extra.titulo } : null,
       }));
       trilhas.push({ topico: t, seq, nodes, extra });
       b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
@@ -654,10 +667,11 @@
     const catInfo = CATEGORIAS[categoria] || CATEGORIAS.fixacao;
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs;
+    let qs, livre;
     try {
       await loadCurriculo();
       qs = await getQuestions(topicoId, categoria, true);
+      livre = await semTravas(await loadProfile());
     } catch {
       $app.innerHTML = pageHead(catInfo.label, '', '#/map') + errorBox('Erro ao carregar o mapa.');
       bindBack(); return bindRetry();
@@ -679,7 +693,7 @@
       titulo: `Fase ${i + 1}`,
       icon: 'play',
       concluido: !!q.respondida_corretamente,
-      desbloqueado: i === 0 || !!qs[i - 1].respondida_corretamente || !!q.respondida_corretamente,
+      desbloqueado: livre || i === 0 || !!qs[i - 1].respondida_corretamente || !!q.respondida_corretamente,
     }));
     html += trailHtml(nodes);
     $app.innerHTML = html;
@@ -705,17 +719,18 @@
     idx = +idx;
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs;
+    let qs, livre;
     try {
       await Promise.all([loadCurriculo(), loadProfile()]);
       qs = await getQuestions(topicoId, categoria);
+      livre = await semTravas(S.profile);
     } catch {
       $app.innerHTML = errorBox('Erro ao carregar a questão.'); return bindRetry();
     }
     const q = qs[idx];
     const trilhaHash = `#/t/${encodeURIComponent(topicoId)}/trilha/${categoria}`;
     if (!q) return go(trilhaHash);
-    if (idx > 0 && !qs[idx - 1].respondida_corretamente && !q.respondida_corretamente) return go(trilhaHash);
+    if (!livre && idx > 0 && !qs[idx - 1].respondida_corretamente && !q.respondida_corretamente) return go(trilhaHash);
 
     const { area, topico } = findTopico(topicoId);
     let selecionada = null;
@@ -1187,7 +1202,9 @@
 
   async function plusStatus() {
     const u = await loadProfile();
-    return { u, st: await Plus.status(u) };
+    const st = await Plus.status(u);
+    S.plusCache = { t: Date.now(), ativo: !!st.ativo };
+    return { u, st };
   }
   // Telas só de assinante: quem não é volta para a página de venda.
   // Admin que NÃO é assinante pode só visualizar a área do assinante

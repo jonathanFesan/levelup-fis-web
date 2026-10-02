@@ -423,6 +423,8 @@ body.exam-mode #starfield { display: none; }
   .action-tile .t { margin: 0; }
 }
 .info-card .k { font-size: 11px; font-weight: 900; letter-spacing: .6px; color: var(--gold); }
+.plus-free { display: flex; align-items: center; gap: 10px; margin: 6px 0 0; padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 700; color: var(--gold); background: rgba(255,198,92,.1); border: 1px solid rgba(255,198,92,.35); }
+.plus-free svg { width: 18px; height: 18px; display: block; }
 .plus-profile { display: flex; align-items: center; gap: 12px; margin-top: 14px; text-decoration: none; color: var(--cream); }
 .plus-profile.on { border-color: rgba(255,198,92,.5); }
 .bottomnav a.plus-tab svg { color: var(--gold); }
