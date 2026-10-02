@@ -10,7 +10,7 @@
   // O navegador pode ter guardado arquivos de versões diferentes (o GitHub
   // Pages manda guardar cada um por 10 min). Se faltar algo que esta versão
   // usa, busca config/api/plus de novo, sem cache, e só então começa.
-  if (!(window.LUP_CONFIG && window.LUP_CONFIG.PLUS && window.API && API.request && window.Plus)) {
+  if (!(window.LUP_CONFIG && window.LUP_CONFIG.PLUS && window.API && API.request && window.Plus && window.Cartoes)) {
     if (main.recarregou) return window.lupFalha && window.lupFalha();
     main.recarregou = true;
     const v = Date.now();
@@ -19,7 +19,7 @@
       s.src = `${src}?v=${v}`; s.onload = ok; s.onerror = falha;
       document.head.appendChild(s);
     });
-    carregar('js/config.js').then(() => carregar('js/api.js')).then(() => carregar('js/plus.js'))
+    carregar('js/config.js').then(() => carregar('js/api.js')).then(() => carregar('js/plus.js')).then(() => carregar('js/cartoes.js'))
       .then(main, () => window.lupFalha && window.lupFalha());
     return;
   }
@@ -592,8 +592,12 @@
     const pdf = conteudo.resumo_pdf_url && conteudo.resumo_pdf_url.trim();
     const texto = conteudo.resumo_texto && conteudo.resumo_texto.trim();
 
+    // Ordem: cartões (editor do painel) → PDF → texto simples.
+    const cartoes = Cartoes.temConteudo(conteudo.resumo_blocos) ? Cartoes.render(conteudo.resumo_blocos) : '';
     let body;
-    if (pdf) {
+    if (cartoes) {
+      body = cartoes;
+    } else if (pdf) {
       body = `<iframe class="pdf-frame" src="${esc(pdf)}#toolbar=0" title="Resumo em PDF"></iframe>
               <p class="small muted" style="text-align:center">Não carregou? <a href="${esc(pdf)}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a></p>`;
     } else if (texto) {
@@ -604,7 +608,7 @@
 
     $app.className = 'app no-nav';
     $app.innerHTML = pageHead(cap?.titulo || 'Resumo', [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map') + `
-      <div class="card">${body}</div>
+      ${cartoes ? body : `<div class="card">${body}</div>`}
       <div class="bottom-cta">
         <div class="error-msg" data-err style="margin-bottom:8px"></div>
         <button class="btn btn-primary btn-block" data-ok>${prog.resumo_concluido ? 'CONTINUAR' : 'ENTENDIDO'}</button>
@@ -636,6 +640,7 @@
     const cap = topico?.capitulos?.find((c) => String(c.id) === String(capId));
     if (!cap) return go('#/map');
     const c = cap.conteudo || {};
+    const cartoes = Cartoes.temConteudo(c.blocos) ? Cartoes.render(c.blocos) : '';
     const parts = [];
     if (c.imagem_url) parts.push(`<img class="media-img" src="${esc(c.imagem_url)}" alt="" onerror="this.outerHTML='<p class=muted>Não foi possível carregar a imagem.</p>'">`);
     if (c.texto && c.texto.trim()) parts.push(`<div class="prose">${esc(c.texto)}</div>`);
@@ -650,7 +655,7 @@
 
     $app.className = 'app no-nav';
     $app.innerHTML = pageHead(cap.titulo, [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map') + `
-      <div class="card stack">${parts.join('')}</div>
+      ${cartoes || `<div class="card stack">${parts.join('')}</div>`}
       <div class="bottom-cta"><div class="error-msg" data-err style="margin-bottom:8px"></div>
       <button class="btn btn-primary btn-block" data-ok>CONTINUAR</button></div>`;
     bindBack();
