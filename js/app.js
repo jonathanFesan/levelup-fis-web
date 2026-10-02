@@ -1500,7 +1500,7 @@
           const livre = d.slots.some((s) => s.livre);
           return `<button class="day-chip ${d.data === diaSel ? 'on' : ''}" data-dia="${d.data}" ${livre ? '' : 'disabled'}>
             <span class="w">${DIAS_SEM[d.date.getDay()]}</span><span class="n">${d.date.getDate()}</span><span class="m">${MESES[d.date.getMonth()]}</span></button>`;
-        }).join('')}</div>` : `<p class="muted" style="text-align:center;padding:16px 0">Nenhum horário livre nas próximas ${PC.AULA_SEMANAS_ABERTAS} semanas.
+        }).join('')}</div>` : `<p class="muted" style="text-align:center;padding:16px 0">Nenhum horário livre nas próximas semanas.
           <br><a href="https://wa.me/${esc(PC.WHATSAPP_PROFESSOR)}" target="_blank" rel="noopener">Fale com o professor</a></p>`}
 
         ${dia ? `<div class="section-title">2. Escolha o horário <span class="small muted" style="font-weight:700">· ${esc(DIAS_LONGO[dia.date.getDay()])}</span></div>

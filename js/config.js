@@ -53,11 +53,14 @@ window.LUP_CONFIG = {
     AULA_VALOR: 80,             // aula avulsa (R$)
     AULA_DESCONTO_PLUS: 0.15,   // 15% para assinantes
     AULA_DURACAO_MIN: 60,
+    // A AGENDA de verdade (horários, bloqueios, antecedência, semanas
+    // abertas) é editada no painel → aba Agenda. Os 5 itens abaixo só valem
+    // no modo demonstração (DEMO: true).
     AULA_ANTECEDENCIA_HORAS: 24,
-    AULA_RESERVA_HORAS: 2,       // reserva sem pagamento libera o horário depois disso // só deixa marcar com pelo menos X horas
+    AULA_RESERVA_HORAS: 2,       // reserva sem pagamento libera o horário depois disso
     AULA_SEMANAS_ABERTAS: 3,     // quantas semanas à frente aparecem
     // Sua agenda semanal: dia da semana (0 = domingo … 6 = sábado) → horários de início
-    AGENDA_SEMANAL: {           // TODO: seus horários livres
+    AGENDA_SEMANAL: {
       1: ['18:00', '19:00', '20:00'],
       2: ['14:00', '15:00'],
       3: ['18:00', '19:00', '20:00'],

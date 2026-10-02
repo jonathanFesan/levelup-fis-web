@@ -32,24 +32,29 @@
     return new Date(y, m - 1, d, h, mi);
   };
 
-  // Gera os horários livres a partir da agenda semanal do config.
-  function gerarSlots(ocupados) {
-    const agora = Date.now();
-    const minimo = agora + P.AULA_ANTECEDENCIA_HORAS * 3600e3;
-    const bloqueios = new Set(P.AGENDA_BLOQUEIOS || []);
+  // Gera os dias/horários a partir da agenda — a que o professor monta no
+  // painel (GET /plus/agenda) ou, no modo demonstração, a do config.js.
+  // Mesma regra do backend (plus.py → _slots_abertos). Bloqueio pode ser
+  // o dia inteiro ('AAAA-MM-DD') ou só um horário ('AAAA-MM-DDTHH:MM').
+  const agendaDoConfig = () => ({
+    semanal: P.AGENDA_SEMANAL || {}, extras: P.AGENDA_EXTRAS || [], bloqueios: P.AGENDA_BLOQUEIOS || [],
+    antecedencia_horas: P.AULA_ANTECEDENCIA_HORAS, semanas_abertas: P.AULA_SEMANAS_ABERTAS,
+  });
+  function gerarSlots(ocupados, ag) {
+    const minimo = Date.now() + (ag.antecedencia_horas ?? 24) * 3600e3;
+    const bloqueios = new Set(ag.bloqueios || []);
     const ocup = new Set(ocupados);
     const dias = [];
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    for (let i = 0; i < P.AULA_SEMANAS_ABERTAS * 7; i++) {
+    for (let i = 0; i < (ag.semanas_abertas || 3) * 7; i++) {
       const d = new Date(hoje); d.setDate(hoje.getDate() + i);
       const k = ymd(d);
-      const horas = [...(P.AGENDA_SEMANAL[d.getDay()] || [])];
-      (P.AGENDA_EXTRAS || []).forEach((x) => { if (x.startsWith(k)) horas.push(x.split('T')[1]); });
-      const slots = bloqueios.has(k) ? [] : [...new Set(horas)].sort().map((h) => {
-        const s = `${k}T${h}`;
-        const t = parseSlot(s).getTime();
-        return { slot: s, livre: t >= minimo && !ocup.has(s) };
-      });
+      const horas = [...((ag.semanal || {})[d.getDay()] || [])];
+      (ag.extras || []).forEach((x) => { if (x.startsWith(k + 'T')) horas.push(x.split('T')[1]); });
+      const slots = bloqueios.has(k) ? [] : [...new Set(horas)].sort()
+        .map((h) => `${k}T${h}`)
+        .filter((s) => !bloqueios.has(s))
+        .map((s) => ({ slot: s, livre: parseSlot(s).getTime() >= minimo && !ocup.has(s) }));
       dias.push({ data: k, date: d, slots });
     }
     return dias;
@@ -93,7 +98,7 @@
       gravar(d); return q;
     },
 
-    async agenda() { return gerarSlots(ativos(ler().aulas).map((a) => a.inicio)); },
+    async agenda() { return gerarSlots(ativos(ler().aulas).map((a) => a.inicio), agendaDoConfig()); },
     async listarAulas() { return ler().aulas.map(comExpiracao).sort((a, b) => a.inicio.localeCompare(b.inicio)); },
     async reservarAula(inicio, plus) {
       const d = ler();
@@ -135,8 +140,8 @@
     listarDuvidas: () => API.request('/plus/duvidas'),
     enviarDuvida: (body) => API.request('/plus/duvidas', { method: 'POST', body }),
     async agenda() {
-      const r = await API.request('/plus/agenda'); // { ocupados: ['AAAA-MM-DDTHH:MM', ...] }
-      return gerarSlots(r.ocupados || []);
+      const r = await API.request('/plus/agenda'); // agenda do painel + { ocupados: [...] }
+      return gerarSlots(r.ocupados || [], r);
     },
     listarAulas: () => API.request('/plus/aulas'),
     reservarAula: (inicio) => API.request('/plus/aulas', { method: 'POST', body: { inicio } }),
