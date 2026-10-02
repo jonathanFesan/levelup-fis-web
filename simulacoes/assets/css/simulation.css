@@ -1,0 +1,146 @@
+/* ============================================================
+   SIMULATION.CSS — LevelUpFís Simulations
+   Subheader e palco (stage) das páginas de simulação.
+   Usado em simulations/_template.html e em toda simulação nova.
+   ============================================================ */
+
+.luf-sub {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 16px;
+  width: 100%;
+}
+.luf-sub h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  color: var(--accent);
+}
+.luf-sub p {
+  margin-top: 8px;
+  color: var(--muted);
+  max-width: 760px;
+  line-height: 1.55;
+}
+
+.luf-simwrap {
+  max-width: 1300px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 24px 32px;
+  flex: 1;
+  display: flex;
+}
+
+/* Palco do simulador.
+   min-height:0 é essencial aqui: sem isso, o tamanho "automático" padrão
+   de um item flex é baseado no conteúdo (min-content), então um filho
+   com tamanho explícito (ex.: um <canvas> redimensionado via JS) pode
+   forçar o palco a crescer. Isso criaria um laço de realimentação com o
+   ResizeObserver do simulation-shell.js: o canvas cresce -> o observer
+   detecta -> redimensiona o canvas de novo -> cresce mais, indefinidamente.
+   Ver também a regra de canvas/svg abaixo (position:absolute), que tira
+   o elemento do fluxo por completo — a defesa principal contra o laço. */
+#sim-stage {
+  position: relative;
+  flex: 1;
+  min-height: 60vh;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--bg-soft), var(--bg-deep));
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, .6);
+  display: flex;
+}
+
+/* Em tela cheia o palco ocupa 100% sem cantos arredondados */
+#sim-stage:fullscreen {
+  border-radius: 0;
+  border: none;
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+}
+#sim-stage:-webkit-full-screen {
+  border-radius: 0;
+  border: none;
+  width: 100vw;
+  height: 100vh;
+}
+
+#sim-content {
+  position: relative;
+  flex: 1;
+  min-height: 0; /* impede que o conteúdo force o palco a crescer (ver comentário acima) */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+/* position:absolute + inset:0 tira o canvas/svg do fluxo de layout: o
+   tamanho dele (incluindo qualquer style.width/height que uma biblioteca
+   como Three.js defina inline via renderer.setSize) nunca pode influenciar
+   o tamanho de #sim-content/#sim-stage, o que quebra o laço de
+   realimentação descrito acima na origem. */
+#sim-content canvas,
+#sim-content svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Mensagem de placeholder do template (removida pela simulação real) */
+.luf-sim-placeholder {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 24px;
+}
+
+/* Botão de tela cheia */
+.luf-fs-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 18px;
+  opacity: .7;
+  transition: .25s;
+  z-index: 5;
+  line-height: 1;
+}
+.luf-fs-btn:hover,
+.luf-fs-btn:focus-visible {
+  opacity: 1;
+  background: var(--accent);
+  color: var(--bg);
+  transform: scale(1.08);
+}
+
+/* Slot opcional de controles da simulação */
+#sim-controls {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(14, 26, 64, .6);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  max-width: calc(100% - 28px);
+}
+#sim-controls:empty { display: none; }

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LevelUpFís Simulations</title>
+<meta name="description" content="Simulações interativas de física e matemática para explorar, experimentar e subir de nível.">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/home.css">
+</head>
+<body data-root="" data-page="home">
+
+<!-- Header e footer são injetados automaticamente por assets/js/layout.js -->
+
+<main>
+  <section class="luf-hero">
+    <h1 class="luf-gradient-text">Aprenda vendo<br>a ciência acontecer</h1>
+    <p>Simulações interativas de física e matemática para explorar, experimentar e subir de nível.</p>
+  </section>
+
+  <h2 class="luf-sec-title">Em destaque</h2>
+  <div class="luf-marquee" id="luf-marquee" hidden>
+    <div class="luf-track" id="luf-track"></div>
+  </div>
+  <div id="luf-featured-empty" hidden></div>
+
+  <h2 class="luf-sec-title">Todos os simuladores</h2>
+  <div class="luf-grid" id="luf-grid" hidden></div>
+  <div id="luf-grid-empty" hidden></div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> listagem -->
+<script src="data/simulations.js"></script>
+<script src="assets/js/layout.js"></script>
+<script src="assets/js/listing.js"></script>
+</body>
+</html>

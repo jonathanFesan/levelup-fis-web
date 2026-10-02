@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coordenadas Esféricas — LevelUpFís Simulations</title>
+<meta name="description" content="Visualize a relação entre coordenadas esféricas (r, θ, φ) e coordenadas cartesianas em 3D.">
+
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/simulation.css">
+
+<!-- Three.js e OrbitControls baixados localmente (sem CDN) -->
+<script src="../../assets/vendor/three.min.js"></script>
+<script src="../../assets/vendor/OrbitControls.js"></script>
+
+<style>
+  /* Estilos específicos desta simulação (painel de controle e legenda de
+     eixos), escopados a este arquivo. Posicionados de forma absoluta
+     dentro de #sim-stage — não sobre a página inteira. */
+  #ui-panel {
+    position: absolute; top: 16px; left: 16px; width: min(320px, calc(100% - 32px));
+    background: rgba(30, 30, 30, 0.85); padding: 18px;
+    border-radius: 12px; border: 1px solid #444; backdrop-filter: blur(5px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 4; color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  #ui-panel h2 { margin: 0 0 10px; font-size: 1.05rem; border-bottom: 1px solid #555; padding-bottom: 10px; }
+  #ui-panel .control-group { margin-bottom: 16px; }
+  #ui-panel .control-group:last-of-type { margin-bottom: 10px; }
+  #ui-panel label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 13px; color: #aaa; }
+  #ui-panel .val-display { float: right; color: #4facfe; font-weight: bold; }
+  #ui-panel input[type="range"] { width: 100%; cursor: pointer; accent-color: #4facfe; }
+  #ui-panel input[type="range"]:disabled { opacity: .5; cursor: not-allowed; }
+  #ui-panel button {
+    width: 100%; padding: 11px; margin-top: 4px; font-size: 14px; font-weight: bold;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #000; border: none; border-radius: 6px; cursor: pointer; transition: .2s;
+  }
+  #ui-panel button:hover { filter: brightness(1.1); transform: scale(1.02); }
+  #ui-panel button:active { transform: scale(0.98); }
+  #ui-panel button:disabled {
+    opacity: .6; cursor: not-allowed; transform: none; filter: none;
+  }
+  /* "Recomeçar" é uma ação secundária: estilo discreto (vidro), separado
+     do botão principal (Rotacionar/Pausar/Continuar), que mantém o
+     destaque em gradiente. */
+  #ui-panel #btn-restart {
+    background: rgba(255, 255, 255, .08);
+    color: #ddd;
+    border: 1px solid #555;
+    font-size: 13px;
+    padding: 9px;
+  }
+  #ui-panel #btn-restart:hover:not(:disabled) {
+    background: rgba(255, 255, 255, .16);
+    filter: none;
+  }
+  #ui-panel #hints { font-size: 12px; color: #777; margin-top: 12px; text-align: center; }
+
+  #axes-legend {
+    position: absolute; bottom: 16px; left: 16px; z-index: 4;
+    background: rgba(30, 30, 30, 0.8); padding: 9px 14px; border-radius: 8px;
+    font-size: 12px; font-weight: bold; color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: calc(100% - 32px);
+  }
+  .axis-x { color: #ff4757; }
+  .axis-y { color: #2ed573; }
+  .axis-z { color: #1e90ff; }
+
+  #sim-content canvas { touch-action: none; }
+
+  /* Rótulos "θ" e "φ" que acompanham os arcos desenhados na cena 3D,
+     indicando qual ângulo é qual e o valor atual de cada um. Posição
+     (top/left) é recalculada a cada quadro via JS, projetando um ponto
+     3D do arco para coordenadas de tela — por isso começam com
+     display:none até a primeira atualização. */
+  .angle-label {
+    position: absolute;
+    top: 0; left: 0;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 3;
+    display: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(10, 10, 16, 0.65);
+    backdrop-filter: blur(2px);
+    white-space: nowrap;
+  }
+  #theta-label { color: #6fd3ff; border: 1px solid rgba(111, 211, 255, .55); }
+  #phi-label { color: #8b7bff; border: 1px solid rgba(139, 123, 255, .55); }
+
+  @media (max-width: 640px) {
+    #ui-panel { padding: 14px; }
+    #axes-legend { font-size: 11px; }
+  }
+</style>
+</head>
+<body data-root="../../" data-page="simulation" data-category="matematica">
+
+<!-- Header (com botão "← Voltar") e footer são injetados por assets/js/layout.js -->
+
+<main>
+  <div class="luf-sub">
+    <h1>Coordenadas Esféricas</h1>
+    <p>Explore como um ponto no espaço é descrito por coordenadas esféricas (r, θ, φ) e veja sua relação com as coordenadas cartesianas. Ajuste o raio e os ângulos, gire a câmera livremente e use o botão para varrer uma esfera de raio constante.</p>
+  </div>
+
+  <div class="luf-simwrap">
+    <section id="sim-stage" aria-label="Área da simulação">
+      <div id="sim-content"><!-- O canvas do Three.js é criado e inserido aqui via JS --></div>
+
+      <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+
+      <div id="ui-panel">
+        <h2>Coordenadas Esféricas</h2>
+
+        <div class="control-group">
+          <label>Raio (r) <span id="r-val" class="val-display">5.0</span></label>
+          <input type="range" id="r" min="1" max="10" step="0.1" value="5">
+        </div>
+
+        <div class="control-group">
+          <label>Ângulo Azimutal (θ) <span id="theta-val" class="val-display">45°</span></label>
+          <input type="range" id="theta" min="0" max="360" step="1" value="45">
+        </div>
+
+        <div class="control-group">
+          <label>Ângulo Zenital (φ) <span id="phi-val" class="val-display">45°</span></label>
+          <input type="range" id="phi" min="0" max="180" step="1" value="45">
+        </div>
+
+        <button type="button" id="btn-playpause">▶ Rotacionar e Formar Esfera</button>
+        <button type="button" id="btn-restart" disabled>↺ Recomeçar</button>
+
+        <div id="hints">
+          🖱️ <b>Arrastar:</b> Girar câmera <br>
+          🔍 <b>Scroll:</b> Zoom in/out
+        </div>
+      </div>
+
+      <div id="axes-legend">
+        Eixos: <span class="axis-x">X (Vermelho)</span> | <span class="axis-y">Y (Verde)</span> | <span class="axis-z">Z (Azul / Altura)</span>
+      </div>
+
+      <!-- Rótulos dos arcos de θ e φ desenhados na cena (posição via JS) -->
+      <div id="theta-label" class="angle-label">θ</div>
+      <div id="phi-label" class="angle-label">φ</div>
+    </section>
+  </div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> shell de simulação -->
+<script src="../../data/simulations.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/simulation-shell.js"></script>
+
+<script>
+(function () {
+  "use strict";
+  if (!window.LUF || !LUF.stage) return;
+
+  // ==========================================
+  // 1. CONFIGURAÇÃO DA CENA E CÂMERA
+  // ==========================================
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x121212);
+
+  // Aspecto inicial é 1 e será corrigido no primeiro ajuste de tamanho,
+  // abaixo, antes de qualquer render acontecer.
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  camera.position.set(12, 10, 15);
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  LUF.stage.content.appendChild(renderer.domElement);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+
+  // Luzes
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  var dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(10, 20, 10);
+  scene.add(dirLight);
+
+  // Grid e Eixos
+  scene.add(new THREE.GridHelper(20, 20, 0x444444, 0x222222));
+  scene.add(new THREE.AxesHelper(10)); // X=Vermelho, Y=Verde, Z=Azul
+
+  // ==========================================
+  // 2. OBJETOS DA SIMULAÇÃO
+  // ==========================================
+  var pointGeo = new THREE.SphereGeometry(0.3, 32, 32);
+  var pointMat = new THREE.MeshPhongMaterial({ color: 0xffea00, emissive: 0xffaa00 });
+  var point = new THREE.Mesh(pointGeo, pointMat);
+  scene.add(point);
+
+  var lineMat = new THREE.LineBasicMaterial({ color: 0xffea00, linewidth: 3 });
+  var lineGeo = new THREE.BufferGeometry();
+  var line = new THREE.Line(lineGeo, lineMat);
+  scene.add(line);
+
+  // Arcos que mostram, na própria cena 3D, qual é o ângulo azimutal (θ) e
+  // o ângulo zenital (φ) atuais — como nos diagramas de livro-texto.
+  // θ é desenhado no plano horizontal (φ=90°), de 0° até o θ atual.
+  // φ é desenhado no plano vertical que contém o ponto (θ fixo), do polo
+  // norte (φ=0°) até o φ atual. Os rótulos "θ"/"φ" acompanham o meio de
+  // cada arco, projetados de 3D para tela a cada quadro (ver frame()).
+  var thetaArcLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x6fd3ff }));
+  var phiArcLine = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x8b7bff }));
+  scene.add(thetaArcLine);
+  scene.add(phiArcLine);
+  var thetaLabelPos = new THREE.Vector3();
+  var phiLabelPos = new THREE.Vector3();
+  var thetaLabelEl = document.getElementById("theta-label");
+  var phiLabelEl = document.getElementById("phi-label");
+
+  // Animação "Rotacionar e Formar Esfera": varre o ângulo azimutal (θ) de
+  // 0° a 360° numa latitude (φ) fixa — 0,33s por volta —, deixa esse
+  // anel marcado com pontos vermelhos e sobe 1° no ângulo zenital (φ)
+  // para o próximo anel, começando no polo norte (θ=0°, φ=0°) até o
+  // polo sul (φ=180°). No fim, os anéis acumulados formam uma esfera
+  // pontilhada. Pode ser pausada/retomada (congela exatamente onde
+  // parou) e reiniciada do zero a qualquer momento.
+  var RING_DURATION_MS = 330; // 0,33 segundos por volta completa no azimutal
+  var RING_DOT_COUNT = 72; // pontos por anel (a cada 5°)
+  var RING_DOT_COLOR = 0xff3b3b;
+
+  // "idle" (nunca rodou) | "running" | "paused" | "finished"
+  var animState = "idle";
+  var ringPhiDeg = 0;
+  var ringRadius = 5;
+  var ringStartTime = 0;
+  var pausedElapsedMs = 0; // quanto do anel atual já havia se passado ao pausar
+  var dotsGroup = null; // acumula os anéis pontilhados já completados nesta execução
+  var btnPlayPause = document.getElementById("btn-playpause");
+  var btnRestart = document.getElementById("btn-restart");
+
+  // ==========================================
+  // 3. LÓGICA MATEMÁTICA
+  // ==========================================
+  function calcCartesian(r, thetaDeg, phiDeg) {
+    var theta = THREE.MathUtils.degToRad(thetaDeg);
+    var phi = THREE.MathUtils.degToRad(phiDeg);
+
+    var mathX = r * Math.sin(phi) * Math.cos(theta);
+    var mathY = r * Math.sin(phi) * Math.sin(theta);
+    var mathZ = r * Math.cos(phi);
+
+    // No Three.js, o eixo Y é a "altura" por padrão. Para manter a
+    // convenção matemática (onde Z é a altura), fazemos essa troca:
+    return new THREE.Vector3(mathX, mathZ, mathY);
+  }
+
+  function updateSimulation() {
+    if (animState === "running" || animState === "paused") return;
+
+    var r = parseFloat(document.getElementById("r").value);
+    var theta = parseFloat(document.getElementById("theta").value);
+    var phi = parseFloat(document.getElementById("phi").value);
+
+    document.getElementById("r-val").innerText = r.toFixed(1);
+    document.getElementById("theta-val").innerText = theta + "°";
+    document.getElementById("phi-val").innerText = phi + "°";
+
+    var pos = calcCartesian(r, theta, phi);
+    point.position.copy(pos);
+    lineGeo.setFromPoints([new THREE.Vector3(0, 0, 0), pos]);
+
+    updateArcs(r, theta, phi);
+  }
+
+  // Redesenha os arcos de θ e φ (ver comentário acima da criação deles) e
+  // guarda a posição 3D do meio de cada um, para os rótulos acompanharem.
+  function updateArcs(r, thetaDeg, phiDeg) {
+    var arcR = Math.max(0.6, Math.min(r * 0.45, 3.5));
+
+    var thetaPts = [];
+    var thetaSegs = Math.max(1, Math.round(Math.abs(thetaDeg) / 4));
+    for (var i = 0; i <= thetaSegs; i++) {
+      thetaPts.push(calcCartesian(arcR, (thetaDeg * i) / thetaSegs, 90));
+    }
+    thetaArcLine.geometry.dispose();
+    thetaArcLine.geometry = new THREE.BufferGeometry().setFromPoints(thetaPts);
+    thetaArcLine.visible = Math.abs(thetaDeg) >= 1;
+    thetaLabelPos.copy(calcCartesian(arcR * 1.3, thetaDeg / 2, 90));
+    thetaLabelEl.textContent = "θ = " + Math.round(thetaDeg) + "°";
+
+    var phiPts = [];
+    var phiSegs = Math.max(1, Math.round(Math.abs(phiDeg) / 4));
+    for (var j = 0; j <= phiSegs; j++) {
+      phiPts.push(calcCartesian(arcR, thetaDeg, (phiDeg * j) / phiSegs));
+    }
+    phiArcLine.geometry.dispose();
+    phiArcLine.geometry = new THREE.BufferGeometry().setFromPoints(phiPts);
+    phiArcLine.visible = Math.abs(phiDeg) >= 1;
+    phiLabelPos.copy(calcCartesian(arcR * 1.3, thetaDeg, phiDeg / 2));
+    phiLabelEl.textContent = "φ = " + Math.round(phiDeg) + "°";
+  }
+
+  // Projeta um ponto 3D para coordenadas de tela (pixels) do canvas atual.
+  function screenPos(vec3) {
+    var v = vec3.clone().project(camera);
+    var halfW = renderer.domElement.clientWidth / 2;
+    var halfH = renderer.domElement.clientHeight / 2;
+    return {
+      x: v.x * halfW + halfW,
+      y: -v.y * halfH + halfH,
+      atras: v.z > 1, // ponto projetado atrás da câmera
+    };
+  }
+
+  // Posiciona os rótulos "θ =" / "φ =" sobre o meio dos respectivos arcos.
+  // Chamado a cada quadro (a câmera pode orbitar mesmo com os ângulos
+  // parados, então a projeção 2D muda independente dos sliders).
+  function updateLabelPositions() {
+    if (thetaArcLine.visible) {
+      var tp = screenPos(thetaLabelPos);
+      thetaLabelEl.style.display = tp.atras ? "none" : "block";
+      thetaLabelEl.style.left = tp.x + "px";
+      thetaLabelEl.style.top = tp.y + "px";
+    } else {
+      thetaLabelEl.style.display = "none";
+    }
+
+    if (phiArcLine.visible) {
+      var pp = screenPos(phiLabelPos);
+      phiLabelEl.style.display = pp.atras ? "none" : "block";
+      phiLabelEl.style.left = pp.x + "px";
+      phiLabelEl.style.top = pp.y + "px";
+    } else {
+      phiLabelEl.style.display = "none";
+    }
+  }
+
+  // Gera um anel de pontos vermelhos na latitude phiDeg (θ de 0° a 360°),
+  // com raio r — usado para "deixar marcado" cada anel já varrido.
+  function buildRingDots(r, phiDeg) {
+    var positions = new Float32Array(RING_DOT_COUNT * 3);
+    for (var i = 0; i < RING_DOT_COUNT; i++) {
+      var thetaDeg = (360 * i) / RING_DOT_COUNT;
+      var p = calcCartesian(r, thetaDeg, phiDeg);
+      positions[i * 3] = p.x;
+      positions[i * 3 + 1] = p.y;
+      positions[i * 3 + 2] = p.z;
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    var mat = new THREE.PointsMaterial({ color: RING_DOT_COLOR, size: 0.08, sizeAttenuation: true });
+    return new THREE.Points(geo, mat);
+  }
+
+  function clearDots() {
+    if (!dotsGroup) return;
+    scene.remove(dotsGroup);
+    dotsGroup.children.forEach(function (obj) {
+      obj.geometry.dispose();
+      obj.material.dispose();
+    });
+    dotsGroup = null;
+  }
+
+  // ==========================================
+  // 4. INTERATIVIDADE E EVENTOS
+  // ==========================================
+  document.getElementById("r").addEventListener("input", updateSimulation);
+  document.getElementById("theta").addEventListener("input", updateSimulation);
+  document.getElementById("phi").addEventListener("input", updateSimulation);
+
+  var sliderIds = ["r", "theta", "phi"];
+
+  function setSlidersEnabled(enabled) {
+    sliderIds.forEach(function (id) {
+      document.getElementById(id).disabled = !enabled;
+    });
+  }
+
+  // Texto do botão principal conforme o estado atual.
+  function updatePlayPauseLabel() {
+    if (animState === "running") {
+      btnPlayPause.textContent = "⏸ Pausar";
+    } else if (animState === "paused") {
+      btnPlayPause.textContent = "▶ Continuar";
+    } else {
+      // "idle" ou "finished": um clique (re)começa do zero.
+      btnPlayPause.textContent = "▶ Rotacionar e Formar Esfera";
+    }
+  }
+
+  // Limpa a esfera pontilhada anterior (se houver) e começa uma execução
+  // nova do zero: θ=0°, φ=0° (polo norte). Usada tanto pelo botão
+  // Play/Pause (quando ocioso ou já terminado) quanto pelo "Recomeçar".
+  function startFreshRun() {
+    clearDots();
+    dotsGroup = new THREE.Group();
+    scene.add(dotsGroup);
+
+    ringRadius = parseFloat(document.getElementById("r").value);
+    ringPhiDeg = 0; // começa no polo norte (θ=0°, φ=0°) e sobe até o polo sul (180°)
+    ringStartTime = performance.now();
+    pausedElapsedMs = 0;
+    animState = "running";
+    setSlidersEnabled(false);
+    btnRestart.disabled = false;
+    updatePlayPauseLabel();
+  }
+
+  btnPlayPause.addEventListener("click", function () {
+    if (animState === "idle" || animState === "finished") {
+      startFreshRun();
+    } else if (animState === "running") {
+      // Pausa: guarda quanto do anel atual já se passou, para retomar exatamente daí.
+      pausedElapsedMs = performance.now() - ringStartTime;
+      animState = "paused";
+      updatePlayPauseLabel();
+    } else if (animState === "paused") {
+      // Retoma: desloca o "relógio" do anel para continuar do ponto em que parou.
+      ringStartTime = performance.now() - pausedElapsedMs;
+      animState = "running";
+      updatePlayPauseLabel();
+    }
+  });
+
+  btnRestart.addEventListener("click", function () {
+    if (animState === "idle") return; // nada a reiniciar ainda
+    startFreshRun();
+  });
+
+  // ==========================================
+  // 5. AJUSTE AO PALCO (LUF.stage)
+  // ==========================================
+  function applySize(width, height) {
+    var w = Math.max(1, Math.floor(width));
+    var h = Math.max(1, Math.floor(height));
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    // O terceiro argumento (false) evita que o Three.js defina
+    // canvas.style.width/height inline — o CSS do site já cuida disso
+    // (position:absolute; inset:0; width:100%; height:100%). Deixar os
+    // dois brigando pelo tamanho do canvas é o que causava um laço de
+    // redimensionamento sem fim com o ResizeObserver do palco.
+    renderer.setSize(w, h, false);
+  }
+
+  // Dimensiona imediatamente com o tamanho atual do palco: o primeiro
+  // aviso de LUF.stage.onResize só dispara em uma mudança futura de
+  // tamanho (ex.: redimensionar a janela ou entrar em tela cheia).
+  applySize(LUF.stage.el.clientWidth, LUF.stage.el.clientHeight);
+  LUF.stage.onResize(function (size) {
+    applySize(size.width, size.height);
+  });
+
+  // ==========================================
+  // 6. MOTOR DE RENDERIZAÇÃO (LOOP) — pausa quando a aba está oculta
+  // ==========================================
+  var rafId = null;
+
+  function frame() {
+    rafId = requestAnimationFrame(frame);
+
+    // Enquanto "paused", nada é recalculado de propósito: ponto, linha,
+    // arcos e sliders ficam parados exatamente no último estado, prontos
+    // para continuar dali quando o usuário apertar "Continuar".
+    if (animState === "running") {
+      var elapsed = performance.now() - ringStartTime;
+      var t = elapsed / RING_DURATION_MS; // 0..1 dentro da volta do anel atual
+
+      if (t >= 1) {
+        // Anel atual completo: deixa o anel pontilhado vermelho para trás.
+        dotsGroup.add(buildRingDots(ringRadius, ringPhiDeg));
+        ringPhiDeg += 1;
+
+        if (ringPhiDeg > 180) {
+          // Chegou ao polo sul (φ=180°): esfera pontilhada completa.
+          animState = "finished";
+          setSlidersEnabled(true);
+          updatePlayPauseLabel();
+          updateSimulation(); // ponto/linha voltam a refletir os sliders atuais
+        } else {
+          ringStartTime = performance.now();
+          t = 0;
+        }
+      }
+
+      if (animState === "running") {
+        var thetaDeg = 360 * t;
+        var pos = calcCartesian(ringRadius, thetaDeg, ringPhiDeg);
+        point.position.copy(pos);
+        lineGeo.setFromPoints([new THREE.Vector3(0, 0, 0), pos]);
+
+        // Feedback visual: valores e sliders acompanham o anel em varredura.
+        document.getElementById("theta").value = Math.round(thetaDeg);
+        document.getElementById("theta-val").innerText = Math.round(thetaDeg) + "°";
+        document.getElementById("phi").value = ringPhiDeg;
+        document.getElementById("phi-val").innerText = ringPhiDeg + "°";
+
+        updateArcs(ringRadius, thetaDeg, ringPhiDeg);
+      }
+    }
+
+    controls.update();
+    renderer.render(scene, camera);
+    // Projeta os rótulos dos arcos DEPOIS do render: é quando as matrizes
+    // da câmera (afetadas pelo OrbitControls) estão garantidamente em dia.
+    updateLabelPositions();
+  }
+
+  document.addEventListener("luf:visibilitychange", function (e) {
+    if (e.detail.hidden) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+    } else if (!rafId) {
+      frame();
+    }
+  });
+
+  // Inicializa
+  updateSimulation();
+  frame();
+})();
+</script>
+</body>
+</html>

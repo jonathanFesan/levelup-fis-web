@@ -105,6 +105,11 @@ Sites estáticos do Render são gratuitos e não "dormem" (só o backend no plan
 
 ## Observações
 
+- **Simulações (`/simulacoes/`):** cópia do site `levelupfis-simulations` (pasta irmã deste
+  repositório), no ar em https://levelupfis.com.br/simulacoes/. Para publicar simulações novas,
+  copie de lá para `simulacoes/` os arquivos `index.html`, `fisica.html`, `matematica.html` e as
+  pastas `assets/`, `data/` e `simulations/` (sem `_template.html`) e faça o push.
+
 - **Ao publicar uma versão nova, troque o `"v"` em `versao.json`** (ex.: `20261002j` →
   `20261003a`). O `index.html` não muda entre versões: ele busca o `versao.json` sempre sem
   cache e carrega CSS/JS com `?v=` dessa versão. Assim, mesmo que o navegador reaproveite um

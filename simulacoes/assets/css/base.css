@@ -1,0 +1,263 @@
+/* ============================================================
+   BASE.CSS — LevelUpFís Simulations
+   Tokens de marca, reset, tipografia, header, botões, footer.
+   Compartilhado por TODAS as páginas do site.
+   ============================================================ */
+
+:root {
+  /* --- Paleta oficial da marca (não alterar) --- */
+  --bg: #0e1a40;              /* fundo principal (cor de fundo da logo) */
+  --bg-deep: #08112e;         /* tom mais escuro (rodapé, fundo do simulador) */
+  --bg-soft: #16265c;         /* tom mais claro (gradientes de cards) */
+  --accent: #fcf3c8;          /* destaque dourado (cor de destaque da logo) */
+  --cyan: #6fd3ff;            /* acento secundário */
+  --violet: #8b7bff;          /* acento terciário */
+  --glass: rgba(255, 255, 255, .07);   /* fundo translúcido (vidro) */
+  --line: rgba(252, 243, 200, .18);    /* bordas sutis */
+  --text: #e9edf8;            /* texto principal */
+  --muted: #9fb0d8;           /* texto secundário */
+
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(900px 500px at 15% -10%, #1f3a8a55, transparent),
+    radial-gradient(800px 500px at 90% 10%, #5b3fd455, transparent),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+img, svg { max-width: 100%; }
+[hidden] { display: none !important; }
+
+/* Foco visível em qualquer elemento interativo (acessibilidade) */
+a:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------
+   HEADER
+   ------------------------------------------------------------ */
+header.luf-header {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  display: grid;
+  /* minmax(0, 1fr) em vez de só "1fr": uma coluna "1fr" sozinha nunca
+     encolhe abaixo do conteúdo mínimo dos seus itens (é como se fosse
+     minmax(auto, 1fr)), então nas páginas de simulação — onde o lado
+     esquerdo tem DOIS botões ("← Voltar" + "Física") — o grid podia
+     estourar a largura da tela em telas estreitas. minmax(0, 1fr)
+     permite a coluna encolher de verdade, e os botões dentro dela
+     (via .luf-side com min-width:0) quebram linha em vez de vazar. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: rgba(14, 26, 64, .55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+
+.luf-side { display: flex; gap: 10px; align-items: center; min-width: 0; flex-wrap: wrap; }
+.luf-side.r { justify-content: flex-end; }
+
+/* Botão pílula translúcido com preenchimento dourado deslizante no hover */
+.luf-btn {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--text);
+  font: 600 14px inherit;
+  font-family: inherit;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform .25s, color .25s, box-shadow .25s, border-color .25s;
+  z-index: 0;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.luf-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, var(--accent), #fff6d8);
+  transform: translateX(-101%);
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1);
+  z-index: -1;
+}
+.luf-btn:hover,
+.luf-btn:focus-visible {
+  transform: translateY(-2px);
+  color: var(--bg);
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px -6px rgba(252, 243, 200, .45);
+}
+.luf-btn:hover::before,
+.luf-btn:focus-visible::before {
+  transform: none;
+}
+.luf-btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Marca central do header */
+.luf-brand {
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.luf-logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+}
+/* Fallback quando a imagem da logo ainda não existe (ver layout.js) */
+.luf-logo-fallback {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 2px dashed var(--accent);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--accent);
+  background: var(--bg-deep);
+}
+.luf-brand small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: .35em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------
+   FOOTER
+   ------------------------------------------------------------ */
+footer.luf-footer {
+  text-align: center;
+  padding: 22px;
+  font-size: 14px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  background: rgba(8, 17, 46, .6);
+}
+
+/* ------------------------------------------------------------
+   Título em gradiente (reutilizável)
+   ------------------------------------------------------------ */
+.luf-gradient-text {
+  background: linear-gradient(90deg, var(--accent), var(--cyan) 60%, var(--violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ------------------------------------------------------------
+   Bloco de estado vazio (vidro), usado nas listagens
+   ------------------------------------------------------------ */
+.luf-empty {
+  max-width: 640px;
+  margin: 24px auto;
+  padding: 48px 32px;
+  text-align: center;
+  border-radius: 20px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--muted);
+}
+.luf-empty svg {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  display: block;
+  opacity: .8;
+}
+.luf-empty strong {
+  display: block;
+  font-size: 18px;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------
+   Responsivo — header mobile
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  header.luf-header { padding: 10px 12px; gap: 8px; }
+  .luf-btn { padding: 8px 12px; font-size: 12px; }
+  .luf-logo, .luf-logo-fallback { width: 44px; height: 44px; }
+}
+
+/* Em telas bem estreitas, a página de simulação tem DOIS botões do lado
+   esquerdo do header ("← Voltar" + "Física"). Esconder o texto "Voltar"
+   (mantendo só a seta), apertar os botões e reduzir o letter-spacing da
+   marca libera espaço suficiente para "Matemática" caber sem cortar. */
+@media (max-width: 420px) {
+  .luf-btn-label { display: none; }
+  #luf-back-btn { padding-left: 14px; padding-right: 14px; }
+  .luf-btn { padding: 7px 9px; font-size: 11px; letter-spacing: .02em; }
+  .luf-brand small { font-size: 10px; letter-spacing: .15em; }
+}
+
+/* ------------------------------------------------------------
+   Movimento reduzido: desliga animações decorativas
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
