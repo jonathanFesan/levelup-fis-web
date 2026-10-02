@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261002i">
-  <link rel="stylesheet" href="css/cartoes.css?v=20261002i">
+  <!-- Fundo já escuro enquanto o CSS carrega (evita piscar branco) -->
+  <style>html,body{background:#0E1A40;margin:0}</style>
 </head>
 <body>
   <script>
@@ -39,14 +39,43 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="modal-root"></div>
 
-  <!-- Ao publicar uma versão nova, troque o ?v= de TODOS os arquivos abaixo
-       (o GitHub Pages deixa o navegador guardar cada arquivo por 10 min). -->
-  <script src="js/config.js?v=20261002i"></script>
-  <script src="js/api.js?v=20261002i"></script>
-  <script src="js/plus.js?v=20261002i"></script>
-  <!-- Resumo/Curiosidade em cartões: DOMPurify limpa o texto rico que vem do painel -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
-  <script src="js/cartoes.js?v=20261002i"></script>
-  <script src="js/app.js?v=20261002i"></script>
+  <!-- Carregador: este index.html NÃO muda entre versões. O navegador às vezes
+       reaproveita um index.html velho do cache (ex.: ao reabrir o navegador),
+       então a versão vem do versao.json, buscado sempre sem cache. Ao publicar,
+       troque só o "v" em versao.json. -->
+  <script>
+    (function () {
+      var ARQS = [
+        'css/style.css', 'css/cartoes.css',
+        'js/config.js', 'js/api.js', 'js/plus.js',
+        // Resumo/Curiosidade em cartões: DOMPurify limpa o texto rico que vem do painel
+        'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+        'js/cartoes.js', 'js/app.js'
+      ];
+      function carregar(v) {
+        ARQS.forEach(function (src) {
+          var url = /^https?:/.test(src) ? src : src + '?v=' + encodeURIComponent(v);
+          if (/\.css$/.test(src)) {
+            var l = document.createElement('link');
+            l.rel = 'stylesheet'; l.href = url;
+            document.head.appendChild(l);
+          } else {
+            var s = document.createElement('script');
+            s.src = url; s.async = false; // mantém a ordem de execução
+            if (!/^https?:/.test(src)) s.onerror = function () { window.lupFalha(); }; // DOMPurify é opcional
+            document.body.appendChild(s);
+          }
+        });
+      }
+      var ok = false;
+      // Sem resposta em 6 s (ou sem internet): carrega com uma versão única,
+      // que nunca está no cache — mais lento, mas sempre consistente.
+      var t = setTimeout(function () { if (!ok) { ok = true; carregar('t' + Date.now()); } }, 6000);
+      fetch('versao.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (!ok) { ok = true; clearTimeout(t); carregar(d.v || ('t' + Date.now())); } })
+        .catch(function () { if (!ok) { ok = true; clearTimeout(t); carregar('t' + Date.now()); } });
+    })();
+  </script>
 </body>
 </html>
