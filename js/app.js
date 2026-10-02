@@ -355,7 +355,7 @@
       btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
       try {
         await API.login(email, password);
-        go('#/map');
+        go(destinoDepoisDoLogin());
       } catch (ex) {
         err.textContent = ex.status === 401 ? 'E-mail ou senha incorretos.' : ex.message;
         btn.disabled = false; btn.textContent = 'Entrar';
@@ -415,7 +415,7 @@
       btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
       try {
         await API.register(email, f.password.value);
-        go('#/map');
+        go(destinoDepoisDoLogin());
       } catch (ex) {
         err.textContent = ex.message;
         btn.disabled = false; btn.textContent = 'Criar conta';
@@ -1647,6 +1647,101 @@
     };
   }
 
+  // ---------- Pós-venda (página de obrigado da Hotmart) ----------
+  // A Hotmart manda o comprador para /obrigado/ (ou /obrigado/?p=aula),
+  // que abre esta tela. Quem já está logado vê o Plus/aula sendo liberado
+  // sozinho (o webhook da Hotmart costuma levar de segundos a minutos);
+  // quem não está é levado a entrar com o mesmo e-mail da compra.
+  const DEPOIS_LOGIN = 'lup.depoisLogin';
+  function destinoDepoisDoLogin() {
+    try {
+      const d = sessionStorage.getItem(DEPOIS_LOGIN);
+      sessionStorage.removeItem(DEPOIS_LOGIN);
+      if (d && d.startsWith('#/')) return d;
+    } catch { /* ignore */ }
+    return '#/map';
+  }
+
+  let obrigadoTimer = null;
+  async function viewObrigado(logged) {
+    clearTimeout(obrigadoTimer);
+    const aula = new URLSearchParams(location.search).get('p') === 'aula';
+    const passo = (n, t, d) => `<li><span class="ob-n">${n}</span><div><b>${t}</b><div class="small muted">${d}</div></div></li>`;
+    $app.innerHTML = `
+      <div class="obrigado">
+        <img class="logo" src="assets/logo.png" alt="">
+        <div class="ob-badge">${ICON.check}</div>
+        <h1>Obrigado pela compra!</h1>
+        <p class="sub">${aula ? 'Sua aula particular está quase marcada.' : 'Falta pouco para o seu LevelUp Plus começar.'}</p>
+        <div class="card ob-status" data-status></div>
+        <ol class="ob-passos">
+          ${passo(1, 'Pagamento', 'Cartão confirma na hora, Pix em alguns minutos e boleto em até 3 dias úteis. A Hotmart avisa o LevelUp sozinha.')}
+          ${passo(2, 'Entre com o mesmo e-mail da compra', 'É por ele que o acesso é ligado à sua conta. Ainda não tem conta? Crie com esse e-mail.')}
+          ${passo(3, aula ? 'Aula confirmada' : 'Plus liberado', aula ? 'A aula aparece como confirmada em Plus → Minhas aulas.' : 'Todas as trilhas, dúvidas com o professor, comunidade e desconto nas aulas.')}
+        </ol>
+        <p class="small muted ob-ajuda">Algum problema? Responda o e-mail da Hotmart ou fale com o professor${PC.WHATSAPP_PROFESSOR && !/^0+$/.test(PC.WHATSAPP_PROFESSOR.slice(2)) ? ` pelo <a href="https://wa.me/${esc(PC.WHATSAPP_PROFESSOR)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}.</p>
+      </div>`;
+    const box = $app.querySelector('[data-status]');
+
+    if (!logged) {
+      box.innerHTML = `<b>Entre na sua conta para liberar o acesso</b>
+        <div class="small muted">Use o mesmo e-mail que você colocou na Hotmart.</div>
+        <div class="ob-botoes"><a class="btn btn-primary" href="#/login" data-ir>Entrar</a><a class="btn btn-ghost" href="#/register" data-ir>Criar conta</a></div>`;
+      box.querySelectorAll('[data-ir]').forEach((a) => a.addEventListener('click', () => {
+        try { sessionStorage.setItem(DEPOIS_LOGIN, '#/obrigado'); } catch { /* ignore */ }
+      }));
+      return;
+    }
+
+    let u = null;
+    try { u = await loadProfile(true); } catch { /* sem perfil: segue só com a sessão */ }
+    const email = (u && u.email) || (API.Session.get() || {}).email || '';
+    const conta = `<div class="small muted">Conta: <b>${esc(email)}</b> · <a href="#/login" data-trocar>não é este e-mail?</a></div>`;
+    const ligarTrocar = () => {
+      const t = box.querySelector('[data-trocar]');
+      if (t) t.onclick = (e) => { e.preventDefault(); try { sessionStorage.setItem(DEPOIS_LOGIN, '#/obrigado'); } catch { /* ignore */ } doLogout(); };
+    };
+
+    const inicio = Date.now();
+    const verificar = async () => {
+      if (!location.hash.startsWith('#/obrigado')) return;
+      let pronto = false, aulaConf = null;
+      try {
+        if (aula) {
+          const aulas = await Plus.listarAulas();
+          aulaConf = aulas.filter((a) => a.status === 'confirmada').sort((a, b) => (b.pago_em || '').localeCompare(a.pago_em || ''))[0];
+          pronto = !!(aulaConf && aulaConf.pago_em && Date.now() - new Date(aulaConf.pago_em).getTime() < 3 * 86400e3);
+        } else {
+          const st = await Plus.status(u);
+          S.plusCache = { t: Date.now(), ativo: !!st.ativo };
+          pronto = !!st.ativo;
+        }
+      } catch { /* servidor acordando: tenta de novo */ }
+      if (pronto) {
+        box.classList.add('ok');
+        box.innerHTML = aula
+          ? `<b>✅ Aula confirmada!</b><div class="small muted">${esc(fmtSlot(aulaConf.inicio))}</div>
+             <div class="ob-botoes"><a class="btn btn-primary" href="#/plus/aulas/${esc(aulaConf.id)}">Ver minha aula</a></div>`
+          : `<b>✅ Seu LevelUp Plus está ativo!</b><div class="small muted">Tudo liberado nesta conta.</div>
+             <div class="ob-botoes"><a class="btn btn-primary" href="#/plus">Ir para a área do assinante</a><a class="btn btn-ghost" href="#/map">Começar a estudar</a></div>`;
+        return;
+      }
+      const passou = Date.now() - inicio;
+      if (passou > 3 * 60e3) {
+        box.innerHTML = `<b>Seu pagamento ainda está sendo processado</b>
+          <div class="small muted">Pix e boleto podem demorar um pouco. Pode fechar esta página: assim que a Hotmart confirmar, o acesso aparece sozinho nesta conta.</div>
+          ${conta}<div class="ob-botoes"><button class="btn btn-ghost" data-de-novo>Verificar de novo</button><a class="btn btn-ghost" href="#/map">Ir para o site</a></div>`;
+        box.querySelector('[data-de-novo]').onclick = () => viewObrigado(true);
+        return ligarTrocar();
+      }
+      box.innerHTML = `<div class="row"><span class="spinner small"></span><b>Confirmando seu pagamento…</b></div>
+        <div class="small muted">Isso costuma levar menos de um minuto. Não precisa atualizar a página.</div>${conta}`;
+      ligarTrocar();
+      obrigadoTimer = setTimeout(verificar, 6000);
+    };
+    verificar();
+  }
+
   // ================================================================
   // Roteador
   // ================================================================
@@ -1661,11 +1756,12 @@
     const parts = hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
     const logged = !!API.Session.get();
 
-    if (!logged && !['login', 'register'].includes(parts[0])) return go('#/login');
+    if (!logged && !['login', 'register', 'obrigado'].includes(parts[0])) return go('#/login');
     if (logged && ['login', 'register', ''].includes(parts[0])) return go('#/map');
 
     switch (parts[0]) {
       case 'login': $app.className = 'app no-nav'; return viewLogin();
+      case 'obrigado': $app.className = 'app no-nav'; return viewObrigado(logged);
       case 'register': $app.className = 'app no-nav'; return viewRegister();
       case 'map': return viewMap();
       case 'videos': return viewVideos();

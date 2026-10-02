@@ -148,6 +148,23 @@ textarea { resize: vertical; min-height: 140px; line-height: 1.5; }
 select { cursor: pointer; }
 .error-msg { color: var(--error); font-size: 14px; font-weight: 700; }
 
+/* ---------- Pós-venda (#/obrigado) ---------- */
+.obrigado { max-width: 520px; margin: 0 auto; padding-block: 6vh 40px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+.obrigado .logo { width: 64px; height: 64px; border-radius: 18px; }
+.obrigado h1 { margin: 0; font-size: 28px; font-weight: 900; }
+.obrigado .sub { margin: 0; color: var(--muted); }
+.ob-badge { width: 64px; height: 64px; border-radius: 50%; background: rgba(76,217,123,.16); color: var(--success); display: grid; place-items: center; margin-top: -6px; }
+.ob-badge svg { width: 34px; height: 34px; }
+.ob-status { width: 100%; text-align: left; display: grid; gap: 6px; border-color: rgba(255,198,92,.45); }
+.ob-status.ok { border-color: var(--success); background: rgba(76,217,123,.08); }
+.ob-status .row { gap: 10px; }
+.ob-botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.ob-botoes .btn { flex: 1; min-width: 150px; }
+.ob-passos { list-style: none; padding: 0; margin: 4px 0 0; width: 100%; text-align: left; display: grid; gap: 12px; }
+.ob-passos li { display: flex; gap: 12px; align-items: flex-start; }
+.ob-n { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--locked); color: var(--gold); font-weight: 900; display: grid; place-items: center; font-size: 14px; }
+.ob-ajuda { margin: 6px 0 0; }
+
 /* ---------- Login ---------- */
 .auth { max-width: 400px; margin: 0 auto; padding-top: 7vh; }
 .auth .logo { width: 104px; height: 104px; border-radius: 28px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
