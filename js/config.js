@@ -31,9 +31,9 @@ window.LUP_CONFIG = {
     // Planos da assinatura (cada um com o seu checkout na Hotmart)
     PLANOS: [
       { id: 'mensal', nome: '1 mês', preco: 'R$ 49', sufixo: '/mês', obs: 'Renova todo mês',
-        checkout: 'https://go.hotmart.com/C107855080D?off=9fkc5c3l' },
+        checkout: 'https://pay.hotmart.com/C107855080D?off=9fkc5c3l&checkoutMode=6' },
       { id: 'semestral', nome: '6 meses', preco: 'R$ 340', sufixo: '/6 meses', obs: 'Pagamento único, sem renovação',
-        checkout: 'https://go.hotmart.com/C107855080D?off=kn8uf8xj' },
+        checkout: 'https://pay.hotmart.com/C107855080D?off=kn8uf8xj&checkoutMode=6' },
     ],
 
     // Checkouts da Hotmart do produto "aula avulsa"
