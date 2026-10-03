@@ -217,7 +217,7 @@
     const deep = '#' + rgb.map((v) => Math.round(v * 0.82).toString(16).padStart(2, '0')).join('');
     const luz = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
     const ink = luz > 0.55 ? 'var(--bg)' : 'var(--white)';
-    return `--acc:${cor};--acc-deep:${deep};--acc-rgb:${rgb.join(',')};--acc-ink:${ink};--rc-gold:${cor};--rc-gold-deep:${deep}`;
+    return `--acc:${cor};--acc-deep:${deep};--acc-rgb:${rgb.join(',')};--acc-ink:${ink}`;
   }
   // Pinta a tela inteira de um capítulo com a cor do tópico dele.
   const aplicarTema = (area, topico) => { $app.style.cssText = temaVars(corTema(area, topico)); };
@@ -931,8 +931,9 @@
     document.body.classList.add('exam-mode');
     $app.className = 'app no-nav exam';
     try { await loadCurriculo(); } catch { /* só o título */ }
-    const { topico } = findTopico(topicoId);
+    const { area, topico } = findTopico(topicoId);
     const cap = findCapitulo(topico, capRef, 'prova');
+    aplicarTema(area, topico);
     const statsHash = `#/t/${encodeURIComponent(topicoId)}/prova${cap ? '/' + cap.id : ''}`;
     const titulo = `${topico?.titulo || topicoId} · ${cap?.titulo || 'Prova'}`;
 

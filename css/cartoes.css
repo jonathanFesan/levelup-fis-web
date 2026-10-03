@@ -1,6 +1,8 @@
 /* Conteúdo em cartões (Resumo e Curiosidade) — visual "B · Cartões".
    Usado pelo site e pela pré-visualização do painel (que carrega este
-   arquivo de levelupfis.com.br), por isso tem cores próprias. */
+   arquivo de levelupfis.com.br), por isso tem cores próprias. O destaque
+   segue a cor tema do tópico (--acc, definida pelo site/painel); sem ela,
+   fica o dourado padrão. */
 .cartoes {
   --rc-bg: #0E1A40;
   --rc-card: #1D2948;
@@ -9,8 +11,8 @@
   --rc-texto: #FAFAFC;
   --rc-cream: #FCF3C8;
   --rc-muted: #8E96C6;
-  --rc-gold: #FFC65C;
-  --rc-gold-deep: #FF9D42;
+  --rc-gold: var(--acc, #FFC65C);
+  --rc-gold-deep: var(--acc-deep, #FF9D42);
   --rc-cyan: #7FD8E8;
   --rc-green: #4CD97B;
   --rc-pink: #FF5C7A;

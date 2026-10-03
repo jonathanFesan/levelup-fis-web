@@ -37,7 +37,7 @@ body {
   overflow-x: hidden;
 }
 button { font-family: inherit; }
-a { color: var(--gold); }
+a { color: var(--acc); }
 [hidden] { display: none !important; }
 
 #starfield { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
@@ -86,14 +86,14 @@ a { color: var(--gold); }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
 .btn-ghost { background: transparent; color: var(--acc); border: 1.5px solid var(--divider); }
 .btn-ghost:hover:not(:disabled) { border-color: var(--acc); }
-.btn-text { background: none; color: var(--gold); padding: 8px 10px; font-weight: 700; }
+.btn-text { background: none; color: var(--acc); padding: 8px 10px; font-weight: 700; }
 .btn-danger { background: transparent; color: var(--error); border: 1.5px solid rgba(255,92,122,.4); }
 .btn-block { width: 100%; }
 a.btn { text-decoration: none; }
 
 .spinner {
   width: 36px; height: 36px; border-radius: 50%;
-  border: 3.5px solid rgba(255,198,92,.25); border-top-color: var(--gold);
+  border: 3.5px solid rgba(var(--acc-rgb),.25); border-top-color: var(--acc);
   animation: spin .8s linear infinite;
 }
 .spinner.small { width: 16px; height: 16px; border-width: 2.5px; }
@@ -149,7 +149,7 @@ input[type=text], input[type=email], input[type=password], select, textarea {
   background: #16214a; color: var(--cream); border: 1.5px solid var(--divider);
   font: inherit; font-size: 16px; outline: none; transition: border-color .15s;
 }
-input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+input:focus, select:focus, textarea:focus { border-color: var(--acc); }
 textarea { resize: vertical; min-height: 140px; line-height: 1.5; }
 select { cursor: pointer; }
 .error-msg { color: var(--error); font-size: 14px; font-weight: 700; }
@@ -346,7 +346,7 @@ body.exam-mode #starfield { display: none; }
 .qgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; margin-top: 12px; }
 .qgrid button { height: 44px; border-radius: 10px; border: 1.5px solid #ccc; background: #fff; color: #111; font-weight: 800; cursor: pointer; }
 .qgrid button.ans { background: #111; color: #fff; border-color: #111; }
-.qgrid button.cur { outline: 3px solid var(--gold-deep); outline-offset: 1px; }
+.qgrid button.cur { outline: 3px solid var(--acc-deep); outline-offset: 1px; }
 .exam .phase { text-align: center; padding: 10vh 8px; }
 .exam .phase h3 { font-size: 22px; margin: 12px 0 8px; }
 .exam .phase p { color: #555; margin: 0 0 20px; }
