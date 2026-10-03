@@ -207,6 +207,21 @@
     }
     return { area: null, topico: null };
   }
+  // Cor tema (painel, sql/020_cor_tema.sql): a do Bloco, senão a da Área,
+  // senão o dourado padrão. Vira variáveis CSS (--acc...) num style="".
+  const corTema = (area, bloco) => (bloco && bloco.cor) || (area && area.cor) || '';
+  function temaVars(cor) {
+    if (!/^#[0-9a-f]{6}$/i.test(cor || '')) return '';
+    const n = parseInt(cor.slice(1), 16);
+    const rgb = [n >> 16, (n >> 8) & 255, n & 255];
+    const deep = '#' + rgb.map((v) => Math.round(v * 0.82).toString(16).padStart(2, '0')).join('');
+    const luz = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    const ink = luz > 0.55 ? 'var(--bg)' : 'var(--white)';
+    return `--acc:${cor};--acc-deep:${deep};--acc-rgb:${rgb.join(',')};--acc-ink:${ink};--rc-gold:${cor};--rc-gold-deep:${deep}`;
+  }
+  // Pinta a tela inteira de um capítulo com a cor do tópico dele.
+  const aplicarTema = (area, topico) => { $app.style.cssText = temaVars(corTema(area, topico)); };
+
   // Capítulo de um tópico pelo id (links novos) ou pelo tipo (links
   // antigos, ex.: #/t/cinematica/trilha/fixacao → primeira Fixação).
   function findCapitulo(topico, ref, tipoPadrao) {
@@ -467,8 +482,8 @@
     let html = topStats(user);
     if (livre && !user.is_admin) html += `<div class="plus-free"><span>${ICON.crown}</span>LevelUp Plus: todas as trilhas liberadas — estude na ordem que quiser.</div>`;
     html += `<div class="modstrip">${areas.map((a, i) => `
-        ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}"></span>` : ''}
-        <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${a.blocos.length || livre ? 'available' : ''}" data-mod="${esc(a.id)}">
+        ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}" style="${temaVars(a.cor)}"></span>` : ''}
+        <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${a.blocos.length || livre ? 'available' : ''}" data-mod="${esc(a.id)}" style="${temaVars(a.cor)}">
           <span class="circle">${esc(a.icone || '•')}</span>${esc(a.titulo)}
         </button>`).join('')}</div>`;
 
@@ -479,6 +494,7 @@
     const trilhas = [];
     const blocos = topicos.map((t, i) => {
       let b = '';
+      t.tema = temaVars(corTema(modulo, t));
       const { prog, cap, att, cont } = info[i];
       const nivelMin = cont.nivel_minimo ?? t.nivel_minimo ?? 1;
       let liberado;
@@ -536,7 +552,7 @@
       b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
       return b;
     });
-    html += `<div class="topics">${blocos.map((b) => `<section class="topic-block">${b}</section>`).join('')}</div>`;
+    html += `<div class="topics">${blocos.map((b, i) => `<section class="topic-block" style="${topicos[i].tema}">${b}</section>`).join('')}</div>`;
 
     html += `<p class="sync-note">${ICON.sync}Progresso sincronizado com o app</p>`;
     html += bottomNav('mapa');
@@ -603,6 +619,7 @@
     const { area, topico } = findTopico(topicoId);
     const cap = findCapitulo(topico, capId, 'resumo');
     if (!cap) return go('#/map');
+    aplicarTema(area, topico);
 
     const conteudo = cap.conteudo || {};
     const pdf = conteudo.pdf_url && conteudo.pdf_url.trim();
@@ -656,6 +673,7 @@
     const { area, topico } = findTopico(topicoId);
     const cap = topico?.capitulos?.find((c) => String(c.id) === String(capId));
     if (!cap) return go('#/map');
+    aplicarTema(area, topico);
     const c = cap.conteudo || {};
     const cartoes = Cartoes.temConteudo(c.blocos) ? Cartoes.render(c.blocos) : '';
     const parts = [];
@@ -696,6 +714,7 @@
       ({ area, topico } = findTopico(topicoId));
       cap = findCapitulo(topico, capRef, 'fixacao');
       if (!cap) return go('#/map');
+      aplicarTema(area, topico);
       catInfo = CATEGORIAS[cap.tipo] || CATEGORIAS.fixacao;
       qs = await getQuestions(topicoId, cap, true);
       livre = await semTravas(await loadProfile());
@@ -711,7 +730,7 @@
       $app.innerHTML = html; return bindBack();
     }
     const feitas = qs.filter((q) => q.respondida_corretamente).length;
-    html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--gold)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
+    html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--acc)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
       <span style="font-weight:800">${catInfo.label}</span><span class="spacer"></span>
       <span class="muted" style="font-weight:800">${feitas}/${qs.length}</span></div>`;
     const nodes = qs.map((q, i) => ({
@@ -750,6 +769,7 @@
       ({ area, topico } = findTopico(topicoId));
       cap = findCapitulo(topico, capRef, 'fixacao');
       if (!cap) return go('#/map');
+      aplicarTema(area, topico);
       qs = await getQuestions(topicoId, cap);
       livre = await semTravas(S.profile);
     } catch {
@@ -850,12 +870,13 @@
   async function viewProvaStats(topicoId, capRef) {
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let att, topico, cap;
+    let att, area, topico, cap;
     try {
       await loadCurriculo();
-      ({ topico } = findTopico(topicoId));
+      ({ area, topico } = findTopico(topicoId));
       cap = findCapitulo(topico, capRef, 'prova');
       if (!cap) return go('#/map');
+      aplicarTema(area, topico);
       att = await API.getAttempts(topicoId, cap.id);
     } catch {
       $app.innerHTML = pageHead('Prova', '', '#/map') + errorBox('Erro ao carregar estatísticas.');
@@ -1774,6 +1795,7 @@
     clearInterval(exTimer);
     document.getElementById('modal-root').innerHTML = '';
     $app.className = 'app';
+    $app.removeAttribute('style');
     window.scrollTo(0, 0);
 
     const hash = (location.hash || '#/').split('?')[0];

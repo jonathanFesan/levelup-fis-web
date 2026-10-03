@@ -12,6 +12,12 @@
   --success: #4CD97B;
   --error: #FF5C7A;
   --cyan: #7FD8E8;
+  /* Cor tema da Área/Bloco (definida no painel). O JS troca estas
+     variáveis no tópico e nas telas dos capítulos; o padrão é o dourado. */
+  --acc: var(--gold);
+  --acc-deep: var(--gold-deep);
+  --acc-rgb: 255, 198, 92;
+  --acc-ink: var(--bg);
   --radius: 16px;
   --maxw: 560px;
   --nav-h: 68px;
@@ -73,13 +79,13 @@ a { color: var(--gold); }
 .btn:active { transform: translateY(1px) scale(.99); }
 .btn:disabled { opacity: .5; cursor: default; }
 .btn-primary {
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
-  color: var(--bg);
-  box-shadow: 0 6px 18px rgba(255, 198, 92, .25);
+  background: linear-gradient(135deg, var(--acc), var(--acc-deep));
+  color: var(--acc-ink);
+  box-shadow: 0 6px 18px rgba(var(--acc-rgb), .25);
 }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
-.btn-ghost { background: transparent; color: var(--gold); border: 1.5px solid var(--divider); }
-.btn-ghost:hover:not(:disabled) { border-color: var(--gold); }
+.btn-ghost { background: transparent; color: var(--acc); border: 1.5px solid var(--divider); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--acc); }
 .btn-text { background: none; color: var(--gold); padding: 8px 10px; font-weight: 700; }
 .btn-danger { background: transparent; color: var(--error); border: 1.5px solid rgba(255,92,122,.4); }
 .btn-block { width: 100%; }
@@ -199,19 +205,19 @@ select { cursor: pointer; }
 }
 .mod.active { color: var(--cream); }
 .mod.active .circle {
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep)); filter: none;
-  box-shadow: 0 0 24px rgba(255,198,92,.45);
+  background: linear-gradient(135deg, var(--acc), var(--acc-deep)); filter: none;
+  box-shadow: 0 0 24px rgba(var(--acc-rgb),.45);
 }
 .mod.available .circle { filter: none; }
 .mod:hover .circle { transform: scale(1.05); }
 .mod-link { flex: 0 0 26px; height: 3px; margin-top: 31px; background: var(--divider); border-radius: 2px; }
-.mod-link.lit { background: var(--gold); opacity: .6; }
+.mod-link.lit { background: var(--acc); opacity: .6; }
 
 /* ---------- Banner do tópico ---------- */
 .topic-banner {
   margin: 24px 0 4px; padding: 14px 18px; border-radius: 20px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
-  color: var(--bg); box-shadow: 0 6px 16px rgba(255,198,92,.3);
+  background: linear-gradient(135deg, var(--acc), var(--acc-deep));
+  color: var(--acc-ink); box-shadow: 0 6px 16px rgba(var(--acc-rgb),.3);
 }
 .topic-banner .k { font-size: 11px; font-weight: 800; letter-spacing: .6px; opacity: .65; text-transform: uppercase; }
 .topic-banner .t { font-size: 19px; font-weight: 900; }
@@ -235,11 +241,11 @@ select { cursor: pointer; }
 }
 .tnode .circle svg { width: 34px; height: 34px; }
 .tnode.locked { color: var(--muted); }
-.tnode.done .circle { background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: var(--bg); }
+.tnode.done .circle { background: linear-gradient(135deg, var(--acc), var(--acc-deep)); color: var(--acc-ink); }
 .tnode.current .circle {
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep)); color: var(--bg);
+  background: linear-gradient(135deg, var(--acc), var(--acc-deep)); color: var(--acc-ink);
   width: 96px; height: 96px;
-  box-shadow: 0 0 0 8px rgba(255,198,92,.12), 0 0 40px rgba(255,198,92,.45);
+  box-shadow: 0 0 0 8px rgba(var(--acc-rgb),.12), 0 0 40px rgba(var(--acc-rgb),.45);
   animation: pulse 2.2s ease-in-out infinite;
 }
 .tnode .check {
@@ -250,7 +256,7 @@ select { cursor: pointer; }
 .tnode .check svg { width: 14px; height: 14px; }
 .tnode:hover .circle { transform: scale(1.05); }
 .tnode .label { text-align: center; line-height: 1.2; }
-@keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(255,198,92,.06), 0 0 50px rgba(255,198,92,.55); } }
+@keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(var(--acc-rgb),.06), 0 0 50px rgba(var(--acc-rgb),.55); } }
 
 .side-badge {
   position: absolute; width: 50px; height: 50px; border-radius: 50%; border: 0; cursor: pointer;
@@ -258,13 +264,13 @@ select { cursor: pointer; }
   background: var(--locked); color: var(--muted);
   transform: translate(-50%, 0);
 }
-.side-badge.on { background: var(--card); color: var(--gold); border: 2px solid var(--gold); }
+.side-badge.on { background: var(--card); color: var(--acc); border: 2px solid var(--acc); }
 .side-badge svg { width: 24px; height: 24px; }
 
 /* ---------- Cabeçalho de página ---------- */
 .pagehead { display: flex; align-items: center; gap: 8px; padding: 16px 0 8px; position: sticky; top: 0; z-index: 5; background: linear-gradient(var(--bg) 75%, rgba(14,26,64,0)); }
 .pagehead h2 { margin: 0; font-size: 18px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pagehead .crumb { display: block; font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--gold); text-transform: uppercase; }
+.pagehead .crumb { display: block; font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--acc); text-transform: uppercase; }
 .back { background: none; border: 0; color: var(--cream); cursor: pointer; padding: 6px; display: inline-flex; border-radius: 10px; }
 .back:hover { background: var(--card); }
 .back svg { width: 24px; height: 24px; }
@@ -297,8 +303,8 @@ select { cursor: pointer; }
   flex: 0 0 32px; height: 32px; border-radius: 10px; background: var(--locked); color: var(--cream);
   display: flex; align-items: center; justify-content: center; font-weight: 900;
 }
-.opt.sel { border-color: var(--gold); background: rgba(255,198,92,.08); }
-.opt.sel .letter { background: var(--gold); color: var(--bg); }
+.opt.sel { border-color: var(--acc); background: rgba(var(--acc-rgb),.08); }
+.opt.sel .letter { background: var(--acc); color: var(--acc-ink); }
 .opt .txt { padding-top: 4px; white-space: pre-wrap; }
 
 /* ---------- Resultado ---------- */
@@ -314,7 +320,7 @@ select { cursor: pointer; }
 .unlock { border-radius: 16px; padding: 14px; background: rgba(76,217,123,.1); border: 1.5px solid var(--success); margin-bottom: 16px; }
 .unlock .k { color: var(--success); font-weight: 900; letter-spacing: .5px; }
 .explain { text-align: left; }
-.explain .k { font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--gold); margin-bottom: 6px; }
+.explain .k { font-size: 11px; font-weight: 800; letter-spacing: .6px; color: var(--acc); margin-bottom: 6px; }
 .explain .prose { font-size: 15px; }
 
 /* ---------- Prova (estilo avaliação, fundo branco) ---------- */
