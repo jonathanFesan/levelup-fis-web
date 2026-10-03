@@ -164,7 +164,7 @@
     profile: null,
     curriculo: null, // [{id,titulo,icone,blocos:[{id,titulo,nivel_minimo,capitulos:[]}]}]
     moduloAtual: null,
-    questions: {}, // `${topico}|${categoria}` -> lista
+    questions: {}, // `${topico}|${capituloId}` -> lista
   };
 
   async function loadProfile(force = false) {
@@ -207,9 +207,16 @@
     }
     return { area: null, topico: null };
   }
-  async function getQuestions(topico, categoria, force = false) {
-    const k = `${topico}|${categoria}`;
-    if (!S.questions[k] || force) S.questions[k] = await API.getQuestions(topico, categoria);
+  // Capítulo de um tópico pelo id (links novos) ou pelo tipo (links
+  // antigos, ex.: #/t/cinematica/trilha/fixacao → primeira Fixação).
+  function findCapitulo(topico, ref, tipoPadrao) {
+    const caps = topico?.capitulos || [];
+    if (ref && /^\d+$/.test(String(ref))) return caps.find((c) => String(c.id) === String(ref));
+    return caps.find((c) => c.tipo === (ref || tipoPadrao));
+  }
+  async function getQuestions(topico, cap, force = false) {
+    const k = `${topico}|${cap.id}`;
+    if (!S.questions[k] || force) S.questions[k] = await API.getQuestions(topico, cap.tipo, cap.id);
     return S.questions[k];
   }
 
@@ -268,7 +275,7 @@
   }
 
   // Trilha em zigue-zague com linha tracejada (widgets/exercise_trail.dart)
-  // nodes: [{titulo, icon, desbloqueado, concluido, sideBadge?:{icon,on}}]
+  // nodes: [{titulo, icon, desbloqueado, concluido, sideBadges?:[{icon,on,title}]}]
   function trailHtml(nodes) {
     const ROW = 170, PAD = 20;
     const X = [50, 72, 50, 28];
@@ -277,11 +284,9 @@
       const x = X[i % 4], top = PAD + i * ROW;
       const cls = n.concluido ? 'done' : n.desbloqueado ? 'current' : 'locked';
       const iconSvg = n.concluido ? ICON[n.icon] : n.desbloqueado ? (n.playIcon ? ICON.play : ICON[n.icon]) : ICON.lock;
-      let badge = '';
-      if (n.sideBadge) {
-        const bx = x >= 50 ? x - 30 : x + 30;
-        badge = `<button class="side-badge ${n.sideBadge.on ? 'on' : ''}" style="left:${bx}%;top:${top + 24}px" data-badge="${i}" title="${esc(n.sideBadge.title || '')}">${n.sideBadge.on ? ICON[n.sideBadge.icon] : ICON.lock}</button>`;
-      }
+      const bx = x >= 50 ? x - 30 : x + 30;
+      const badge = (n.sideBadges || []).map((sb, j) =>
+        `<button class="side-badge ${sb.on ? 'on' : ''}" style="left:${bx}%;top:${top + 24 + j * 58}px" data-badge="${i}:${j}" title="${esc(sb.title || '')}">${sb.on ? ICON[sb.icon] : ICON.lock}</button>`).join('');
       return `
         <button class="tnode ${cls}" style="left:${x}%;top:${top}px" data-node="${i}">
           <span style="width:96px;height:96px;display:flex;align-items:center;justify-content:center">
@@ -497,18 +502,24 @@
 
       b += `<div class="topic-banner"><div class="k">${esc(modulo.titulo)}</div><div class="t">${esc(t.titulo)}</div></div>`;
 
-      const provaConcluida = (att || []).some((a) => a.finalizado_em);
+      // Cada Capítulo conta sozinho, mesmo com vários do mesmo tipo no
+      // tópico: Resumo, Fixação e Curiosidade em capitulo_progress; Prova
+      // pelas tentativas finalizadas daquele Capítulo.
       const concluido = (c) => {
-        switch (c.tipo) {
-          case 'resumo': return !!prog.resumo_concluido;
-          case 'fixacao': return !!prog.fixacao_concluida;
-          case 'prova': return provaConcluida;
-          case 'curiosidade': return !!cap[String(c.id)];
-          default: return false;
-        }
+        if (c.tipo === 'prova') return (att || []).some((a) => a.finalizado_em && a.capitulo_id === c.id);
+        return !!cap[String(c.id)];
       };
-      const seq = (t.capitulos || []).filter((c) => c.tipo !== 'extra');
-      const extra = (t.capitulos || []).find((c) => c.tipo === 'extra');
+      const todos = t.capitulos || [];
+      const seq = todos.filter((c) => c.tipo !== 'extra');
+      // Exercícios (opcionais) ficam ao lado do capítulo anterior a eles —
+      // de preferência a Fixação — e liberam quando ele é concluído.
+      const extrasPorNo = seq.map(() => []);
+      todos.forEach((c, pos) => {
+        if (c.tipo !== 'extra' || !seq.length) return;
+        const antes = todos.slice(0, pos).filter((x) => x.tipo !== 'extra');
+        const ancora = [...antes].reverse().find((x) => x.tipo === 'fixacao') || antes[antes.length - 1] || seq[0];
+        extrasPorNo[seq.indexOf(ancora)].push(c);
+      });
 
       if (!seq.length) {
         b += `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste tópico ainda está sendo preparado.</div>`;
@@ -519,10 +530,9 @@
         icon: TIPO_ICON[c.tipo] || 'bulb',
         desbloqueado: livre || k === 0 || concluido(seq[k - 1]),
         concluido: concluido(c),
-        sideBadge: c.tipo === 'fixacao' && extra
-          ? { icon: 'plus', on: livre || !!prog.fixacao_concluida, title: extra.titulo } : null,
+        sideBadges: extrasPorNo[k].map((e) => ({ icon: 'plus', on: livre || concluido(c), title: e.titulo, cap: e })),
       }));
-      trilhas.push({ topico: t, seq, nodes, extra });
+      trilhas.push({ topico: t, seq, nodes });
       b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
       return b;
     });
@@ -558,9 +568,10 @@
       });
       wrap.querySelectorAll('[data-badge]').forEach((b) => {
         b.onclick = () => {
-          const i = +b.dataset.badge;
-          if (!tr.nodes[i].sideBadge.on) return toast('Conclua a Fixação para desbloquear.');
-          go(`#/t/${encodeURIComponent(tr.topico.id)}/trilha/extra`);
+          const [i, j] = b.dataset.badge.split(':').map(Number);
+          const sb = tr.nodes[i].sideBadges[j];
+          if (!sb.on) return toast(`Conclua "${tr.seq[i].titulo}" para desbloquear.`);
+          go(`#/t/${encodeURIComponent(tr.topico.id)}/trilha/${sb.cap.id}`);
         };
       });
     });
@@ -569,31 +580,37 @@
   function abrirCapitulo(topico, cap) {
     const t = encodeURIComponent(topico.id);
     switch (cap.tipo) {
-      case 'resumo': return go(`#/t/${t}/resumo`);
-      case 'fixacao': return go(`#/t/${t}/trilha/fixacao`);
-      case 'prova': return go(`#/t/${t}/prova`);
+      case 'resumo': return go(`#/t/${t}/resumo/${cap.id}`);
+      case 'fixacao': return go(`#/t/${t}/trilha/${cap.id}`);
+      case 'prova': return go(`#/t/${t}/prova/${cap.id}`);
       case 'curiosidade': return go(`#/t/${t}/cur/${cap.id}`);
     }
   }
 
   // ---------- Resumo ----------
-  async function viewResumo(topicoId) {
+  // Cada Capítulo "Resumo" tem o próprio conteúdo (cap.conteudo) e o
+  // próprio progresso (capitulo_progress).
+  async function viewResumo(topicoId, capId) {
     $app.innerHTML = loading();
-    let conteudo, prog;
+    let capProg;
     try {
       await loadCurriculo();
-      [conteudo, prog] = await Promise.all([API.getTopicContent(topicoId), API.getTopicProgress(topicoId)]);
+      capProg = await API.getCapituloProgress(topicoId);
     } catch (e) {
       $app.innerHTML = pageHead('Resumo', '', '#/map') + errorBox('Não foi possível carregar o conteúdo do resumo agora.');
       bindBack(); return bindRetry();
     }
     const { area, topico } = findTopico(topicoId);
-    const cap = topico?.capitulos?.find((c) => c.tipo === 'resumo');
-    const pdf = conteudo.resumo_pdf_url && conteudo.resumo_pdf_url.trim();
-    const texto = conteudo.resumo_texto && conteudo.resumo_texto.trim();
+    const cap = findCapitulo(topico, capId, 'resumo');
+    if (!cap) return go('#/map');
+
+    const conteudo = cap.conteudo || {};
+    const pdf = conteudo.pdf_url && conteudo.pdf_url.trim();
+    const texto = conteudo.texto && conteudo.texto.trim();
+    const jaConcluido = !!capProg[String(cap.id)];
 
     // Ordem: cartões (editor do painel) → PDF → texto simples.
-    const cartoes = Cartoes.temConteudo(conteudo.resumo_blocos) ? Cartoes.render(conteudo.resumo_blocos) : '';
+    const cartoes = Cartoes.temConteudo(conteudo.blocos) ? Cartoes.render(conteudo.blocos) : '';
     let body;
     if (cartoes) {
       body = cartoes;
@@ -601,26 +618,26 @@
       body = `<iframe class="pdf-frame" src="${esc(pdf)}#toolbar=0" title="Resumo em PDF"></iframe>
               <p class="small muted" style="text-align:center">Não carregou? <a href="${esc(pdf)}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a></p>`;
     } else if (texto) {
-      body = `<div class="prose">${esc(conteudo.resumo_texto)}</div>`;
+      body = `<div class="prose">${esc(conteudo.texto)}</div>`;
     } else {
-      body = `<p class="muted">O conteúdo do resumo deste tópico ainda não foi cadastrado no painel administrativo.</p>`;
+      body = `<p class="muted">O conteúdo deste resumo ainda não foi cadastrado no painel administrativo.</p>`;
     }
 
     $app.className = 'app no-nav';
-    $app.innerHTML = pageHead(cap?.titulo || 'Resumo', [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map') + `
+    $app.innerHTML = pageHead(cap.titulo || 'Resumo', [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map') + `
       ${cartoes ? body : `<div class="card">${body}</div>`}
       <div class="bottom-cta">
         <div class="error-msg" data-err style="margin-bottom:8px"></div>
-        <button class="btn btn-primary btn-block" data-ok>${prog.resumo_concluido ? 'CONTINUAR' : 'ENTENDIDO'}</button>
+        <button class="btn btn-primary btn-block" data-ok>${jaConcluido ? 'CONTINUAR' : 'ENTENDIDO'}</button>
       </div>`;
     bindBack();
     const btn = $app.querySelector('[data-ok]');
     btn.onclick = async () => {
-      if (prog.resumo_concluido) return go('#/map');
+      if (jaConcluido) return go('#/map');
       btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
       try {
-        const r = await API.marcarResumo(topicoId);
-        if (S.profile) S.profile.xp = r.joules_totais;
+        const r = await API.concluirCapitulo(cap.id);
+        if (S.profile && r.joules_totais != null) S.profile.xp = r.joules_totais;
         if (r.joules_ganhos > 0) toast(`Resumo concluído! +${r.joules_ganhos} J`);
         go('#/map');
       } catch (e) {
@@ -670,22 +687,23 @@
   }
 
   // ---------- Trilha de exercícios (Fixação / Exercícios extra) ----------
-  async function viewTrilha(topicoId, categoria) {
-    const catInfo = CATEGORIAS[categoria] || CATEGORIAS.fixacao;
+  async function viewTrilha(topicoId, capRef) {
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs, livre;
+    let qs, livre, area, topico, cap, catInfo;
     try {
       await loadCurriculo();
-      qs = await getQuestions(topicoId, categoria, true);
+      ({ area, topico } = findTopico(topicoId));
+      cap = findCapitulo(topico, capRef, 'fixacao');
+      if (!cap) return go('#/map');
+      catInfo = CATEGORIAS[cap.tipo] || CATEGORIAS.fixacao;
+      qs = await getQuestions(topicoId, cap, true);
       livre = await semTravas(await loadProfile());
     } catch {
-      $app.innerHTML = pageHead(catInfo.label, '', '#/map') + errorBox('Erro ao carregar o mapa.');
+      $app.innerHTML = pageHead('Exercícios', '', '#/map') + errorBox('Erro ao carregar o mapa.');
       bindBack(); return bindRetry();
     }
-    const { area, topico } = findTopico(topicoId);
-    const cap = topico?.capitulos?.find((c) => c.tipo === categoria);
-    const titulo = cap?.titulo || (categoria === 'extra' ? 'Exercícios' : 'Fixação');
+    const titulo = cap.titulo || (cap.tipo === 'extra' ? 'Exercícios' : 'Fixação');
 
     let html = pageHead(titulo, [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map');
     if (!qs.length) {
@@ -710,7 +728,7 @@
       b.onclick = () => {
         const i = +b.dataset.node;
         if (!nodes[i].desbloqueado) return toast('Conclua a fase anterior para desbloquear.');
-        go(`#/t/${encodeURIComponent(topicoId)}/q/${categoria}/${i}`);
+        go(`#/t/${encodeURIComponent(topicoId)}/q/${cap.id}/${i}`);
       };
     });
     const atual = nodes.findIndex((n) => !n.concluido);
@@ -722,24 +740,26 @@
 
   // ---------- Exercício ----------
   let exTimer = null;
-  async function viewExercicio(topicoId, categoria, idx) {
+  async function viewExercicio(topicoId, capRef, idx) {
     idx = +idx;
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs, livre;
+    let qs, livre, area, topico, cap;
     try {
       await Promise.all([loadCurriculo(), loadProfile()]);
-      qs = await getQuestions(topicoId, categoria);
+      ({ area, topico } = findTopico(topicoId));
+      cap = findCapitulo(topico, capRef, 'fixacao');
+      if (!cap) return go('#/map');
+      qs = await getQuestions(topicoId, cap);
       livre = await semTravas(S.profile);
     } catch {
       $app.innerHTML = errorBox('Erro ao carregar a questão.'); return bindRetry();
     }
     const q = qs[idx];
-    const trilhaHash = `#/t/${encodeURIComponent(topicoId)}/trilha/${categoria}`;
+    const trilhaHash = `#/t/${encodeURIComponent(topicoId)}/trilha/${cap.id}`;
     if (!q) return go(trilhaHash);
     if (!livre && idx > 0 && !qs[idx - 1].respondida_corretamente && !q.respondida_corretamente) return go(trilhaHash);
 
-    const { area, topico } = findTopico(topicoId);
     let selecionada = null;
     let seg = 0;
 
@@ -827,20 +847,22 @@
   }
 
   // ---------- Prova: estatísticas ----------
-  async function viewProvaStats(topicoId) {
+  async function viewProvaStats(topicoId, capRef) {
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let att;
+    let att, topico, cap;
     try {
       await loadCurriculo();
-      att = await API.getAttempts(topicoId);
+      ({ topico } = findTopico(topicoId));
+      cap = findCapitulo(topico, capRef, 'prova');
+      if (!cap) return go('#/map');
+      att = await API.getAttempts(topicoId, cap.id);
     } catch {
       $app.innerHTML = pageHead('Prova', '', '#/map') + errorBox('Erro ao carregar estatísticas.');
       bindBack(); return bindRetry();
     }
-    const { topico } = findTopico(topicoId);
     const fin = att.filter((a) => a.finalizado_em);
-    let html = pageHead(`${topico?.titulo || topicoId} · Prova`, '', '#/map');
+    let html = pageHead(`${topico?.titulo || topicoId} · ${cap.titulo || 'Prova'}`, '', '#/map');
     html += `<button class="btn btn-primary btn-block" data-start style="margin:8px 0 22px">${fin.length ? '↻ Tentar novamente' : 'Iniciar prova'}</button>`;
     html += `<div style="font-weight:800;margin-bottom:10px">Histórico (${fin.length} ${fin.length === 1 ? 'tentativa' : 'tentativas'})</div>`;
     if (!fin.length) html += `<p class="muted" style="text-align:center;padding:20px 0">Nenhuma tentativa concluída ainda.</p>`;
@@ -872,7 +894,7 @@
         if (modo === 'dificil' && document.documentElement.requestFullscreen) {
           document.documentElement.requestFullscreen().catch(() => {});
         }
-        go(`#/t/${encodeURIComponent(topicoId)}/prova/run/${modo}`);
+        go(`#/t/${encodeURIComponent(topicoId)}/prova/${cap.id}/run/${modo}`);
       }
     };
   }
@@ -882,14 +904,16 @@
   // finalizar. No modo difícil: baixa online → exige offline para
   // responder → pede para reconectar só para enviar.
   let examCleanup = null;
-  async function viewProvaRun(topicoId, modo) {
-    const statsHash = `#/t/${encodeURIComponent(topicoId)}/prova`;
+  const emProvaRun = () => /\/prova\/(\d+\/)?run\//.test(location.hash);
+  async function viewProvaRun(topicoId, capRef, modo) {
     const dificil = modo === 'dificil';
     document.body.classList.add('exam-mode');
     $app.className = 'app no-nav exam';
     try { await loadCurriculo(); } catch { /* só o título */ }
     const { topico } = findTopico(topicoId);
-    const titulo = `${topico?.titulo || topicoId} · Prova`;
+    const cap = findCapitulo(topico, capRef, 'prova');
+    const statsHash = `#/t/${encodeURIComponent(topicoId)}/prova${cap ? '/' + cap.id : ''}`;
+    const titulo = `${topico?.titulo || topicoId} · ${cap?.titulo || 'Prova'}`;
 
     const E = {
       fase: dificil ? (navigator.onLine ? 'baixando' : 'aguardandoOnlineInicial') : 'baixando',
@@ -940,7 +964,7 @@
     async function baixar() {
       E.fase = 'baixando'; E.erro = null; paint();
       try {
-        const r = await API.startExam(topicoId, modo);
+        const r = await API.startExam(topicoId, modo, cap?.id);
         E.attemptId = r.attempt_id;
         E.questoes = r.questoes || [];
         E.inicio = Date.now();
@@ -992,7 +1016,7 @@
     }
 
     function paint() {
-      if (!location.hash.includes('/prova/run/')) return;
+      if (!emProvaRun()) return;
       let body = '';
       const head = `<div class="pagehead"><button class="back" data-exit aria-label="Sair">${ICON.close}</button><h2>${esc(titulo)}${dificil ? ' <span class="tag hard">DIFÍCIL</span>' : ''}</h2></div>`;
       switch (E.fase) {
@@ -1746,7 +1770,7 @@
   // Roteador
   // ================================================================
   async function render() {
-    if (examCleanup && !location.hash.includes('/prova/run/')) examCleanup();
+    if (examCleanup && !emProvaRun()) examCleanup();
     clearInterval(exTimer);
     document.getElementById('modal-root').innerHTML = '';
     $app.className = 'app';
@@ -1782,13 +1806,15 @@
         return viewPlus();
       }
       case 't': {
-        const [, topico, kind, a, b] = parts;
-        if (kind === 'resumo') return viewResumo(topico);
+        const [, topico, kind, a, b, c] = parts;
+        if (kind === 'resumo') return viewResumo(topico, a);
         if (kind === 'cur') return viewCuriosidade(topico, a);
         if (kind === 'trilha') return viewTrilha(topico, a);
         if (kind === 'q') return viewExercicio(topico, a, b);
-        if (kind === 'prova' && a === 'run') return viewProvaRun(topico, b === 'dificil' ? 'dificil' : 'facil');
-        if (kind === 'prova') return viewProvaStats(topico);
+        // Links antigos sem o id do Capítulo (#/t/x/prova/run/facil) abrem a primeira Prova.
+        if (kind === 'prova' && a === 'run') return viewProvaRun(topico, null, b === 'dificil' ? 'dificil' : 'facil');
+        if (kind === 'prova' && b === 'run') return viewProvaRun(topico, a, c === 'dificil' ? 'dificil' : 'facil');
+        if (kind === 'prova') return viewProvaStats(topico, a);
         return go('#/map');
       }
       default: return go('#/map');

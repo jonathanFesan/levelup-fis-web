@@ -180,19 +180,18 @@
 
     // --- Progresso ---
     getTopicProgress: (topico) => authed(`/topic-progress/${encodeURIComponent(topico)}`),
-    marcarResumo: (topico) => authed(`/topic-progress/${encodeURIComponent(topico)}/resumo`, { method: 'POST' }),
     getCapituloProgress: (topico) => authed(`/capitulo-progress/${encodeURIComponent(topico)}`),
     concluirCapitulo: (id) => authed(`/capitulo-progress/${id}/concluir`, { method: 'POST' }),
 
     // --- Questões ---
-    getQuestions: (topico, categoria) => authed('/questions/', { query: { topico, categoria } }),
+    getQuestions: (topico, categoria, capituloId) => authed('/questions/', { query: { topico, categoria, capitulo_id: capituloId } }),
     answer: (question_id, resposta) => authed('/questions/answer', { method: 'POST', body: { question_id, resposta } }),
 
     // --- Prova ---
-    startExam: (topico, modo) => authed('/exam/start', { method: 'POST', body: { topico, modo } }),
+    startExam: (topico, modo, capituloId) => authed('/exam/start', { method: 'POST', body: { topico, modo, capitulo_id: capituloId } }),
     finishExam: (id, respostas, tempo_total_segundos) =>
       authed(`/exam/${id}/finish`, { method: 'POST', body: { respostas, tempo_total_segundos } }),
-    getAttempts: (topico) => authed('/exam/attempts', { query: { topico } }),
+    getAttempts: (topico, capituloId) => authed('/exam/attempts', { query: { topico, capitulo_id: capituloId } }),
 
     // --- Vídeos ---
     getVideos: () => authed('/videos/'),
