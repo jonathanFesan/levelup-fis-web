@@ -40,6 +40,8 @@
   border-radius: 6px; padding: 2px 8px; background: var(--rc-cyan); }
 .rc-tag.rc-dourado { background: var(--rc-gold); } .rc-tag.rc-verde { background: var(--rc-green); }
 .rc-tag.rc-rosa { background: var(--rc-pink); } .rc-tag.rc-lilas { background: var(--rc-lilac); }
+/* etiqueta na cor do capítulo (--acc); texto claro ou escuro conforme a cor */
+.rc-tag.rc-tema { background: var(--rc-gold); color: var(--acc-ink, var(--rc-bg)); }
 
 /* texto rico (vem do editor) */
 .rc-texto { min-width: 0; overflow-wrap: anywhere; }

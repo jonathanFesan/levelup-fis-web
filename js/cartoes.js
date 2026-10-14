@@ -11,7 +11,7 @@
 //   v: 1,
 //   capa: { icone: '⚡', etiqueta: 'Conceito-chave', titulo: 'Velocidade média' },
 //   blocos: [
-//     { tipo: 'cartao', etiqueta: 'O QUE É', cor: 'ciano', titulo: '...', html: '<p>...</p>' },
+//     { tipo: 'cartao', etiqueta: 'O QUE É', cor: 'ciano' | 'tema' (cor do capítulo) | ..., titulo: '...', html: '<p>...</p>' },
 //     { tipo: 'formula', texto: 'v_m = Δs / Δt', legenda: '...' },
 //     { tipo: 'destaque', variante: 'dica' | 'atencao' | 'exemplo', html: '...' },
 //     { tipo: 'valores', itens: ['Δs = 120 km', 'Δt = 2 h'] },
@@ -26,12 +26,17 @@
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   // Cores e fontes que o editor oferece (combinam com o fundo escuro).
+  // "Cor do capítulo" não é fixa: usa a cor tema (--acc) do tópico onde o
+  // cartão aparece; sem ela, cai no dourado padrão.
+  const COR_CAPITULO = 'var(--acc, #FFC65C)';
+  const MARCA_CAPITULO = 'rgba(var(--acc-rgb, 255, 198, 92), 0.3)';
   const PALETA = [
+    [COR_CAPITULO, 'Cor do capítulo'],
     ['#FCF3C8', 'Creme'], ['#FAFAFC', 'Branco'], ['#FFC65C', 'Dourado'], ['#FF9D42', 'Laranja'],
     ['#7FD8E8', 'Ciano'], ['#4CD97B', 'Verde'], ['#FF5C7A', 'Rosa'], ['#B79EFF', 'Lilás'],
   ];
-  const MARCA_TEXTO = [['#5c4a1f', 'Dourado'], ['#1f4a52', 'Ciano'], ['#1f4a33', 'Verde'], ['#552334', 'Rosa'], ['#3d3266', 'Lilás']];
-  const CORES_ETIQUETA = { ciano: 'Ciano', dourado: 'Dourado', verde: 'Verde', rosa: 'Rosa', lilas: 'Lilás' };
+  const MARCA_TEXTO = [[MARCA_CAPITULO, 'Cor do capítulo'], ['#5c4a1f', 'Dourado'], ['#1f4a52', 'Ciano'], ['#1f4a33', 'Verde'], ['#552334', 'Rosa'], ['#3d3266', 'Lilás']];
+  const CORES_ETIQUETA = { tema: 'Cor do capítulo', ciano: 'Ciano', dourado: 'Dourado', verde: 'Verde', rosa: 'Rosa', lilas: 'Lilás' };
   const DESTAQUES = {
     dica: { titulo: 'Dica', icone: 'i' },
     atencao: { titulo: 'Atenção', icone: '!' },
@@ -150,5 +155,5 @@
     return partes.filter(Boolean).join('\n\n');
   }
 
-  window.Cartoes = { render, textoPlano, temConteudo, formula, limpar, youtubeId, PALETA, MARCA_TEXTO, CORES_ETIQUETA, DESTAQUES };
+  window.Cartoes = { render, textoPlano, temConteudo, formula, limpar, youtubeId, PALETA, MARCA_TEXTO, CORES_ETIQUETA, DESTAQUES, COR_CAPITULO, MARCA_CAPITULO };
 })();
