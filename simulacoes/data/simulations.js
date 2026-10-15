@@ -41,6 +41,15 @@ window.LUF.simulations = [
     tags: ["geometria", "vetores", "3D"],
     addedAt: "2026-09-28",
   },
+  {
+    id: "lancamento-obliquo",
+    title: "Lançamento Oblíquo",
+    summary: "Canhão, bola e mangueira: altura, ângulo, velocidade e minigame do alvo",
+    category: "fisica",
+    path: "simulations/fisica/lancamento-obliquo.html",
+    tags: ["cinemática", "lançamento", "parábola", "2D"],
+    addedAt: "2026-10-14",
+  },
 ];
 
 // DESTAQUES DA HOME: ids na ORDEM em que devem aparecer no carrossel.

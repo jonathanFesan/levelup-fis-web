@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lançamento Oblíquo — LevelUpFís Simulations</title>
+<meta name="description" content="Lance com um canhão, uma bola de futebol ou uma mangueira: escolha altura, ângulo e velocidade, compare trajetórias e resolva desafios de acertar o alvo.">
+
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/simulation.css">
+
+<style>
+  /* Mesmo padrão visual das outras simulações (painéis de vidro escuro,
+     destaque azul). */
+  #sim-stage { min-height: 78vh; }
+  #sim-content canvas { touch-action: none; }
+
+  .glass {
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 12px;
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  #ui-panel {
+    position: absolute; top: 16px; left: 16px; z-index: 4;
+    width: min(290px, calc(100% - 32px)); max-height: calc(100% - 32px);
+    overflow-y: auto; padding: 14px 16px;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head h2 { margin: 0; font-size: 1.02rem; }
+  #btn-collapse {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #555;
+    background: rgba(255,255,255,.06); color: #ddd; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  #panel-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
+  #ui-panel.collapsed #panel-body { display: none; }
+
+  .section { margin-bottom: 14px; }
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: #8a8a8a; margin-bottom: 6px;
+  }
+  .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tool-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .tool-grid.five { grid-template-columns: repeat(5, 1fr); }
+  .tool-btn, .seg-btn, .act-btn {
+    font: inherit; font-size: 12.5px; font-weight: 600; color: #e6e6e6;
+    background: rgba(255,255,255,.07); border: 1px solid #555; border-radius: 7px;
+    padding: 8px 6px; cursor: pointer; transition: background .15s, transform .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  }
+  .tool-btn { flex-direction: column; gap: 3px; padding: 8px 4px; }
+  .tool-btn .ic { font-size: 19px; line-height: 1; }
+  .tool-btn:hover, .seg-btn:hover, .act-btn:hover { background: rgba(255,255,255,.15); }
+  .tool-btn.active, .seg-btn.active, .act-btn.on {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent;
+  }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:hover { background: rgba(255,255,255,.07); }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .seg-btn { padding: 7px 6px; }
+
+  #ui-panel label, #info-panel label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 12.5px; color: #aaa; }
+  .range-row { display: grid; grid-template-columns: 1fr 74px; gap: 8px; align-items: center; margin-bottom: 4px; }
+  input[type="range"] { width: 100%; cursor: pointer; accent-color: #4facfe; }
+  input[type="range"]:disabled { cursor: not-allowed; opacity: .5; }
+  .num {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 12.5px; font-weight: 700; color: #4facfe;
+    background: rgba(0,0,0,.35); border: 1px solid #555; border-radius: 6px; padding: 5px 6px; text-align: right;
+  }
+  .num:disabled { opacity: .55; }
+  .unit { color: #8a8a8a; font-weight: 600; }
+  .check { display: flex !important; align-items: center; gap: 8px; cursor: pointer; font-weight: 600 !important; }
+  .check input { accent-color: #4facfe; }
+  .hint { font-size: 11.5px; color: #7d7d7d; margin-top: 6px; line-height: 1.5; }
+
+  .launch-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .act-btn.primary { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent; font-size: 14px; padding: 10px; }
+  .act-btn.gold { border-color: #8a7a3a; color: #fcf3c8; }
+  .act-btn.gold:hover { background: rgba(252, 243, 200, .12); }
+  .act-btn.danger { border-color: #7a3b3b; color: #ffb4b4; }
+  .act-btn.danger:hover { background: rgba(255, 71, 87, .18); }
+
+  #info-panel {
+    position: absolute; top: 62px; right: 16px; z-index: 4;
+    width: min(270px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow-y: auto; padding: 14px 16px;
+  }
+  #info-panel h3 { margin: 0 0 10px; font-size: .98rem; border-bottom: 1px solid #555; padding-bottom: 8px; }
+  #info-panel .muted { color: #9a9a9a; font-size: 12.5px; margin: 0 0 8px; line-height: 1.45; }
+  #info-panel .note { color: #8a8a8a; font-size: 11.5px; line-height: 1.45; margin: 8px 0 0; }
+  .stat { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed #3a3a3a; }
+  .stat span { color: #9a9a9a; }
+  .stat b { color: #fff; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat b.hi { color: #4facfe; }
+
+  /* Minigame */
+  .game { border: 1px solid #8a7a3a; background: rgba(252, 243, 200, .06); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .game h4 { margin: 0 0 6px; font-size: 13px; color: #fcf3c8; display: flex; justify-content: space-between; gap: 8px; }
+  .game h4 small { color: #b9b08a; font-weight: 600; }
+  .game p { font-size: 12.8px; line-height: 1.5; margin: 0 0 8px; color: #e6e6e6; }
+  .game .ask { color: #fcf3c8; font-weight: 700; }
+  .game .ans { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .game .ans .num { color: #fcf3c8; font-size: 14px; }
+  .game .res { font-size: 12.8px; line-height: 1.5; border-radius: 8px; padding: 8px 10px; margin: 8px 0 6px; }
+  .game .res.ok { background: rgba(76, 217, 123, .14); border: 1px solid rgba(76, 217, 123, .5); color: #bff3cf; }
+  .game .res.no { background: rgba(255, 92, 122, .12); border: 1px solid rgba(255, 92, 122, .45); color: #ffc3cd; }
+  .game .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  #status-bar {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4;
+    max-width: calc(100% - 32px); padding: 8px 14px; font-size: 12.5px; text-align: center;
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 8px; color: #ddd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; pointer-events: none;
+  }
+  #status-bar:empty { display: none; }
+
+  #tooltip {
+    position: absolute; z-index: 5; pointer-events: none; display: none;
+    padding: 8px 10px; font-size: 12px; line-height: 1.5; border-radius: 8px; white-space: nowrap;
+  }
+  #tooltip b { color: #4facfe; }
+
+  button:focus-visible, input:focus-visible { outline: 2px solid #fcf3c8; outline-offset: 2px; }
+
+  @media (max-width: 760px) {
+    #info-panel { top: auto; bottom: 60px; right: 16px; max-height: 40%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tool-btn, .seg-btn, .act-btn { transition: none; }
+  }
+</style>
+</head>
+<body data-root="../../" data-page="simulation" data-category="fisica">
+
+<!-- Header (com botão "← Voltar") e footer são injetados por assets/js/layout.js -->
+
+<main>
+  <div class="luf-sub">
+    <h1>Lançamento Oblíquo</h1>
+    <p>Escolha o lançador (canhão, bola de futebol ou mangueira), a altura de onde ele dispara, o ângulo e a velocidade inicial e veja a trajetória parabólica. Salve as trajetórias para comparar lançamentos e encare o minigame: calcule o que falta para acertar o alvo.</p>
+  </div>
+
+  <div class="luf-simwrap">
+    <section id="sim-stage" aria-label="Área da simulação">
+      <div id="sim-content">
+        <canvas id="sim-canvas" aria-label="Trajetória do lançamento"></canvas>
+      </div>
+
+      <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+
+      <div id="ui-panel" class="glass">
+        <div class="panel-head">
+          <h2>Lançamento Oblíquo</h2>
+          <button type="button" id="btn-collapse" aria-expanded="true" aria-controls="panel-body" title="Recolher painel">–</button>
+        </div>
+
+        <div id="panel-body">
+          <div class="section">
+            <div class="section-title">Lançador</div>
+            <div class="tool-grid three" role="group" aria-label="Lançador">
+              <button type="button" class="tool-btn active" data-launcher="canhao" aria-pressed="true"><span class="ic">💣</span>Canhão</button>
+              <button type="button" class="tool-btn" data-launcher="bola" aria-pressed="false"><span class="ic">⚽</span>Bola</button>
+              <button type="button" class="tool-btn" data-launcher="mangueira" aria-pressed="false"><span class="ic">💧</span>Mangueira</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Condições do disparo</div>
+
+            <label for="h-range">Altura do lançador <span class="unit">(m)</span></label>
+            <div class="range-row">
+              <input type="range" id="h-range" min="0" max="100" step="1" value="0">
+              <input type="number" class="num" id="h-num" min="0" max="100" step="0.1" value="0" aria-label="Altura em metros">
+            </div>
+
+            <label for="v-range" style="margin-top:10px">Velocidade inicial <span class="unit">(m/s)</span></label>
+            <div class="range-row">
+              <input type="range" id="v-range" min="0" max="50" step="0.5" value="20">
+              <input type="number" class="num" id="v-num" min="0" max="50" step="0.1" value="20" aria-label="Velocidade inicial em metros por segundo">
+            </div>
+
+            <label style="margin-top:10px">Ângulo de lançamento <span class="unit">(°)</span></label>
+            <div class="seg" role="group" aria-label="Tipo de ângulo">
+              <button type="button" class="seg-btn active" id="mode-livre" aria-pressed="true">Livre</button>
+              <button type="button" class="seg-btn" id="mode-notaveis" aria-pressed="false">Notáveis</button>
+            </div>
+            <div id="angle-livre">
+              <div class="range-row">
+                <input type="range" id="a-range" min="0" max="90" step="0.1" value="45" aria-label="Ângulo em graus">
+                <input type="number" class="num" id="a-num" min="0" max="90" step="0.1" value="45" aria-label="Ângulo em graus">
+              </div>
+            </div>
+            <div id="angle-notaveis" hidden>
+              <div class="tool-grid five" role="group" aria-label="Ângulos notáveis">
+                <button type="button" class="seg-btn" data-angle="0">0°</button>
+                <button type="button" class="seg-btn" data-angle="30">30°</button>
+                <button type="button" class="seg-btn active" data-angle="45">45°</button>
+                <button type="button" class="seg-btn" data-angle="60">60°</button>
+                <button type="button" class="seg-btn" data-angle="90">90°</button>
+              </div>
+            </div>
+            <div class="hint">Dica: arraste o lançador na tela para girá-lo.</div>
+
+            <label style="margin-top:10px">Gravidade</label>
+            <div class="seg" role="group" aria-label="Aceleração da gravidade">
+              <button type="button" class="seg-btn" data-g="9.8">g = 9,8 m/s²</button>
+              <button type="button" class="seg-btn active" data-g="10">g = 10 m/s²</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Simulação</div>
+            <div class="launch-row">
+              <button type="button" class="act-btn primary" id="btn-launch">🚀 Lançar <span class="unit" style="color:#003">(espaço)</span></button>
+            </div>
+            <div class="tool-grid" style="margin-top:6px">
+              <button type="button" class="act-btn" id="btn-slow" aria-pressed="false">🐢 Câmera lenta</button>
+              <button type="button" class="act-btn danger" id="btn-reset">↺ Reiniciar tudo</button>
+            </div>
+            <label class="check" style="margin-top:10px"><input type="checkbox" id="chk-save"> Salvar trajetórias</label>
+            <label class="check"><input type="checkbox" id="chk-vec" checked> Mostrar vetores velocidade</label>
+            <button type="button" class="act-btn" id="btn-clear-saved" style="width:100%;margin-top:4px" hidden>✕ Apagar trajetórias salvas</button>
+          </div>
+
+          <div class="section" style="margin-bottom:0">
+            <div class="section-title">Desafio</div>
+            <button type="button" class="act-btn gold" id="btn-game" style="width:100%">🎯 Minigame: acerte o alvo</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="info-panel" class="glass" aria-live="polite"></div>
+      <div id="tooltip" class="glass"></div>
+      <div id="status-bar" role="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> shell de simulação -->
+<script src="../../data/simulations.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/simulation-shell.js"></script>
+
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("sim-canvas");
+  if (!canvas || !window.LUF || !LUF.stage) return;
+
+  // ==========================================
+  // 1. ESTADO
+  // ==========================================
+  var DEG = Math.PI / 180;
+  var NOTAVEIS = [0, 30, 45, 60, 90];
+  var LAUNCHERS = {
+    canhao:    { nome: "Canhão",          artigo: "Um canhão",          cor: "#ff8c42", rgb: "255,140,66" },
+    bola:      { nome: "Bola de futebol", artigo: "Uma bola de futebol", cor: "#f5c542", rgb: "245,197,66" },
+    mangueira: { nome: "Mangueira",       artigo: "Uma mangueira",       cor: "#4facfe", rgb: "79,172,254" }
+  };
+  var DEFAULT = { launcher: "canhao", h: 0, v0: 20, angle: 45, angleMode: "livre", g: 10, save: false, vectors: true, slow: false };
+  var JATO = 1.2;   // a mangueira solta água por 1,2 s
+
+  var cfg = clone(DEFAULT);
+  var flight = null;    // lançamento atual
+  var saved = [];       // trajetórias guardadas
+  var game = null;      // desafio do minigame
+  var score = { ok: 0, total: 0, seq: 0 };
+  var hover = null;     // trajetória sob o mouse
+  var splashes = [];    // efeitos de impacto (em px)
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function fmt(x, d) {
+    if (!isFinite(x)) return "—";
+    return (d == null ? x.toFixed(1) : x.toFixed(d)).replace(".", ",").replace(/^-(0,?0*)$/, "$1");
+  }
+  function fmtAng(a) { return fmt(a, Math.abs(a - Math.round(a)) < 1e-9 ? 0 : 1) + "°"; }
+  function fmtG(g) { return fmt(g, g % 1 ? 1 : 0); }
+  function parseNum(s) { return parseFloat(String(s).replace(",", ".")); }
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+
+  // ==========================================
+  // 2. FÍSICA (sem resistência do ar — solução exata)
+  // ==========================================
+  function params(src) {
+    var a = src.angle * DEG;
+    return { launcher: src.launcher, h: src.h, v0: src.v0, angle: src.angle, g: src.g,
+      vx: src.v0 * Math.cos(a), vy: src.v0 * Math.sin(a) };
+  }
+  function tempoVoo(p) {
+    var d = p.vy * p.vy + 2 * p.g * p.h;
+    var T = (p.vy + Math.sqrt(Math.max(0, d))) / p.g;
+    return T > 1e-9 ? T : 0;
+  }
+  function posAt(p, t) { return { x: p.vx * t, y: p.h + p.vy * t - 0.5 * p.g * t * t }; }
+  function completar(p) {
+    p.T = tempoVoo(p);
+    p.D = p.vx * p.T;
+    p.tA = p.vy > 0 ? p.vy / p.g : 0;
+    p.H = p.h + (p.vy > 0 ? p.vy * p.vy / (2 * p.g) : 0);
+    p.pts = [];
+    var n = 140;
+    for (var i = 0; i <= n; i++) { var q = posAt(p, p.T * i / n); p.pts.push([q.x, Math.max(0, q.y)]); }
+    return p;
+  }
+  function alcance(v0, ang, h, g) { return completar(params({ v0: v0, angle: ang, h: h, g: g })).D; }
+
+  // v0 para acertar D (trajetória passa por (D, 0)).
+  function resolveV0(D, ang, h, g) {
+    var a = ang * DEG, c = Math.cos(a), den = 2 * c * c * (h + D * Math.tan(a));
+    return den > 0 && c > 1e-9 ? Math.sqrt(g * D * D / den) : NaN;
+  }
+  // Ângulos (0–90°) que acertam D com v0 e h dados.
+  function resolveAng(D, v0, h, g) {
+    var sols = [], passo = 0.05, f = function (t) { return alcance(v0, t, h, g) - D; };
+    for (var t = 0; t < 90; t += passo) {
+      var a = f(t), b = f(Math.min(90, t + passo));
+      if (a === 0) sols.push(t);
+      else if (a * b < 0) {
+        var lo = t, hi = Math.min(90, t + passo);
+        for (var k = 0; k < 40; k++) { var m = (lo + hi) / 2; if (f(lo) * f(m) <= 0) hi = m; else lo = m; }
+        sols.push((lo + hi) / 2);
+      }
+    }
+    return sols;
+  }
+
+  // ==========================================
+  // 3. PALCO E VISTA
+  // ==========================================
+  var ctx, W = 0, H = 0;
+  var view = { s: 6, ox: 80, oy: 300 };   // px por metro e origem (pé da torre) na tela
+  var hideX = false;                        // esconde as medidas do eixo x (desafio de distância)
+
+  var stageEl = LUF.stage.el;
+  var uiPanel = document.getElementById("ui-panel");
+  var infoPanel = document.getElementById("info-panel");
+  var statusBar = document.getElementById("status-bar");
+  var tooltip = document.getElementById("tooltip");
+
+  function resize() {
+    var fit = LUF.stage.fitCanvas(canvas);
+    ctx = fit.ctx; W = fit.width; H = fit.height;
+    if (W < 760 && !uiPanel.classList.contains("collapsed") && !resize.feito) { setCollapsed(true); }
+    resize.feito = true;
+  }
+  LUF.stage.onResize(resize);
+
+  // Área livre entre os painéis, onde a cena é desenhada.
+  function areaLivre() {
+    var st = stageEl.getBoundingClientRect();
+    var L = 0, R = W, T = 0, B = H;
+    if (W >= 760) {
+      var u = uiPanel.getBoundingClientRect(), i = infoPanel.getBoundingClientRect();
+      L = u.right - st.left + 10;
+      if (i.width) R = i.left - st.left - 10;
+      T = 60;
+      if (R - L < 280) { L = 0; R = W; }
+    } else {
+      var ip = infoPanel.getBoundingClientRect();
+      T = uiPanel.getBoundingClientRect().bottom - st.top + 6;
+      if (ip.height) B = ip.top - st.top - 6;
+      if (B - T < 160) { T = 50; B = H - 50; }
+    }
+    return { L: L, R: R, T: T, B: B };
+  }
+
+  function alvoVista() {
+    var xmax = 20, ymax = Math.max(cfg.h, 8);
+    function inclui(p) { xmax = Math.max(xmax, p.D * 1.06); ymax = Math.max(ymax, p.H); }
+    if (cfg.save) saved.forEach(inclui);
+    if (flight) inclui(flight);
+    if (game) { xmax = Math.max(xmax, game.D * 1.25 + game.tol); ymax = Math.max(ymax, game.h); }
+    var a = areaLivre();
+    var padL = 92, padR = 26, padT = 34, padB = 40;
+    var w = Math.max(80, a.R - a.L - padL - padR), hh = Math.max(80, a.B - a.T - padT - padB);
+    return { s: Math.min(w / xmax, hh / (ymax * 1.08)), ox: a.L + padL, oy: a.B - padB };
+  }
+
+  function sx(x) { return view.ox + x * view.s; }
+  function sy(y) { return view.oy - y * view.s; }
+
+  // Passo "bonito" para as marcas dos eixos (1, 2, 5 × 10^n).
+  function passoBonito(alvo) {
+    var e = Math.pow(10, Math.floor(Math.log10(alvo))), f = alvo / e;
+    return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * e;
+  }
+
+  // ==========================================
+  // 4. DESENHO
+  // ==========================================
+  function desenhaFundo() {
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(0, 0, W, H);
+    var passo = passoBonito(70 / view.s);
+    ctx.lineWidth = 1;
+    ctx.font = "11px 'Segoe UI', Tahoma, sans-serif";
+    // grade
+    // No desafio de distância, sem grade vertical (contar as linhas daria a resposta).
+    for (var x = 0; !hideX && sx(x) < W + 1; x += passo) {
+      ctx.strokeStyle = x === 0 ? "#2a2a2a" : "#151515";
+      ctx.beginPath(); ctx.moveTo(Math.round(sx(x)) + .5, 0); ctx.lineTo(Math.round(sx(x)) + .5, view.oy); ctx.stroke();
+    }
+    for (var y = passo; sy(y) > -1; y += passo) {
+      ctx.strokeStyle = "#151515";
+      ctx.beginPath(); ctx.moveTo(0, Math.round(sy(y)) + .5); ctx.lineTo(W, Math.round(sy(y)) + .5); ctx.stroke();
+    }
+    // chão
+    var g = ctx.createLinearGradient(0, view.oy, 0, H);
+    g.addColorStop(0, "rgba(76, 217, 123, .16)"); g.addColorStop(1, "rgba(76, 217, 123, .02)");
+    ctx.fillStyle = g; ctx.fillRect(0, view.oy, W, H - view.oy);
+    ctx.strokeStyle = "#4cd97b"; ctx.globalAlpha = .55;
+    ctx.beginPath(); ctx.moveTo(0, view.oy + .5); ctx.lineTo(W, view.oy + .5); ctx.stroke();
+    ctx.globalAlpha = 1;
+    // marcas do eixo x
+    ctx.fillStyle = "#8a8a8a"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (x = 0; sx(x) < W - 10; x += passo) {
+      if (!hideX) ctx.fillRect(Math.round(sx(x)), view.oy, 1, 5);
+      if (!hideX || x === 0) ctx.fillText(fmt(x, passo < 1 ? 1 : 0) + (x === 0 ? " m" : ""), sx(x), view.oy + 8);
+    }
+    if (hideX) { ctx.fillStyle = "#b9b08a"; ctx.fillText("medidas escondidas — calcule a distância!", (view.ox + W) / 2, view.oy + 24); }
+    // marcas do eixo y
+    ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = "#8a8a8a";
+    for (y = passo; sy(y) > 14; y += passo) ctx.fillText(fmt(y, passo < 1 ? 1 : 0) + " m", view.ox - 42, sy(y));
+  }
+
+  function desenhaTorre() {
+    if (cfg.h <= 0) return;
+    var x0 = view.ox, top = sy(cfg.h), w = 22;
+    ctx.fillStyle = "#1a1f2b"; ctx.strokeStyle = "#3a4558"; ctx.lineWidth = 1;
+    ctx.fillRect(x0 - w / 2, top, w, view.oy - top);
+    ctx.strokeRect(x0 - w / 2 + .5, top + .5, w - 1, view.oy - top - 1);
+    ctx.strokeStyle = "#2a3346";
+    for (var yy = top + 10; yy < view.oy; yy += 10) { ctx.beginPath(); ctx.moveTo(x0 - w / 2 + 1, yy + .5); ctx.lineTo(x0 + w / 2 - 1, yy + .5); ctx.stroke(); }
+    ctx.fillStyle = "#3a4558"; ctx.fillRect(x0 - w / 2 - 4, top - 3, w + 8, 4);
+    // cota da altura
+    var cx = x0 - 22;
+    ctx.strokeStyle = "rgba(252, 243, 200, .55)"; ctx.fillStyle = "rgba(252, 243, 200, .85)";
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, view.oy); ctx.stroke();
+    seta(cx, top + 6, cx, top); seta(cx, view.oy - 6, cx, view.oy);
+    if (view.oy - top > 26) {
+      ctx.save(); ctx.translate(cx - 7, (top + view.oy) / 2); ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.font = "bold 11px 'Segoe UI', sans-serif";
+      ctx.fillText("h = " + fmt(cfg.h, cfg.h % 1 ? 1 : 0) + " m", 0, 0);
+      ctx.restore();
+    }
+  }
+
+  function seta(x1, y1, x2, y2, tam) {
+    var a = Math.atan2(y2 - y1, x2 - x1), s = tam || 5;
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - s * Math.cos(a - .5), y2 - s * Math.sin(a - .5));
+    ctx.lineTo(x2 - s * Math.cos(a + .5), y2 - s * Math.sin(a + .5));
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Lançadores desenhados em px (tamanho fixo, para aparecerem em qualquer zoom).
+  function desenhaLancador() {
+    var px = view.ox, py = sy(cfg.h), a = -cfg.angle * DEG;
+    var voando = flight && !flight.done;
+    if (cfg.launcher === "canhao") {
+      ctx.save(); ctx.translate(px, py - 12);
+      // carreta
+      ctx.fillStyle = "#3b2a1c"; ctx.beginPath(); ctx.moveTo(-18, 12); ctx.lineTo(16, 12); ctx.lineTo(6, -2); ctx.lineTo(-10, -2); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.rotate(a);
+      var gr = ctx.createLinearGradient(0, -8, 0, 8);
+      gr.addColorStop(0, "#6a7385"); gr.addColorStop(.5, "#3a4150"); gr.addColorStop(1, "#22262f");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(-12, -9); ctx.lineTo(40, -6); ctx.lineTo(40, 6); ctx.lineTo(-12, 9); ctx.arc(-12, 0, 9, Math.PI / 2, -Math.PI / 2); ctx.fill();
+      ctx.fillStyle = "#c9a04a"; ctx.fillRect(36, -7.5, 6, 15); ctx.fillRect(8, -8, 3, 16);
+      ctx.restore();
+      // roda
+      ctx.fillStyle = "#6b4a2b"; ctx.strokeStyle = "#2a1d12"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 2, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); for (var k = 0; k < 6; k++) { var b = k * Math.PI / 3; ctx.moveTo(0, 2); ctx.lineTo(9 * Math.cos(b), 2 + 9 * Math.sin(b)); } ctx.stroke();
+      ctx.restore();
+    } else if (cfg.launcher === "bola") {
+      // seta de mira + bola parada no ponto de chute
+      ctx.save(); ctx.translate(px, py - 9);
+      ctx.strokeStyle = "rgba(245, 197, 66, .85)"; ctx.fillStyle = "rgba(245, 197, 66, .95)"; ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      var L = 56, ex = L * Math.cos(a), ey = L * Math.sin(a);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      seta(0, 0, ex + 4 * Math.cos(a), ey + 4 * Math.sin(a), 8);
+      ctx.restore();
+      if (!voando) desenhaBola(px, py - 9, 0);
+    } else {
+      // mangueira: tubo verde que sobe pela torre e o bico de latão
+      ctx.save();
+      ctx.strokeStyle = "#2f8f4e"; ctx.lineWidth = 6; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(px - 30, view.oy); ctx.bezierCurveTo(px - 30, py + 10, px - 22, py - 8, px - 6, py - 10); ctx.stroke();
+      ctx.translate(px, py - 10); ctx.rotate(a);
+      ctx.fillStyle = "#2f8f4e"; ctx.fillRect(-8, -5, 10, 10);
+      var gb = ctx.createLinearGradient(0, -6, 0, 6); gb.addColorStop(0, "#f1d27a"); gb.addColorStop(1, "#9a7a2a");
+      ctx.fillStyle = gb; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(26, -3); ctx.lineTo(26, 3); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#7a5f20"; ctx.fillRect(8, -5.5, 3, 11);
+      ctx.restore();
+    }
+    // arco do ângulo
+    var r = 30, cy = py - (cfg.launcher === "canhao" ? 12 : cfg.launcher === "bola" ? 9 : 10);
+    ctx.strokeStyle = "rgba(79, 172, 254, .8)"; ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(px, cy); ctx.lineTo(px + r + 34, cy); ctx.stroke(); ctx.setLineDash([]);
+    if (cfg.angle > 0.05) { ctx.beginPath(); ctx.arc(px, cy, r + 22, -cfg.angle * DEG, 0); ctx.stroke(); }
+    ctx.fillStyle = "#4facfe"; ctx.font = "bold 12px 'Segoe UI', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    var am = -cfg.angle * DEG / 2;
+    ctx.fillText(fmtAng(cfg.angle), px + (r + 28) * Math.cos(am) + 4, cy + (r + 28) * Math.sin(am) - 2);
+  }
+
+  function pontoDeSaida() { return { x: view.ox, y: sy(cfg.h) - (cfg.launcher === "canhao" ? 12 : cfg.launcher === "bola" ? 9 : 10) }; }
+
+  function desenhaBola(x, y, giro) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(giro);
+    ctx.fillStyle = "#f4f4f4"; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1b1b1b";
+    pent(0, 0, 3.2);
+    for (var k = 0; k < 5; k++) { var b = k * 2 * Math.PI / 5 - Math.PI / 2; pent(6.6 * Math.cos(b), 6.6 * Math.sin(b), 2.2); }
+    ctx.restore();
+    ctx.strokeStyle = "#999"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.stroke();
+    function pent(cx, cy, r) {
+      ctx.beginPath();
+      for (var i = 0; i < 5; i++) { var t = i * 2 * Math.PI / 5 - Math.PI / 2; ctx[i ? "lineTo" : "moveTo"](cx + r * Math.cos(t), cy + r * Math.sin(t)); }
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // Trajetória em coordenadas da tela, saindo do bico do lançador.
+  function caminho(p, ate) {
+    var off = p.offY || 0;
+    ctx.beginPath();
+    var n = p.pts.length - 1, lim = ate == null ? n : Math.floor(n * ate / (p.T || 1));
+    for (var i = 0; i <= lim; i++) {
+      var k = i / n, yo = off * (1 - k);
+      ctx[i ? "lineTo" : "moveTo"](sx(p.pts[i][0]), sy(p.pts[i][1]) - yo);
+    }
+    if (ate != null && ate < p.T) { var q = posAt(p, ate); ctx.lineTo(sx(q.x), sy(q.y) - off * (1 - ate / p.T)); }
+  }
+  // O projétil sai do bico (alguns px acima do ponto físico); essa diferença
+  // some ao longo do voo, para o pouso cair exatamente na marca do chão.
+  function telaDe(p, t) { var q = posAt(p, t); return { x: sx(q.x), y: sy(Math.max(0, q.y)) - (p.offY || 0) * (1 - (p.T ? t / p.T : 1)) }; }
+
+  function desenhaSalvas() {
+    if (!cfg.save) return;
+    saved.forEach(function (p) {
+      var L = LAUNCHERS[p.launcher], on = hover === p;
+      ctx.strokeStyle = "rgba(" + L.rgb + "," + (on ? .95 : .42) + ")";
+      ctx.lineWidth = on ? 3 : 2;
+      caminho(p); ctx.stroke();
+      ctx.fillStyle = "rgba(" + L.rgb + "," + (on ? .95 : .5) + ")";
+      ctx.beginPath(); ctx.arc(sx(p.D), view.oy, on ? 4 : 3, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+
+  function desenhaAlvo() {
+    if (!game) return;
+    var x = sx(game.D), y = view.oy, half = Math.max(9, game.tol * view.s);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, .32);
+    var cores = ["#ff5c7a", "#fafafc", "#ff5c7a", "#fafafc", "#ff5c7a"];
+    for (var i = 0; i < 5; i++) { ctx.fillStyle = cores[i]; ctx.beginPath(); ctx.arc(0, 0, half * (1 - i * .19), 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    // haste com bandeira
+    ctx.strokeStyle = "#ddd"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 34); ctx.stroke();
+    ctx.fillStyle = "#ff5c7a"; ctx.beginPath(); ctx.moveTo(x, y - 34); ctx.lineTo(x + 16, y - 29); ctx.lineTo(x, y - 24); ctx.closePath(); ctx.fill();
+    ctx.font = "bold 12px 'Segoe UI', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    ctx.fillStyle = "#fcf3c8";
+    ctx.fillText(game.tipo === "distancia" && !game.respondido ? "D = ?" : "D = " + fmt(game.D) + " m", x, y - 38);
+    // cota da distância
+    if (!(game.tipo === "distancia" && !game.respondido)) {
+      ctx.strokeStyle = "rgba(252, 243, 200, .35)"; ctx.fillStyle = "rgba(252, 243, 200, .6)"; ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(view.ox, y + 26); ctx.lineTo(x, y + 26); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  function desenhaVoo(dt) {
+    if (!flight) return;
+    var p = flight, L = LAUNCHERS[p.launcher], tLead = Math.min(p.t, p.T);
+    if (p.launcher === "mangueira") desenhaJato(p);
+    else {
+      ctx.strokeStyle = "rgba(" + L.rgb + ", .9)"; ctx.lineWidth = 2.5;
+      caminho(p, tLead); ctx.stroke();
+    }
+    if (p.t >= p.T) desenhaMarcas(p);
+    // projétil
+    if (p.launcher !== "mangueira" && p.T > 0) {
+      var q = telaDe(p, tLead);
+      if (p.launcher === "canhao") {
+        var gr = ctx.createRadialGradient(q.x - 2, q.y - 2, 1, q.x, q.y, 7);
+        gr.addColorStop(0, "#8a92a3"); gr.addColorStop(1, "#1e2129");
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(q.x, q.y, 6.5, 0, Math.PI * 2); ctx.fill();
+      } else desenhaBola(q.x, q.y - 8 * Math.min(1, tLead / p.T), tLead * 9);
+    }
+    if (cfg.vectors && p.T > 0 && p.t < p.T) desenhaVetores(p, tLead);
+  }
+
+  function desenhaJato(p) {
+    var passo = 0.02, fim = Math.min(p.t, JATO), ant = null;
+    ctx.lineCap = "round";
+    for (var e = 0; e <= fim + 1e-9; e += passo) {
+      var idade = p.t - e;
+      if (idade < 0 || idade > p.T) { ant = null; continue; }
+      var q = telaDe(p, idade);
+      if (ant) {
+        ctx.strokeStyle = "rgba(79, 172, 254, .55)"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(ant.x, ant.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(160, 215, 255, .9)";
+      ctx.beginPath(); ctx.arc(q.x, q.y, 2, 0, Math.PI * 2); ctx.fill();
+      ant = q;
+    }
+    // depois que a água passou, fica o rastro fino da trajetória
+    if (p.t > JATO + 0.05 || p.done) {
+      ctx.strokeStyle = "rgba(79, 172, 254, .35)"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+      caminho(p, Math.min(p.t - JATO, p.T)); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+
+  function desenhaVetores(p, t) {
+    var q = telaDe(p, t), k = 2.2, vy = p.vy - p.g * t;
+    ctx.lineWidth = 2;
+    vetor(q.x, q.y, p.vx * k, 0, "#ff5c7a", "vx");
+    vetor(q.x, q.y, 0, -vy * k, "#4cd97b", "vy");
+    vetor(q.x, q.y, p.vx * k, -vy * k, "#fcf3c8", "v");
+    function vetor(x, y, dx, dy, cor, nome) {
+      if (Math.hypot(dx, dy) < 3) return;
+      ctx.strokeStyle = cor; ctx.fillStyle = cor;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+      seta(x, y, x + dx, y + dy, 7);
+      ctx.font = "bold 11px 'Segoe UI', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+      ctx.fillText(nome, x + dx + 4, y + dy - 2);
+    }
+  }
+
+  // Altura máxima e alcance, depois do pouso.
+  function desenhaMarcas(p) {
+    ctx.font = "bold 11.5px 'Segoe UI', sans-serif";
+    ctx.lineWidth = 1;
+    if (p.vy > 0 && p.H - p.h > 0.05) {
+      var xa = sx(p.vx * p.tA), ya = sy(p.H) - (p.offY || 0) * (1 - p.tA / p.T);
+      ctx.strokeStyle = "rgba(252, 243, 200, .45)"; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(xa, ya); ctx.lineTo(xa, view.oy); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = "#fcf3c8"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText("H máx = " + fmt(p.H) + " m", xa, ya - 8);
+      ctx.beginPath(); ctx.arc(xa, ya, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    if (game && game.tipo === "distancia" && !game.respondido) return;
+    var xl = sx(p.D), yl = view.oy + 26;
+    ctx.strokeStyle = "#4facfe"; ctx.fillStyle = "#4facfe";
+    ctx.beginPath(); ctx.moveTo(view.ox, yl); ctx.lineTo(xl, yl); ctx.stroke();
+    seta(xl - 6, yl, xl, yl); seta(view.ox + 6, yl, view.ox, yl);
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("alcance = " + fmt(p.D) + " m", (view.ox + xl) / 2, yl + 3);
+  }
+
+  function desenhaImpactos(dt) {
+    splashes = splashes.filter(function (s) { s.vida -= dt; return s.vida > 0; });
+    splashes.forEach(function (s) {
+      var k = 1 - s.vida / s.dur, x = sx(s.x);
+      ctx.strokeStyle = "rgba(" + s.rgb + "," + (1 - k) * .8 + ")"; ctx.lineWidth = 2;
+      ctx.save(); ctx.translate(x, view.oy); ctx.scale(1, .3);
+      ctx.beginPath(); ctx.arc(0, 0, 6 + k * 26, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  // ==========================================
+  // 5. LANÇAMENTO E ANIMAÇÃO
+  // ==========================================
+  function lancar() {
+    if (flight && !flight.done) finalizar();
+    var p = completar(params(cfg));
+    p.t = 0; p.done = false; p.pousou = false;
+    p.offY = 0;
+    var bico = pontoDeSaida(); p.offY = sy(cfg.h) - bico.y;
+    if (p.T === 0) {
+      status(cfg.v0 === 0 ? "Com v₀ = 0 e altura 0, o objeto não sai do lugar." : "Lançado na horizontal a partir do chão: o objeto não chega a voar.");
+      flight = null; return;
+    }
+    flight = p;
+    hover = null; tooltip.style.display = "none";
+    status(cfg.slow ? "🐢 Câmera lenta: 4× mais devagar." : "");
+  }
+
+  function finalizar() {
+    var p = flight; if (!p) return;
+    if (!p.done) {
+      p.t = p.launcher === "mangueira" ? p.T + JATO : p.T; p.done = true;
+      if (!p.pousou) pousou(p);
+    }
+    if (cfg.save && saved.indexOf(p) < 0) saved.push(p);
+  }
+
+  function pousou(p) {
+    p.pousou = true;
+    splashes.push({ x: p.D, vida: .7, dur: .7, rgb: LAUNCHERS[p.launcher].rgb });
+    if (game && game.lancado === p) conferir(p);
+    renderInfo();
+  }
+
+  var ultimo = performance.now(), pausado = false, ultimoInfo = 0;
+  function quadro(agora) {
+    var dtReal = Math.min(0.05, (agora - ultimo) / 1000); ultimo = agora;
+    if (pausado) { requestAnimationFrame(quadro); return; }
+    var dt = dtReal * (cfg.slow ? 0.25 : 1);
+    if (flight && !flight.done) {
+      flight.t += dt;
+      if (!flight.pousou && flight.t >= flight.T) pousou(flight);
+      var fim = flight.launcher === "mangueira" ? flight.T + JATO : flight.T;
+      if (flight.t >= fim) { flight.t = fim; flight.done = true; if (cfg.save && saved.indexOf(flight) < 0) saved.push(flight); renderInfo(); }
+      if (agora - ultimoInfo > 80) { ultimoInfo = agora; renderStats(); }
+    }
+    // zoom suave até enquadrar tudo
+    var alvo = alvoVista(), f = reduceMotion ? 1 : Math.min(1, dtReal * 6);
+    view.s += (alvo.s - view.s) * f; view.ox += (alvo.ox - view.ox) * f; view.oy += (alvo.oy - view.oy) * f;
+
+    if (ctx) {
+      desenhaFundo();
+      desenhaSalvas();
+      desenhaAlvo();
+      desenhaTorre();
+      desenhaVoo(dt);
+      desenhaImpactos(dtReal);
+      desenhaLancador();
+    }
+    requestAnimationFrame(quadro);
+  }
+
+  document.addEventListener("luf:visibilitychange", function (e) {
+    pausado = !!e.detail.hidden;
+    ultimo = performance.now();
+  });
+
+  // ==========================================
+  // 6. PAINEL DE CONTROLES
+  // ==========================================
+  var $ = function (id) { return document.getElementById(id); };
+  var hR = $("h-range"), hN = $("h-num"), vR = $("v-range"), vN = $("v-num"), aR = $("a-range"), aN = $("a-num");
+
+  function liga(range, num, chave, min, max) {
+    range.addEventListener("input", function () { set(chave, parseFloat(range.value)); });
+    num.addEventListener("input", function () { var x = parseNum(num.value); if (isFinite(x)) set(chave, clamp(x, min, max), num); });
+    num.addEventListener("change", function () { syncUI(); });
+  }
+  liga(hR, hN, "h", 0, 100);
+  liga(vR, vN, "v0", 0, 50);
+  liga(aR, aN, "angle", 0, 90);
+
+  function set(chave, valor, origem) {
+    cfg[chave] = Math.round(valor * 10) / 10;
+    syncUI(origem);
+  }
+
+  function syncUI(origem) {
+    hR.value = cfg.h; vR.value = cfg.v0; aR.value = cfg.angle;
+    if (origem !== hN) hN.value = cfg.h;
+    if (origem !== vN) vN.value = cfg.v0;
+    if (origem !== aN) aN.value = cfg.angle;
+    document.querySelectorAll("[data-launcher]").forEach(function (b) {
+      var on = b.dataset.launcher === cfg.launcher; b.classList.toggle("active", on); b.setAttribute("aria-pressed", on);
+    });
+    var notaveis = cfg.angleMode === "notaveis";
+    $("mode-livre").classList.toggle("active", !notaveis); $("mode-livre").setAttribute("aria-pressed", !notaveis);
+    $("mode-notaveis").classList.toggle("active", notaveis); $("mode-notaveis").setAttribute("aria-pressed", notaveis);
+    $("angle-livre").hidden = notaveis; $("angle-notaveis").hidden = !notaveis;
+    document.querySelectorAll("[data-angle]").forEach(function (b) { b.classList.toggle("active", +b.dataset.angle === cfg.angle); });
+    document.querySelectorAll("[data-g]").forEach(function (b) { b.classList.toggle("active", +b.dataset.g === cfg.g); });
+    $("btn-slow").classList.toggle("on", cfg.slow); $("btn-slow").setAttribute("aria-pressed", cfg.slow);
+    $("chk-save").checked = cfg.save; $("chk-vec").checked = cfg.vectors;
+    $("btn-clear-saved").hidden = !(cfg.save && saved.length);
+    // No minigame, as condições ficam travadas nos dados do problema.
+    var trava = !!game;
+    [hR, hN, vR, vN, aR, aN, $("mode-livre"), $("mode-notaveis")].forEach(function (el) { el.disabled = trava; });
+    document.querySelectorAll("[data-angle], [data-g]").forEach(function (el) { el.disabled = trava; });
+    $("btn-launch").disabled = trava;
+    $("btn-game").textContent = game ? "✕ Sair do minigame" : "🎯 Minigame: acerte o alvo";
+    if (!(flight && !flight.done)) renderStats();
+  }
+
+  document.querySelectorAll("[data-launcher]").forEach(function (b) {
+    b.addEventListener("click", function () { cfg.launcher = b.dataset.launcher; syncUI(); if (game) renderInfo(); });
+  });
+  $("mode-livre").addEventListener("click", function () { cfg.angleMode = "livre"; syncUI(); });
+  $("mode-notaveis").addEventListener("click", function () {
+    cfg.angleMode = "notaveis";
+    cfg.angle = NOTAVEIS.reduce(function (m, a) { return Math.abs(a - cfg.angle) < Math.abs(m - cfg.angle) ? a : m; }, 0);
+    syncUI();
+  });
+  document.querySelectorAll("[data-angle]").forEach(function (b) {
+    b.addEventListener("click", function () { cfg.angle = +b.dataset.angle; syncUI(); });
+  });
+  document.querySelectorAll("[data-g]").forEach(function (b) {
+    b.addEventListener("click", function () { cfg.g = +b.dataset.g; syncUI(); });
+  });
+  $("btn-launch").addEventListener("click", lancar);
+  $("btn-slow").addEventListener("click", function () { cfg.slow = !cfg.slow; syncUI(); if (cfg.slow) status("🐢 Câmera lenta: 4× mais devagar."); else status(""); });
+  $("chk-save").addEventListener("change", function () {
+    cfg.save = this.checked;
+    if (cfg.save && flight && flight.done && saved.indexOf(flight) < 0) saved.push(flight);
+    syncUI();
+  });
+  $("chk-vec").addEventListener("change", function () { cfg.vectors = this.checked; });
+  $("btn-clear-saved").addEventListener("click", function () { saved = []; hover = null; syncUI(); });
+  $("btn-reset").addEventListener("click", function () {
+    cfg = clone(DEFAULT); flight = null; saved = []; game = null; hideX = false; hover = null; splashes = [];
+    score = { ok: 0, total: 0, seq: 0 };
+    tooltip.style.display = "none"; status("");
+    syncUI(); renderInfo();
+  });
+  $("btn-game").addEventListener("click", function () { if (game) sairDoJogo(); else novoDesafio(); });
+
+  function setCollapsed(c) {
+    uiPanel.classList.toggle("collapsed", c);
+    $("btn-collapse").textContent = c ? "+" : "–";
+    $("btn-collapse").setAttribute("aria-expanded", !c);
+    $("btn-collapse").title = c ? "Mostrar painel" : "Recolher painel";
+  }
+  $("btn-collapse").addEventListener("click", function () { setCollapsed(!uiPanel.classList.contains("collapsed")); });
+
+  document.addEventListener("keydown", function (e) {
+    var t = e.target.tagName;
+    if (e.code === "Space" && t !== "INPUT" && t !== "BUTTON" && t !== "TEXTAREA" && !game) { e.preventDefault(); lancar(); }
+  });
+
+  function status(msg) { statusBar.textContent = msg || ""; }
+
+  // ==========================================
+  // 7. MOUSE: GIRAR O LANÇADOR E INSPECIONAR TRAJETÓRIAS
+  // ==========================================
+  var girando = false;
+  function mouse(e) { var r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  function pertoDoLancador(m) { var b = pontoDeSaida(); return Math.hypot(m.x - b.x, m.y - b.y) < 60 && m.x > b.x - 30; }
+  function anguloDoMouse(m) {
+    var b = pontoDeSaida();
+    var a = Math.atan2(b.y - m.y, m.x - b.x) / DEG;
+    if (m.x < b.x && m.y < b.y) a = 90;
+    a = clamp(a, 0, 90);
+    if (cfg.angleMode === "notaveis") return NOTAVEIS.reduce(function (best, n) { return Math.abs(n - a) < Math.abs(best - a) ? n : best; }, 0);
+    return Math.round(a * 10) / 10;
+  }
+
+  canvas.addEventListener("pointerdown", function (e) {
+    var m = mouse(e);
+    if (!game && pertoDoLancador(m)) {
+      girando = true; canvas.setPointerCapture(e.pointerId);
+      cfg.angle = anguloDoMouse(m); syncUI();
+      canvas.style.cursor = "grabbing";
+    }
+  });
+  canvas.addEventListener("pointermove", function (e) {
+    var m = mouse(e);
+    if (girando) { cfg.angle = anguloDoMouse(m); syncUI(); return; }
+    canvas.style.cursor = !game && pertoDoLancador(m) ? "grab" : "default";
+    // trajetória mais próxima do mouse (até 8 px)
+    var lista = cfg.save ? saved.slice() : [];
+    if (flight && flight.done && lista.indexOf(flight) < 0) lista.push(flight);
+    var melhor = null, dmin = 8;
+    lista.forEach(function (p) {
+      for (var i = 1; i < p.pts.length; i++) {
+        var n = p.pts.length - 1, o1 = (p.offY || 0) * (1 - (i - 1) / n), o2 = (p.offY || 0) * (1 - i / n);
+        var d = distSeg(m.x, m.y, sx(p.pts[i - 1][0]), sy(p.pts[i - 1][1]) - o1, sx(p.pts[i][0]), sy(p.pts[i][1]) - o2);
+        if (d < dmin) { dmin = d; melhor = p; }
+      }
+    });
+    if (game && game.tipo === "distancia" && !game.respondido) melhor = null;
+    hover = melhor;
+    if (melhor) {
+      var L = LAUNCHERS[melhor.launcher];
+      tooltip.innerHTML = "<b>" + L.nome + "</b><br>Ângulo: " + fmtAng(melhor.angle) + "<br>Velocidade: " + fmt(melhor.v0) + " m/s<br>Altura: " + fmt(melhor.h) + " m<br>Alcance: " + fmt(melhor.D) + " m · H máx: " + fmt(melhor.H) + " m<br><span style='color:#8a8a8a'>g = " + fmtG(melhor.g) + " m/s²</span>";
+      tooltip.style.display = "block";
+      var tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+      tooltip.style.left = clamp(m.x + 14, 4, W - tw - 4) + "px";
+      tooltip.style.top = clamp(m.y - th - 10, 4, H - th - 4) + "px";
+    } else tooltip.style.display = "none";
+  });
+  canvas.addEventListener("pointerup", function () { girando = false; canvas.style.cursor = "default"; });
+  canvas.addEventListener("pointerleave", function () { if (!girando) { hover = null; tooltip.style.display = "none"; } });
+
+  function distSeg(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1, l = dx * dx + dy * dy;
+    var t = l ? clamp(((px - x1) * dx + (py - y1) * dy) / l, 0, 1) : 0;
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  // ==========================================
+  // 8. PAINEL DE INFORMAÇÕES
+  // ==========================================
+  function renderInfo() {
+    var html = "";
+    if (game) html += htmlJogo();
+    html += "<h3>Dados do lançamento</h3><div id='stats'></div>";
+    html += "<p class='note'>Sem resistência do ar. <span style='color:#ff5c7a'>vx</span> é constante; <span style='color:#4cd97b'>vy</span> diminui " + fmtG(cfg.g) + " m/s a cada segundo.</p>";
+    infoPanel.innerHTML = html;
+    if (game) ligaJogo();
+    renderStats();
+  }
+
+  function renderStats() {
+    var el = document.getElementById("stats"); if (!el) return;
+    var p = flight, linhas = [];
+    var escondeD = game && game.tipo === "distancia" && !game.respondido;
+    if (p) {
+      var t = Math.min(p.t, p.T), q = posAt(p, t), vy = p.vy - p.g * t;
+      linhas.push(["Lançador", LAUNCHERS[p.launcher].nome]);
+      linhas.push(["v₀ · θ · h", fmt(p.v0) + " m/s · " + fmtAng(p.angle) + " · " + fmt(p.h) + " m"]);
+      linhas.push(["Tempo", fmt(t, 2) + " s", true]);
+      linhas.push(["Posição x", escondeD ? "?" : fmt(q.x) + " m"]);
+      linhas.push(["Altura y", fmt(Math.max(0, q.y)) + " m"]);
+      linhas.push(["vx", fmt(p.vx) + " m/s"]);
+      linhas.push(["vy", fmt(vy) + " m/s"]);
+      linhas.push(["|v|", fmt(Math.hypot(p.vx, vy)) + " m/s"]);
+      if (p.t >= p.T) {
+        linhas.push(["Tempo de voo", fmt(p.T, 2) + " s", true]);
+        linhas.push(["Altura máxima", fmt(p.H) + " m", true]);
+        linhas.push(["Alcance", escondeD ? "?" : fmt(p.D) + " m", true]);
+      }
+    } else {
+      var a = cfg.angle * DEG;
+      linhas.push(["Lançador", LAUNCHERS[cfg.launcher].nome]);
+      linhas.push(["v₀x = v₀·cos θ", fmt(cfg.v0 * Math.cos(a)) + " m/s"]);
+      linhas.push(["v₀y = v₀·sen θ", fmt(cfg.v0 * Math.sin(a)) + " m/s"]);
+      linhas.push(["Trajetórias salvas", cfg.save ? String(saved.length) : "desligado"]);
+    }
+    el.innerHTML = linhas.map(function (l) { return "<div class='stat'><span>" + l[0] + "</span><b" + (l[2] ? " class='hi'" : "") + ">" + l[1] + "</b></div>"; }).join("") +
+      (p ? "" : "<p class='muted' style='margin-top:8px'>Ajuste as condições e clique em <b>Lançar</b> (ou aperte espaço).</p>");
+  }
+
+  // ==========================================
+  // 9. MINIGAME
+  // ==========================================
+  var ultimoTipo = null;
+  function sorteia(l) { return l[Math.floor(Math.random() * l.length)]; }
+
+  function novoDesafio() {
+    if (flight && !flight.done) finalizar();
+    flight = null;
+    var tipos = ["v0", "angulo", "distancia"].filter(function (t) { return t !== ultimoTipo; });
+    var tipo = sorteia(tipos); ultimoTipo = tipo;
+    var notaveis = cfg.angleMode === "notaveis", h, ang, v0, D, tent = 0;
+    do {
+      h = sorteia([0, 0, 0, 5, 10, 15, 20, 25, 30, 40, 45, 50, 60, 80, 100]);
+      if (notaveis) ang = sorteia(h > 0 && tipo !== "angulo" ? [0, 30, 45, 60] : [30, 45, 60]);
+      else ang = Math.random() < .5 ? 10 + Math.floor(Math.random() * 71) : Math.round((10 + Math.random() * 70) * 10) / 10;
+      if (tipo === "angulo" && !notaveis && h === 0 && Math.abs(ang - 45) < 3) ang += 8;
+      v0 = (ang === 0 ? 5 : 8) + Math.floor(Math.random() * 33);
+      D = Math.round(alcance(v0, ang, h, cfg.g) * 10) / 10;
+      tent++;
+    } while ((D < 6 || D > 250) && tent < 200);
+    // Para v0 e ângulo, o dado é a distância arredondada: a resposta exata vem dela.
+    game = { tipo: tipo, h: h, angle: ang, v0: v0, D: D, g: cfg.g, notaveis: notaveis, tol: Math.max(0.8, D * 0.025), respondido: false, lancado: null, resultado: null };
+    if (tipo === "v0") game.resposta = resolveV0(D, ang, h, cfg.g);
+    if (tipo === "angulo") game.respostas = resolveAng(D, v0, h, cfg.g);
+    if (tipo === "distancia") game.resposta = alcance(v0, ang, h, cfg.g);
+    // condições conhecidas já vão para o lançador
+    cfg.h = h;
+    if (tipo !== "v0") cfg.v0 = v0;
+    if (tipo !== "angulo") cfg.angle = ang;
+    hideX = tipo === "distancia";
+    syncUI(); renderInfo(); status("🎯 Leia o desafio no painel e responda.");
+  }
+
+  function sairDoJogo() {
+    game = null; hideX = false; status(""); syncUI(); renderInfo();
+  }
+
+  function htmlJogo() {
+    var g = game, L = LAUNCHERS[cfg.launcher], dados = [], pergunta = "", campo = "";
+    var gtxt = "g = " + fmtG(g.g) + " m/s²";
+    var hTxt = g.h > 0 ? "a <b>" + fmt(g.h, 0) + " m</b> do chão" : "no chão";
+    if (g.tipo === "v0") {
+      dados.push(L.artigo + " está " + hTxt + " e dispara com ângulo de <b>" + fmtAng(g.angle) + "</b>.");
+      dados.push("O alvo está a <b>" + fmt(g.D) + " m</b> do pé do lançador.");
+      pergunta = "Qual deve ser a velocidade inicial v₀ para acertar o alvo?";
+      campo = "<div class='ans'><input type='text' inputmode='decimal' class='num' id='g-ans' placeholder='v₀ (m/s)' aria-label='Sua resposta em metros por segundo'><span class='unit'>m/s</span></div>";
+    } else if (g.tipo === "angulo") {
+      dados.push(L.artigo + " está " + hTxt + " e dispara com <b>v₀ = " + fmt(g.v0, 0) + " m/s</b>.");
+      dados.push("O alvo está a <b>" + fmt(g.D) + " m</b> do pé do lançador.");
+      pergunta = g.notaveis ? "Qual ângulo notável acerta o alvo?" : "Qual deve ser o ângulo de lançamento? (vale qualquer ângulo que acerte)";
+      campo = g.notaveis
+        ? "<div class='tool-grid five' style='margin-bottom:6px'>" + NOTAVEIS.map(function (a) { return "<button type='button' class='seg-btn' data-g-ang='" + a + "'>" + a + "°</button>"; }).join("") + "</div>"
+        : "<div class='ans'><input type='text' inputmode='decimal' class='num' id='g-ans' placeholder='θ (graus)' aria-label='Sua resposta em graus'><span class='unit'>°</span></div>";
+    } else {
+      dados.push(L.artigo + " está " + hTxt + " e dispara com <b>v₀ = " + fmt(g.v0, 0) + " m/s</b> e ângulo de <b>" + fmtAng(g.angle) + "</b>.");
+      dados.push("O projétil vai cair exatamente no alvo.");
+      pergunta = "A que distância do pé do lançador está o alvo?";
+      campo = "<div class='ans'><input type='text' inputmode='decimal' class='num' id='g-ans' placeholder='D (m)' aria-label='Sua resposta em metros'><span class='unit'>m</span></div>";
+    }
+    var html = "<div class='game'><h4>🎯 Desafio <small>acertos: " + score.ok + "/" + score.total + (score.seq > 1 ? " · 🔥 " + score.seq + " seguidos" : "") + "</small></h4>";
+    html += "<p>" + dados.join(" ") + " Use <b>" + gtxt + "</b> e despreze a resistência do ar.</p>";
+    html += "<p class='ask'>" + pergunta + "</p>";
+    if (!g.respondido) {
+      html += campo;
+      if (!(g.tipo === "angulo" && g.notaveis)) html += "<button type='button' class='act-btn primary' id='g-ok' style='width:100%'>Conferir lançando</button>";
+      html += "<p class='note'>Aceita uma margem de " + fmt(g.tol) + " m (o tamanho do alvo). Use vírgula ou ponto.</p>";
+    } else if (g.resultado) {
+      html += "<div class='res " + (g.resultado.ok ? "ok" : "no") + "'>" + g.resultado.msg + "</div>";
+    } else {
+      html += "<p class='note'>Lançando…</p>";
+    }
+    html += "<div class='btns' style='margin-top:6px'><button type='button' class='act-btn gold' id='g-next'>" + (g.respondido ? "Próximo desafio →" : "Pular desafio") + "</button><button type='button' class='act-btn' id='g-exit'>Sair</button></div>";
+    return html + "</div>";
+  }
+
+  function ligaJogo() {
+    var ok = $("g-ok"), inp = $("g-ans");
+    if (ok) ok.addEventListener("click", function () { responder(inp ? inp.value : ""); });
+    if (inp) {
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") responder(inp.value); });
+      setTimeout(function () { try { inp.focus({ preventScroll: true }); } catch (err) { /* sem foco */ } }, 0);
+    }
+    document.querySelectorAll("[data-g-ang]").forEach(function (b) { b.addEventListener("click", function () { responder(b.dataset.gAng); }); });
+    $("g-next").addEventListener("click", function () { if (!game.respondido) { score.total++; score.seq = 0; } novoDesafio(); });
+    $("g-exit").addEventListener("click", sairDoJogo);
+  }
+
+  function responder(txt) {
+    var x = parseNum(txt), g = game;
+    if (!isFinite(x)) { status("Digite um número para responder."); return; }
+    if (g.tipo === "v0") { if (x < 0 || x > 50) { status("A velocidade vai de 0 a 50 m/s."); return; } cfg.v0 = Math.round(x * 10) / 10; }
+    if (g.tipo === "angulo") { if (x < 0 || x > 90) { status("O ângulo vai de 0° a 90°."); return; } cfg.angle = Math.round(x * 10) / 10; }
+    if (g.tipo === "distancia") { if (x < 0) { status("A distância não pode ser negativa."); return; } g.palpite = x; }
+    g.respondido = true;
+    syncUI();
+    lancar();
+    g.lancado = flight;
+    if (!flight) conferir(null);
+    renderInfo();
+    status("");
+  }
+
+  function conferir(p) {
+    var g = game, ok, msg;
+    if (g.tipo === "distancia") {
+      ok = Math.abs(g.palpite - g.resposta) <= g.tol;
+      msg = ok ? "🎯 Acertou! O alvo está a " + fmt(g.resposta) + " m — você respondeu " + fmt(g.palpite) + " m."
+               : "Quase! Você respondeu " + fmt(g.palpite) + " m, mas o alvo está a <b>" + fmt(g.resposta) + " m</b>.";
+      msg += "<br><span style='opacity:.8'>D = v₀·cos θ · t<sub>voo</sub> = " + fmt(g.v0 * Math.cos(g.angle * DEG), 2) + " · " + fmt(p ? p.T : tempoVoo(params(g)), 2) + "</span>";
+      hideX = false;
+    } else {
+      var cai = p ? p.D : 0;
+      ok = Math.abs(cai - g.D) <= g.tol;
+      var certa = g.tipo === "v0" ? "v₀ ≈ " + fmt(g.resposta, 2) + " m/s"
+        : g.notaveis ? "θ = " + g.respostas.map(function (a) { return fmtAng(Math.round(a)); }).filter(function (a, i, l) { return l.indexOf(a) === i; }).join(" ou ")
+        : "θ ≈ " + g.respostas.map(function (a) { return fmt(a) + "°"; }).join(" ou ");
+      msg = ok ? "🎯 Na mosca! Caiu a " + fmt(cai) + " m (alvo a " + fmt(g.D) + " m)."
+               : "Errou: caiu a " + fmt(cai) + " m, e o alvo está a " + fmt(g.D) + " m.";
+      msg += "<br>Resposta: <b>" + certa + "</b>.";
+    }
+    score.total++;
+    if (ok) { score.ok++; score.seq++; } else score.seq = 0;
+    g.resultado = { ok: ok, msg: msg };
+    renderInfo();
+  }
+
+  // ==========================================
+  // 10. INÍCIO
+  // ==========================================
+  resize();
+  syncUI();
+  renderInfo();
+  var a0 = alvoVista(); view.s = a0.s; view.ox = a0.ox; view.oy = a0.oy;
+  requestAnimationFrame(quadro);
+})();
+</script>
+</body>
+</html>
