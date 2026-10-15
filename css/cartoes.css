@@ -70,6 +70,10 @@
 /* fórmula */
 .rc-formula { background: var(--rc-card-2); border: 1px solid var(--rc-line); border-radius: 14px; padding: 14px 16px; text-align: center; overflow-x: auto; }
 .rc-eq { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 19px; color: var(--rc-texto); white-space: nowrap; }
+.rc-eq.rc-latex { font-family: inherit; white-space: normal; }
+.rc-eq.rc-latex .katex-display { margin: 0; }
+.rc-eq.rc-latex .katex { font-size: 1.25em; }
+.rc-formula small .katex { font-size: 1.05em; }
 .rc-formula small { display: block; margin-top: 6px; font-size: 13px; color: var(--rc-muted); }
 
 /* caixas de destaque */

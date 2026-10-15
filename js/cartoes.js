@@ -12,14 +12,16 @@
 //   capa: { icone: '⚡', etiqueta: 'Conceito-chave', titulo: 'Velocidade média' },
 //   blocos: [
 //     { tipo: 'cartao', etiqueta: 'O QUE É', cor: 'ciano' | 'tema' (cor do capítulo) | ..., titulo: '...', html: '<p>...</p>' },
-//     { tipo: 'formula', texto: 'v_m = Δs / Δt', legenda: '...' },
+//     { tipo: 'formula', latex: true, texto: 'v_m = \frac{\Delta s}{\Delta t}', legenda: '...' },
 //     { tipo: 'destaque', variante: 'dica' | 'atencao' | 'exemplo', html: '...' },
 //     { tipo: 'valores', itens: ['Δs = 120 km', 'Δt = 2 h'] },
 //     { tipo: 'imagem', url: 'https://...', legenda: '...' },
 //     { tipo: 'video', url: 'https://youtube.com/...', legenda: '...' },
 //   ],
 // }
-// Fórmulas e valores aceitam índice e expoente: v_0, v_{m}, t^2, 10^{-3}.
+// Fórmulas com latex: true são LaTeX (desenhadas pelo KaTeX); as antigas,
+// sem essa marca, e os valores aceitam índice e expoente: v_0, v_{m}, t^2,
+// 10^{-3}. A legenda da fórmula aceita LaTeX entre cifrões: $\Delta t$.
 
 (function () {
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
@@ -49,6 +51,16 @@
       .replace(/([_^])\{([^}]*)\}/g, (m, t, x) => (t === '_' ? `<sub>${x}</sub>` : `<sup>${x}</sup>`))
       .replace(/([_^])([^\s{}_^]+?)(?=[\s,;.)=+\-*/×·÷]|$)/g, (m, t, x) => (t === '_' ? `<sub>${x}</sub>` : `<sup>${x}</sup>`));
   }
+
+  // LaTeX → HTML pelo KaTeX (carregado antes deste arquivo). Sem o KaTeX,
+  // mostra o código mesmo, para nunca sumir com a fórmula.
+  function latex(tex, bloco) {
+    if (!window.katex) return `<code>${esc(tex)}</code>`;
+    return window.katex.renderToString(String(tex || ''), { displayMode: !!bloco, throwOnError: false, strict: 'ignore', trust: false });
+  }
+  // Texto com trechos $...$ em LaTeX (legenda da fórmula).
+  const comLatex = (texto) => String(texto || '').split(/(\$[^$]+\$)/).map((p) => (
+    /^\$[^$]+\$$/.test(p) ? latex(p.slice(1, -1)) : esc(p))).join('');
 
   // Texto rico do editor (Quill) passa por aqui antes de aparecer: só
   // ficam tags de formatação, links seguros e cores no atributo style.
@@ -101,6 +113,7 @@
       }
       case 'formula':
         if (!b.texto) return '';
+        if (b.latex) return `<div class="rc-formula"><div class="rc-eq rc-latex">${latex(b.texto, true)}</div>${b.legenda ? `<small>${comLatex(b.legenda)}</small>` : ''}</div>`;
         return `<div class="rc-formula"><div class="rc-eq">${formula(b.texto)}</div>${b.legenda ? `<small>${formula(b.legenda)}</small>` : ''}</div>`;
       case 'destaque': {
         const d = DESTAQUES[b.variante] || DESTAQUES.dica;
@@ -155,5 +168,5 @@
     return partes.filter(Boolean).join('\n\n');
   }
 
-  window.Cartoes = { render, textoPlano, temConteudo, formula, limpar, youtubeId, PALETA, MARCA_TEXTO, CORES_ETIQUETA, DESTAQUES, COR_CAPITULO, MARCA_CAPITULO };
+  window.Cartoes = { render, textoPlano, temConteudo, formula, latex, limpar, youtubeId, PALETA, MARCA_TEXTO, CORES_ETIQUETA, DESTAQUES, COR_CAPITULO, MARCA_CAPITULO };
 })();

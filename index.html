@@ -50,6 +50,9 @@
         'js/config.js', 'js/api.js', 'js/plus.js',
         // Resumo/Curiosidade em cartões: DOMPurify limpa o texto rico que vem do painel
         'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+        // Fórmulas em LaTeX (KaTeX)
+        'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js',
         'js/cartoes.js', 'js/app.js'
       ];
       function carregar(v) {
@@ -62,7 +65,7 @@
           } else {
             var s = document.createElement('script');
             s.src = url; s.async = false; // mantém a ordem de execução
-            if (!/^https?:/.test(src)) s.onerror = function () { window.lupFalha(); }; // DOMPurify é opcional
+            if (!/^https?:/.test(src)) s.onerror = function () { window.lupFalha(); }; // DOMPurify e KaTeX são opcionais
             document.body.appendChild(s);
           }
         });
