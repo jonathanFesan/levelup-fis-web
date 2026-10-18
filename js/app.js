@@ -340,12 +340,13 @@
     $app.innerHTML = `
       <div class="auth-wrap">
       <aside class="auth-side">
-        <img class="logo" src="assets/logo.png" alt="">
-        <h2>Física de um jeito que dá vontade de estudar.</h2>
+        <div class="auth-hero">
+          <img class="logo" src="assets/logo.png" alt="">
+          <h2>Física de um jeito que dá vontade de estudar.</h2>
+        </div>
         <ul>
           <li>${ICON.map}Trilhas por capítulo com resumo, exercícios e prova</li>
           <li>${ICON.bolt}Ganhe Joules, suba de nível e desbloqueie conteúdos</li>
-          <li>${ICON.sync}O mesmo progresso no app e no site</li>
         </ul>
       </aside>
       <div class="auth center">
@@ -360,7 +361,6 @@
           <button class="btn btn-primary btn-block" type="submit">Entrar</button>
           <a class="btn btn-text btn-block" href="#/register">Ainda não tem conta? Cadastre-se</a>
         </form>
-        <p class="sync-note">${ICON.sync}Use a mesma conta do app — seu progresso é o mesmo.</p>
       </div></div>`;
     const f = $app.querySelector('form');
     const err = $app.querySelector('[data-err]');
@@ -400,12 +400,13 @@
     $app.innerHTML = `
       <div class="auth-wrap">
       <aside class="auth-side">
-        <img class="logo" src="assets/logo.png" alt="">
-        <h2>Física de um jeito que dá vontade de estudar.</h2>
+        <div class="auth-hero">
+          <img class="logo" src="assets/logo.png" alt="">
+          <h2>Física de um jeito que dá vontade de estudar.</h2>
+        </div>
         <ul>
           <li>${ICON.map}Trilhas por capítulo com resumo, exercícios e prova</li>
           <li>${ICON.bolt}Ganhe Joules, suba de nível e desbloqueie conteúdos</li>
-          <li>${ICON.sync}O mesmo progresso no app e no site</li>
         </ul>
       </aside>
       <div class="auth center">
@@ -1851,6 +1852,8 @@
     const c = document.getElementById('starfield');
     const ctx = c.getContext('2d');
     let stars = [];
+    const meteors = [];
+    let nextMeteor = 0;
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       c.width = innerWidth * dpr; c.height = innerHeight * dpr;
@@ -1859,17 +1862,53 @@
       stars = Array.from({ length: n }, () => ({
         x: Math.random() * innerWidth, y: Math.random() * innerHeight,
         r: Math.random() * 1.3 + 0.3, a: Math.random() * 0.5 + 0.15, p: Math.random() * Math.PI * 2,
+        v: 1 / (500 + Math.random() * 700), // cada estrela cintila no seu ritmo
       }));
+    };
+    // Meteoros só no login/cadastro, para não distrair durante o estudo
+    const meteorosAtivos = () => /^#\/(login|register)/.test(location.hash) || !location.hash;
+    const spawnMeteor = (t) => {
+      const ang = Math.PI / 5 + Math.random() * 0.25; // ~36–50° descendo para a esquerda
+      meteors.push({
+        x: innerWidth * (0.35 + Math.random() * 0.75), y: -20 + Math.random() * innerHeight * 0.35,
+        dx: -Math.cos(ang), dy: Math.sin(ang),
+        speed: 0.45 + Math.random() * 0.35, len: 90 + Math.random() * 90,
+        born: t, life: 1100 + Math.random() * 700,
+      });
     };
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const draw = (t) => {
       ctx.clearRect(0, 0, innerWidth, innerHeight);
       for (const s of stars) {
-        const a = reduce ? s.a : s.a * (0.6 + 0.4 * Math.sin(t / 1400 + s.p));
-        ctx.fillStyle = `rgba(124,132,184,${a})`;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        const w = 0.5 + 0.5 * Math.sin(t * s.v + s.p); // 0..1
+        const a = Math.min(1, s.a * 1.8) * (0.08 + 0.92 * w);
+        const r = s.r * (0.85 + 0.35 * w);
+        ctx.fillStyle = `rgba(${150 + 70 * w | 0},${158 + 66 * w | 0},${210 + 35 * w | 0},${a})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.fill();
       }
-      if (!reduce) requestAnimationFrame(draw);
+      // Cintilação é só brilho (sem movimento), então roda sempre; meteoros respeitam "reduzir movimento"
+      if (!reduce) {
+        if (!nextMeteor) nextMeteor = t + 1000;
+        if (t >= nextMeteor) {
+          if (meteorosAtivos() && !document.hidden) spawnMeteor(t);
+          nextMeteor = t + 1800 + Math.random() * 3000;
+        }
+        for (let i = meteors.length - 1; i >= 0; i--) {
+          const m = meteors[i];
+          const k = (t - m.born) / m.life;
+          if (k >= 1) { meteors.splice(i, 1); continue; }
+          const d = (t - m.born) * m.speed;
+          const hx = m.x + m.dx * d, hy = m.y + m.dy * d;
+          const tx = hx - m.dx * m.len, ty = hy - m.dy * m.len;
+          const fade = Math.sin(Math.PI * k) * 0.55; // surge e some suavemente
+          const g = ctx.createLinearGradient(hx, hy, tx, ty);
+          g.addColorStop(0, `rgba(230,234,255,${fade})`);
+          g.addColorStop(1, 'rgba(160,170,230,0)');
+          ctx.strokeStyle = g; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(tx, ty); ctx.stroke();
+        }
+      }
+      requestAnimationFrame(draw);
     };
     addEventListener('resize', resize);
     resize();

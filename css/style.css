@@ -586,6 +586,7 @@ button.price-card:hover { border-color: #3b4a85; }
   .auth-side { display: block !important; }
   .auth .logo { display: none; }
   .auth h1 { margin-top: 0; }
+  .auth-hero { display: flex; flex-direction: column; align-items: center; width: fit-content; }
   .auth-side .logo { width: 88px; height: 88px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
   .auth-side h2 { font-family: 'Lora', Georgia, serif; font-size: 38px; line-height: 1.15; margin: 22px 0 26px; }
   .auth-side ul { list-style: none; padding: 0; margin: 0; }
