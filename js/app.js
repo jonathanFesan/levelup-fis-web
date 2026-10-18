@@ -1282,8 +1282,59 @@
 
   async function exigirPlus() {
     const r = await plusStatus();
-    if (!r.st.ativo && !emPreview(r.st)) { go('#/plus'); return null; }
+    if (r.st.pausado || (!r.st.ativo && !emPreview(r.st))) { go('#/plus'); return null; }
     return r;
+  }
+
+  // ---------- Plus pausado (painel → aba Plus → "Pausar Plus") ----------
+  // Astronauta flutuando segura a placa de aviso e alterna o olhar entre o
+  // céu (estrelas e meteoros do fundo) e quem está vendo a página.
+  const ASTRONAUTA = `<svg class="pp-astro" viewBox="0 0 200 240" aria-hidden="true">
+    <defs>
+      <linearGradient id="pp-visor" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b3a78"/><stop offset="1" stop-color="#0b1233"/></linearGradient>
+      <linearGradient id="pp-traje" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fafafc"/><stop offset="1" stop-color="#d6dbef"/></linearGradient>
+    </defs>
+    <g class="pp-corpo">
+      <rect x="50" y="80" width="100" height="92" rx="20" fill="#b9c0de"/>
+      <rect x="68" y="168" width="28" height="50" rx="13" fill="url(#pp-traje)"/>
+      <rect x="104" y="168" width="28" height="50" rx="13" fill="url(#pp-traje)"/>
+      <rect x="66" y="206" width="32" height="16" rx="8" fill="#8e97c2"/>
+      <rect x="102" y="206" width="32" height="16" rx="8" fill="#8e97c2"/>
+      <rect x="58" y="88" width="84" height="96" rx="32" fill="url(#pp-traje)"/>
+      <path d="M68 104 Q48 122 58 142" stroke="#e6e9f6" stroke-width="17" fill="none" stroke-linecap="round"/>
+      <path d="M132 104 Q152 122 142 142" stroke="#e6e9f6" stroke-width="17" fill="none" stroke-linecap="round"/>
+      <g class="pp-placa">
+        <rect x="56" y="114" width="88" height="66" rx="9" fill="#fff8e6" stroke="#d8ccae" stroke-width="2"/>
+        <path d="M100 123 L127 170 L73 170 Z" fill="#ffc65c" stroke="#e8952a" stroke-width="4" stroke-linejoin="round"/>
+        <rect x="96.8" y="137" width="6.4" height="19" rx="3.2" fill="#1a2050"/>
+        <circle cx="100" cy="162.5" r="3.6" fill="#1a2050"/>
+      </g>
+      <circle cx="58" cy="142" r="10" fill="#b9c0de"/>
+      <circle cx="142" cy="142" r="10" fill="#b9c0de"/>
+      <g class="pp-cabeca">
+        <rect x="48" y="52" width="10" height="22" rx="5" fill="#b9c0de"/>
+        <rect x="142" y="52" width="10" height="22" rx="5" fill="#b9c0de"/>
+        <circle cx="100" cy="62" r="45" fill="url(#pp-traje)"/>
+        <ellipse cx="100" cy="64" rx="33" ry="29" fill="url(#pp-visor)"/>
+        <g class="pp-olhos">
+          <ellipse cx="88" cy="64" rx="4" ry="5" fill="#fcf3c8"/>
+          <ellipse cx="112" cy="64" rx="4" ry="5" fill="#fcf3c8"/>
+          <path d="M93 77 Q100 81 107 77" stroke="#fcf3c8" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        </g>
+        <path d="M76 52 Q84 40 98 38" stroke="#fff" stroke-opacity=".55" stroke-width="5" fill="none" stroke-linecap="round"/>
+      </g>
+    </g>
+  </svg>`;
+
+  function viewPlusPausado() {
+    $app.innerHTML = topStats(S.profile) + `
+      <div class="plus-pausa">
+        <div class="pp-cena" aria-hidden="true">
+          ${ASTRONAUTA}
+        </div>
+        <h2>Plus temporariamente indisponível</h2>
+        <p class="muted">Aguarde — estamos ajustando algumas coisas e o LevelUp Plus volta logo.</p>
+      </div>` + bottomNav('plus');
   }
 
   // ---------- Plus: venda ou área do assinante ----------
@@ -1294,6 +1345,7 @@
       $app.innerHTML = topStats(S.profile) + errorBox('Erro ao carregar o LevelUp Plus.') + bottomNav('plus');
       return bindRetry();
     }
+    if (st.pausado) return viewPlusPausado();
     if (st.ativo || emPreview(st)) return viewPlusMembro(u, st);
 
     const pct = Math.round(PC.AULA_DESCONTO_PLUS * 100);
@@ -1866,7 +1918,7 @@
       }));
     };
     // Meteoros só no login/cadastro, para não distrair durante o estudo
-    const meteorosAtivos = () => /^#\/(login|register)/.test(location.hash) || !location.hash;
+    const meteorosAtivos = () => /^#\/(login|register)/.test(location.hash) || !location.hash || !!document.querySelector('.plus-pausa');
     const spawnMeteor = (t) => {
       const ang = Math.PI / 5 + Math.random() * 0.25; // ~36–50° descendo para a esquerda
       meteors.push({

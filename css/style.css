@@ -647,3 +647,22 @@ button.price-card:hover { border-color: #3b4a85; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Plus pausado: astronauta segurando a placa de aviso ---------- */
+.plus-pausa { text-align: center; padding: 18px 0 40px; }
+.plus-pausa h2 { font-family: 'Lora', Georgia, serif; font-size: 26px; line-height: 1.2; margin: 6px 0 8px; color: var(--cream); }
+.plus-pausa p { max-width: 380px; margin: 0 auto; }
+.pp-cena { width: 100%; max-width: 230px; margin: 12px auto 4px; }
+
+.pp-astro { display: block; width: 100%; overflow: visible; }
+.pp-astro * { transform-box: fill-box; }
+.pp-corpo { transform-origin: center; animation: pp-flutua 6s ease-in-out infinite; }
+.pp-cabeca { transform-origin: 50% 90%; animation: pp-cabeca 8s ease-in-out infinite; }
+.pp-olhos { transform-origin: center; animation: pp-olhar 8s ease-in-out infinite; }
+.pp-placa { transform-origin: 50% 0; animation: pp-placa 6s ease-in-out infinite; }
+
+@keyframes pp-flutua { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(2deg); } }
+@keyframes pp-placa { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+/* 0–40%: olha o céu (cima, à direita) · 50–90%: olha para quem está vendo */
+@keyframes pp-cabeca { 0%, 40% { transform: rotate(11deg); } 50%, 90% { transform: rotate(0); } 100% { transform: rotate(11deg); } }
+@keyframes pp-olhar { 0%, 40% { transform: translate(7px, -5px); } 50%, 90% { transform: translate(0, 0); } 100% { transform: translate(7px, -5px); } }
