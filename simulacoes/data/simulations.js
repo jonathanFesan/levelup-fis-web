@@ -59,6 +59,15 @@ window.LUF.simulations = [
     tags: ["eletromagnetismo", "força magnética", "vetores", "3D"],
     addedAt: "2026-10-19",
   },
+  {
+    id: "teoria-cinetica-dos-gases",
+    title: "Teoria Cinética dos Gases e Termodinâmica",
+    summary: "Partículas, êmbolo, manômetro e gráfico P×V: transformações gasosas e 1ª Lei",
+    category: "fisica",
+    path: "simulations/fisica/teoria-cinetica-dos-gases.html",
+    tags: ["termodinâmica", "gases", "pressão", "3D"],
+    addedAt: "2026-10-19",
+  },
 ];
 
 // DESTAQUES DA HOME: ids na ORDEM em que devem aparecer no carrossel.
