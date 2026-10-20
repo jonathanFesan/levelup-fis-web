@@ -68,6 +68,15 @@ window.LUF.simulations = [
     tags: ["termodinâmica", "gases", "pressão", "3D"],
     addedAt: "2026-10-19",
   },
+  {
+    id: "polias-engrenagens-eixos",
+    title: "Polias, Engrenagens e Eixos",
+    summary: "Correia, engrenagens e eixo comum: v, ω e f de cada disco, marchas da bicicleta e redutor",
+    category: "fisica",
+    path: "simulations/fisica/polias-engrenagens-eixos.html",
+    tags: ["mecânica", "rotação", "MCU", "3D"],
+    addedAt: "2026-10-19",
+  },
 ];
 
 // DESTAQUES DA HOME: ids na ORDEM em que devem aparecer no carrossel.

@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Polias, Engrenagens e Eixos — LevelUpFís Simulations</title>
+<meta name="description" content="Transmissão de movimento em 3D: engrenagens, correia direta e cruzada e eixo comum. Compare v, ω e f de cada disco, monte as marchas de uma bicicleta e veja a redução de velocidade com ganho de torque.">
+
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/simulation.css">
+
+<!-- Three.js e OrbitControls baixados localmente (sem CDN) -->
+<script src="../../assets/vendor/three.min.js"></script>
+<script src="../../assets/vendor/OrbitControls.js"></script>
+
+<style>
+  /* Estilos específicos desta simulação, no mesmo padrão visual de
+     transmissao-de-movimento.html (painéis de vidro escuro, destaque azul). */
+  #sim-stage { min-height: 80vh; }
+  #sim-content canvas { touch-action: none; }
+
+  .glass {
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 12px;
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  #ui-panel {
+    position: absolute; top: 16px; left: 16px; z-index: 4;
+    width: min(290px, calc(100% - 32px)); max-height: calc(100% - 32px);
+    overflow-y: auto; padding: 14px 16px;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head h2 { margin: 0; font-size: 1.02rem; }
+  .panel-head h3 { margin: 0; font-size: .98rem; }
+  .collapse-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #555; flex: none;
+    background: rgba(255,255,255,.06); color: #ddd; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  .panel-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
+  .collapsed .panel-body { display: none; }
+
+  .section { margin-bottom: 14px; }
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: #8a8a8a; margin-bottom: 6px;
+  }
+  .ctrl { margin-bottom: 12px; }
+  #ui-panel label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 12.5px; color: #aaa; }
+  .val-display { float: right; color: #4facfe; font-weight: bold; }
+  input[type="range"] { width: 100%; cursor: pointer; accent-color: #4facfe; }
+  .check { display: flex !important; align-items: center; gap: 8px; cursor: pointer; font-weight: 600 !important; margin-bottom: 6px !important; }
+  .check input { accent-color: #4facfe; }
+
+  .seg { display: grid; gap: 5px; }
+  .seg.c2 { grid-template-columns: repeat(2, 1fr); }
+  .seg.c3 { grid-template-columns: repeat(3, 1fr); }
+  .seg.c6 { grid-template-columns: repeat(6, 1fr); }
+  .seg-btn, .act-btn {
+    font: inherit; font-size: 12px; font-weight: 600; color: #e6e6e6;
+    background: rgba(255,255,255,.07); border: 1px solid #555; border-radius: 7px;
+    padding: 7px 4px; cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center;
+  }
+  .seg-btn:hover, .act-btn:hover { background: rgba(255,255,255,.15); }
+  .seg-btn.active, .act-btn.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent;
+  }
+  .act-btn { font-size: 12.5px; padding: 8px 6px; }
+  .act-btn.primary { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent; }
+  .act-btn.primary:hover { filter: brightness(1.1); }
+  .seg-btn small { display: block; font-size: 10px; font-weight: 600; opacity: .75; }
+  .seg-btn.tall { flex-direction: column; gap: 0; padding: 6px 3px; }
+  .note { font-size: 11.5px; color: #8a8a8a; margin: 6px 0 0; line-height: 1.45; }
+  #hints { font-size: 11.5px; color: #7d7d7d; margin-top: 8px; line-height: 1.5; }
+
+  #info-panel {
+    position: absolute; top: 62px; right: 16px; z-index: 4;
+    width: min(320px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow-y: auto; padding: 14px 16px;
+  }
+  table.readout { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.readout th { color: #8a8a8a; font-weight: 600; text-align: right; padding: 3px 4px; border-bottom: 1px solid #444; font-size: 11px; }
+  table.readout th:first-child, table.readout td:first-child { text-align: left; }
+  table.readout td { text-align: right; padding: 5px 4px; border-bottom: 1px dashed #3a3a3a; font-variant-numeric: tabular-nums; }
+  .dname { font-weight: 700; white-space: nowrap; }
+  .dname i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .eq-box {
+    margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid #3a3a3a;
+    font-size: 12.5px; line-height: 1.55; color: #ddd;
+  }
+  .eq-box .eq { font-family: 'Cambria Math', 'Times New Roman', serif; font-size: 15px; color: #fff; text-align: center; margin: 2px 0 4px; }
+  .eq-box b.y { color: #ffd84a; }
+  .big { font-size: 22px; font-weight: 800; color: #ffd84a; text-align: center; margin: 4px 0 0; }
+  .big small { font-size: 12px; color: #aaa; font-weight: 600; display: block; }
+  .bars { display: grid; grid-template-columns: 54px 1fr 70px; gap: 5px 8px; align-items: center; font-size: 12px; margin-top: 8px; }
+  .bar { height: 8px; border-radius: 4px; background: #2a2a2a; overflow: hidden; }
+  .bar span { display: block; height: 100%; border-radius: 4px; }
+
+  #status-bar {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4;
+    max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; font-size: 12.5px; text-align: center;
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 8px; color: #ddd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; pointer-events: none;
+  }
+  #status-bar:empty { display: none; }
+
+  /* Rótulos que acompanham objetos 3D (posição recalculada a cada quadro) */
+  #label-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .tag {
+    position: absolute; top: 0; left: 0; transform: translate(-50%, -50%); display: none;
+    font: 700 12px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; white-space: nowrap;
+    padding: 2px 9px; border-radius: 999px; background: rgba(10, 10, 16, 0.72); color: #ddd; border: 1px solid #555;
+  }
+  .tag.vel { color: #ffd84a; border-color: rgba(255, 216, 74, .55); font-weight: 600; }
+
+  button:focus-visible, input:focus-visible { outline: 2px solid #fcf3c8; outline-offset: 2px; }
+
+  @media (max-width: 760px) {
+    #info-panel { top: auto; bottom: 60px; right: 16px; max-height: 40%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seg-btn, .act-btn { transition: none; }
+  }
+</style>
+</head>
+<body data-root="../../" data-page="simulation" data-category="fisica">
+
+<!-- Header (com botão "← Voltar") e footer são injetados por assets/js/layout.js -->
+
+<main>
+  <div class="luf-sub">
+    <h1>Polias, Engrenagens e Eixos</h1>
+    <p>Compare os acoplamentos que transmitem movimento: engrenagens e correias têm a mesma velocidade v na borda, enquanto discos no mesmo eixo têm a mesma velocidade angular ω. Ajuste os raios e a frequência do motor, conte as voltas com os ponteiros e aplique nas marchas de uma bicicleta e num redutor industrial.</p>
+  </div>
+
+  <div class="luf-simwrap">
+    <section id="sim-stage" aria-label="Área da simulação">
+      <div id="sim-content">
+        <!-- O canvas do Three.js é criado e inserido aqui via JS -->
+        <div id="label-layer" aria-hidden="true"></div>
+      </div>
+
+      <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+
+      <div id="ui-panel" class="glass">
+        <div class="panel-head">
+          <h2>Transmissão</h2>
+          <button type="button" class="collapse-btn" data-collapse="ui-panel" aria-expanded="true" title="Recolher painel">–</button>
+        </div>
+
+        <div class="panel-body">
+          <div class="section">
+            <div class="section-title">Modo</div>
+            <div class="seg c3" role="group" aria-label="Modo">
+              <button type="button" class="seg-btn tall" data-mode="livre">⚙️<small>Livre</small></button>
+              <button type="button" class="seg-btn tall" data-mode="bike">🚲<small>Bicicleta</small></button>
+              <button type="button" class="seg-btn tall" data-mode="red">🏭<small>Redutor</small></button>
+            </div>
+          </div>
+
+          <div id="sec-livre">
+            <div class="section">
+              <div class="section-title">Acoplamento</div>
+              <div class="seg c2" role="group" aria-label="Tipo de acoplamento">
+                <button type="button" class="seg-btn" data-coupling="gear">Engrenagens</button>
+                <button type="button" class="seg-btn" data-coupling="belt">Correia direta</button>
+                <button type="button" class="seg-btn" data-coupling="cross">Correia cruzada</button>
+                <button type="button" class="seg-btn" data-coupling="axle">Eixo comum</button>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-title">Raios</div>
+              <div class="ctrl">
+                <label for="in-r1">Disco 1 (R₁) <span class="val-display" id="r1-val"></span></label>
+                <input type="range" id="in-r1" min="5" max="30" step="1" value="10">
+              </div>
+              <div class="ctrl" id="ctrl-r2">
+                <label for="in-r2">Disco 2 (R₂) <span class="val-display" id="r2-val"></span></label>
+                <input type="range" id="in-r2" min="5" max="30" step="1" value="30">
+              </div>
+              <label class="check" id="chk-d3-wrap"><input type="checkbox" id="chk-d3"> Disco 3 no eixo do disco 1</label>
+              <div class="ctrl" id="ctrl-r3">
+                <label for="in-r3">Disco 3 (R₃) <span class="val-display" id="r3-val"></span></label>
+                <input type="range" id="in-r3" min="5" max="30" step="1" value="20">
+              </div>
+            </div>
+          </div>
+
+          <div id="sec-bike">
+            <div class="section">
+              <div class="section-title">Coroa (pedivela)</div>
+              <div class="seg c3" role="group" aria-label="Coroa">
+                <button type="button" class="seg-btn" data-coroa="8">8 cm</button>
+                <button type="button" class="seg-btn" data-coroa="10">10 cm</button>
+                <button type="button" class="seg-btn" data-coroa="12">12 cm</button>
+              </div>
+            </div>
+            <div class="section">
+              <div class="section-title">Marcha (catraca traseira)</div>
+              <div class="seg c6" role="group" aria-label="Catraca">
+                <button type="button" class="seg-btn tall" data-catraca="9">1<small>9</small></button>
+                <button type="button" class="seg-btn tall" data-catraca="8">2<small>8</small></button>
+                <button type="button" class="seg-btn tall" data-catraca="7">3<small>7</small></button>
+                <button type="button" class="seg-btn tall" data-catraca="6">4<small>6</small></button>
+                <button type="button" class="seg-btn tall" data-catraca="5">5<small>5</small></button>
+                <button type="button" class="seg-btn tall" data-catraca="4">6<small>4</small></button>
+              </div>
+              <p class="note">Raio da catraca em cm. Marcha mais alta = catraca menor.</p>
+            </div>
+          </div>
+
+          <div id="sec-red">
+            <div class="section">
+              <div class="section-title">Engrenagens do redutor</div>
+              <div class="ctrl">
+                <label for="in-r1b">Pinhão do motor (R₁) <span class="val-display" id="r1b-val"></span></label>
+                <input type="range" id="in-r1b" min="5" max="30" step="1" value="5">
+              </div>
+              <div class="ctrl">
+                <label for="in-r2b">Coroa de saída (R₂) <span class="val-display" id="r2b-val"></span></label>
+                <input type="range" id="in-r2b" min="5" max="30" step="1" value="30">
+              </div>
+              <div class="ctrl">
+                <label for="in-pow">Potência do motor (P) <span class="val-display" id="pow-val"></span></label>
+                <input type="range" id="in-pow" min="10" max="200" step="10" value="60">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title" id="motor-title">Motor (disco 1)</div>
+            <div class="ctrl">
+              <label for="in-f1" id="f1-label">Frequência f₁ <span class="val-display" id="f1-val"></span></label>
+              <input type="range" id="in-f1" min="0" max="3" step="0.05" value="0.5">
+            </div>
+            <div class="seg c3">
+              <button type="button" class="act-btn" id="btn-dir" title="Inverter sentido do motor">↺ Anti-hor.</button>
+              <button type="button" class="act-btn" id="btn-slow" aria-pressed="false">🐢 Lenta</button>
+              <button type="button" class="act-btn primary" id="btn-pause">⏸ Pausar</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Exibir</div>
+            <label class="check"><input type="checkbox" id="chk-vec" checked> Vetores velocidade (v)</label>
+            <label class="check"><input type="checkbox" id="chk-ptr" checked> Ponteiros (contar voltas)</label>
+            <label class="check"><input type="checkbox" id="chk-tags" checked> Rótulos nos discos</label>
+            <div class="seg c3" style="margin-top:8px">
+              <button type="button" class="act-btn" id="btn-front">Frente</button>
+              <button type="button" class="act-btn" id="btn-3d">3D</button>
+              <button type="button" class="act-btn" id="btn-laps">0 voltas</button>
+            </div>
+          </div>
+
+          <div id="hints">
+            🎥 <b>Arrastar:</b> girar a câmera · <b>Roda:</b> zoom<br>
+            ⌨️ <b>Espaço:</b> pausar
+          </div>
+        </div>
+      </div>
+
+      <div id="info-panel" class="glass" aria-live="polite">
+        <div class="panel-head">
+          <h3 id="info-title">Leituras</h3>
+          <button type="button" class="collapse-btn" data-collapse="info-panel" aria-expanded="true" title="Recolher painel">–</button>
+        </div>
+        <div class="panel-body" id="info-body"></div>
+      </div>
+
+      <div id="status-bar" role="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> shell de simulação -->
+<script src="../../data/simulations.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/simulation-shell.js"></script>
+
+<script>
+(function () {
+  "use strict";
+  if (!window.LUF || !LUF.stage || !window.THREE) return;
+
+  // ==========================================
+  // 1. CONSTANTES E ESTADO
+  // ==========================================
+  // Convenção: todos os discos giram em torno de eixos paralelos a Z.
+  // ω > 0 = anti-horário visto de frente (+Z). 1 unidade da cena = 10 cm.
+  var TAU = Math.PI * 2;
+  var CM = 10;                  // cm por unidade
+  var MODULE = 0.1;             // engrenagens: raio primitivo = N·m/2 → N = 2·R(cm)
+  var WHEEL_CM = 33;            // raio da roda da bicicleta
+  var CHAINSTAY = 4.2;          // distância coroa–catraca (unid.)
+  var DRUM_CM = 4;              // tambor do redutor
+  var G = 9.8;
+  var COL = { d1: 0x2f9bff, d2: 0xff3b5c, d3: 0x39ff7a, vec: 0xffd84a };
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var cfg = {
+    mode: "livre", coupling: "gear",
+    R1: 10, R2: 30, R3: 20, d3: false,
+    coroa: 10, catraca: 6,
+    redR1: 5, redR2: 30, power: 60,
+    f1: 0.5, dir: 1, slow: false, paused: false,
+    vec: true, ptr: true, tags: true
+  };
+
+  function fmt(x, d) { return (Math.abs(x) < 0.5 * Math.pow(10, -d) ? 0 : x).toFixed(d).replace(".", ","); }
+
+  // ==========================================
+  // 2. CENA, CÂMERA E CONTROLES
+  // ==========================================
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x050505);
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  LUF.stage.content.appendChild(renderer.domElement);
+  var canvas = renderer.domElement;
+
+  var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
+  var controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 5;
+  controls.maxDistance = 60;
+
+  var camTween = null;
+  var VIEWS = { front: [0, 0.4, 23], "3d": [-12, 8, 19] };
+  function setView(name, instant) {
+    var to = new THREE.Vector3().fromArray(VIEWS[name]);
+    var tgt = new THREE.Vector3(cfg.mode === "bike" ? 0.4 : 0, cfg.mode === "red" ? -0.8 : 0, 0);
+    if (instant || reduceMotion) {
+      camera.position.copy(to); controls.target.copy(tgt); camTween = null; controls.update();
+    } else {
+      camTween = { t: 0, fp: camera.position.clone(), tp: to, ft: controls.target.clone(), tt: tgt };
+    }
+  }
+  function stepTween(dt) {
+    if (!camTween) return;
+    camTween.t = Math.min(1, camTween.t + dt / 0.7);
+    var t = camTween.t, k = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    camera.position.lerpVectors(camTween.fp, camTween.tp, k);
+    controls.target.lerpVectors(camTween.ft, camTween.tt, k);
+    if (t >= 1) camTween = null;
+  }
+  controls.addEventListener("start", function () { camTween = null; });
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  var keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+  keyLight.position.set(6, 10, 18);
+  scene.add(keyLight);
+  var fillLight = new THREE.DirectionalLight(0x9fc7ff, 0.35);
+  fillLight.position.set(-12, -6, 8);
+  scene.add(fillLight);
+
+  // Parede de fundo com grade (mesmo estilo de transmissao-de-movimento.html).
+  var grid = new THREE.GridHelper(60, 60, 0x262626, 0x151515);
+  grid.rotation.x = Math.PI / 2;
+  grid.position.z = -2.4;
+  scene.add(grid);
+
+  // ==========================================
+  // 3. GEOMETRIAS
+  // ==========================================
+  function zCyl(r, h, seg) {
+    var g = new THREE.CylinderGeometry(r, r, h, seg || 24);
+    g.rotateX(Math.PI / 2);
+    return g;
+  }
+
+  // Engrenagem de dentes trapezoidais. Dente k centrado no ângulo 2πk/N —
+  // convenção usada no cálculo de fase do engrenamento (ver kinematics()).
+  function gearGeometry(N, depth) {
+    var r = N * MODULE / 2, ra = r + MODULE, rf = r - 1.25 * MODULE, p = TAU / N;
+    var shape = new THREE.Shape();
+    for (var i = 0; i < N; i++) {
+      var a = i * p;
+      var pts = [[a - 0.29 * p, rf], [a - 0.13 * p, ra], [a + 0.13 * p, ra], [a + 0.29 * p, rf], [a + 0.5 * p, rf]];
+      for (var j = 0; j < pts.length; j++) {
+        var x = pts[j][1] * Math.cos(pts[j][0]), y = pts[j][1] * Math.sin(pts[j][0]);
+        if (i === 0 && j === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+      }
+    }
+    shape.closePath();
+    addHoles(shape, rf);
+    var geo = new THREE.ExtrudeGeometry(shape, {
+      depth: depth, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 1, curveSegments: 10
+    });
+    geo.translate(0, 0, -depth / 2);
+    return geo;
+  }
+  // Furo central + furos de alívio (também ajudam a ver o giro).
+  function addHoles(shape, rOuter) {
+    var hole = new THREE.Path();
+    hole.absarc(0, 0, 0.14, 0, TAU, true);
+    shape.holes.push(hole);
+    var inner = 0.32, outer = rOuter - 0.18;
+    if (outer - inner < 0.12) return;
+    var nh = rOuter > 1.8 ? 6 : 4;
+    var rc = (inner + outer) / 2;
+    var hr = Math.min((outer - inner) / 2 * 0.8, TAU * rc / nh * 0.3);
+    for (var h = 0; h < nh; h++) {
+      var ang = (h + 0.5) * TAU / nh, lh = new THREE.Path();
+      lh.absarc(rc * Math.cos(ang), rc * Math.sin(ang), hr, 0, TAU, true);
+      shape.holes.push(lh);
+    }
+  }
+  function pulleyGeometry(r) {
+    var shape = new THREE.Shape();
+    shape.absarc(0, 0, r, 0, TAU, false);
+    addHoles(shape, r);
+    var geo = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.34, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 2, curveSegments: 48
+    });
+    geo.translate(0, 0, -0.17);
+    return geo;
+  }
+
+  function neonMat(hex) {
+    return new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: 0.32, metalness: 0.35, roughness: 0.4 });
+  }
+  var metal = new THREE.MeshStandardMaterial({ color: 0xaab3bd, metalness: 0.85, roughness: 0.3 });
+  var darkMetal = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.7, roughness: 0.45 });
+
+  // ==========================================
+  // 4. DISCOS
+  // ==========================================
+  // Cada disco: { root (posição), spin (gira), kind, rCm, color, theta, omega, trav }.
+  function makeDisc(color) {
+    var d = { root: new THREE.Group(), spin: new THREE.Group(), kind: "", rCm: 0, color: color, key: "",
+              theta: 0, omega: 0, trav: 0, visible: false, x: 0, z: 0, name: "", front: 0.2 };
+    d.root.add(d.spin);
+    scene.add(d.root);
+    return d;
+  }
+  var d1 = makeDisc(COL.d1), d2 = makeDisc(COL.d2), d3 = makeDisc(COL.d3);
+  var discs = [d1, d2, d3];
+
+  function clearGroup(g) {
+    while (g.children.length) {
+      var c = g.children[0];
+      g.remove(c);
+      c.traverse(function (o) {
+        if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
+        if (o.material && !o.material.userData.shared) o.material.dispose();
+      });
+    }
+  }
+
+  var dotGeo = new THREE.SphereGeometry(0.09, 14, 10); dotGeo.userData.shared = true;
+  var dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); dotMat.userData.shared = true;
+
+  // (Re)constrói a malha do disco conforme tipo e raio.
+  function buildDisc(d) {
+    var key = d.kind + ":" + d.rCm + ":" + (d.extra ? 1 : 0);
+    if (key === d.key) return;
+    d.key = key;
+    clearGroup(d.spin);
+    if (d === d1) pedals = [];
+    var r = d.rCm / CM, mat = neonMat(d.color), geo, front = 0.2;
+    if (d.kind === "gear" || d.kind === "sprocket") {
+      var depth = d.kind === "gear" ? 0.4 : 0.16;
+      geo = gearGeometry(Math.round(2 * d.rCm), depth);
+      front = depth / 2 + 0.03;
+    } else if (d.kind === "pulley" || d.kind === "drum") {
+      geo = pulleyGeometry(r);
+      front = 0.2;
+    }
+    if (geo) {
+      d.spin.add(new THREE.Mesh(geo, mat));
+      var edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25),
+        new THREE.LineBasicMaterial({ color: new THREE.Color(d.color).lerp(new THREE.Color(0xffffff), 0.45), transparent: true, opacity: 0.55 }));
+      d.spin.add(edges);
+      if (d.kind === "pulley") {
+        [-0.2, 0.2].forEach(function (z) {
+          var ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.03, 0.045, 8, 64),
+            new THREE.MeshBasicMaterial({ color: new THREE.Color(d.color).lerp(new THREE.Color(0xffffff), 0.25) }));
+          ring.position.z = z;
+          d.spin.add(ring);
+        });
+      }
+    }
+    if (d.kind === "wheel") {
+      var tire = new THREE.Mesh(new THREE.TorusGeometry(r - 0.07, 0.14, 12, 96), new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.9 }));
+      d.spin.add(tire);
+      var rim = new THREE.Mesh(new THREE.TorusGeometry(r - 0.27, 0.05, 8, 96), mat);
+      d.spin.add(rim);
+      var sp = [];
+      for (var i = 0; i < 18; i++) {
+        var a = i * TAU / 18, zz = i % 2 ? 0.08 : -0.08;
+        sp.push(new THREE.Vector3(0.18 * Math.cos(a + 0.2), 0.18 * Math.sin(a + 0.2), zz * 2),
+                new THREE.Vector3((r - 0.3) * Math.cos(a), (r - 0.3) * Math.sin(a), 0));
+      }
+      d.spin.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(sp), new THREE.LineBasicMaterial({ color: 0x9aa3ad, transparent: true, opacity: 0.7 })));
+      d.spin.add(new THREE.Mesh(zCyl(0.2, 0.4, 20), metal));
+      front = 0.2;
+    }
+    d.front = front;
+    // Ponteiro: raio pontilhado do centro até a borda + ponto brilhante.
+    var pr = d.kind === "wheel" ? r - 0.27 : r;
+    var ptrLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, front + 0.02), new THREE.Vector3(pr, 0, front + 0.02)]),
+      new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.1, gapSize: 0.07 }));
+    ptrLine.computeLineDistances();
+    var dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(pr, 0, front + 0.02);
+    d.ptr = new THREE.Group();
+    d.ptr.add(ptrLine, dot);
+    d.spin.add(d.ptr);
+    // Eixo (haste) atrás do disco.
+    var shaft = new THREE.Mesh(zCyl(0.12, 1.4, 16), metal);
+    shaft.position.z = -0.6;
+    d.spin.add(shaft);
+    if (d.extra) d.extra(d);
+  }
+
+  // Pedivela (bicicleta): braços presos à coroa, pedais sempre na horizontal.
+  var pedals = [];
+  function addCrank(d) {
+    pedals = [];
+    [[1, 0.42], [-1, -0.42]].forEach(function (s) {
+      var arm = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.16, 0.1), darkMetal.clone());
+      arm.position.set(s[0] * 0.85, 0, s[1]);
+      d.spin.add(arm);
+      var pedal = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 0.42), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.7 }));
+      var holder = new THREE.Group();
+      holder.position.set(s[0] * 1.7, 0, s[1] + s[0] * 0.25);
+      holder.add(pedal);
+      d.spin.add(holder);
+      pedals.push(holder);
+    });
+  }
+
+  // ==========================================
+  // 5. CORREIA / CORRENTE
+  // ==========================================
+  // Caminho fechado em volta de dois círculos (centros em y = 0, x1 < x2).
+  // Aberta: tangentes externas. Cruzada: tangentes internas, com os dois
+  // trechos retos em profundidades diferentes para não se atravessarem.
+  // O caminho percorre o disco 1 no sentido horário.
+  function beltPath(x1, r1, x2, r2, crossed, z0) {
+    var d = x2 - x1, pts = [], zc = crossed ? 0.16 : 0;
+    function arc(cx, r, a0, a1, zA, zB) {
+      var n = Math.max(8, Math.ceil(Math.abs(a1 - a0) * r / 0.08));
+      for (var i = 0; i <= n; i++) {
+        var a = a0 + (a1 - a0) * i / n;
+        pts.push(new THREE.Vector3(cx + r * Math.cos(a), r * Math.sin(a), z0 + zA + (zB - zA) * i / n));
+      }
+    }
+    function line(p, q) {
+      var n = Math.max(2, Math.ceil(p.distanceTo(q) / 0.12));
+      for (var i = 1; i < n; i++) pts.push(new THREE.Vector3().lerpVectors(p, q, i / n));
+    }
+    var nx, ny, au;
+    if (!crossed) {
+      // Pontos de tangência A + r₁·n e B + r₂·n, com n·(B − A) = r₁ − r₂.
+      nx = (r1 - r2) / d; ny = Math.sqrt(1 - nx * nx); au = Math.atan2(ny, nx);
+      // Disco 2: de cima (au) para baixo (-au) pelo lado de fora; disco 1: de -au até au - 2π.
+      arc(x2, r2, au, -au, 0, 0);
+      var b2 = pts[pts.length - 1].clone(), a1p = new THREE.Vector3(x1 + r1 * nx, -r1 * ny, z0);
+      line(b2, a1p);
+      arc(x1, r1, -au, au - TAU, 0, 0);
+      line(pts[pts.length - 1].clone(), new THREE.Vector3(x2 + r2 * nx, r2 * ny, z0));
+    } else {
+      // Pontos de tangência A + r₁·n e B − r₂·n, com n·(B − A) = r₁ + r₂.
+      nx = (r1 + r2) / d; ny = Math.sqrt(Math.max(0, 1 - nx * nx));
+      var b1 = Math.atan2(-ny, -nx), bb2 = Math.atan2(ny, -nx);
+      var a2 = Math.atan2(-ny, nx), a1 = Math.atan2(ny, nx);
+      arc(x2, r2, b1, bb2, zc, -zc);                       // disco 2 (anti-horário)
+      line(pts[pts.length - 1].clone(), new THREE.Vector3(x1 + r1 * nx, -r1 * ny, z0 - zc));
+      arc(x1, r1, a2, a1 - TAU, -zc, zc);                  // disco 1 (horário)
+      line(pts[pts.length - 1].clone(), new THREE.Vector3(x2 + r2 * Math.cos(b1), r2 * Math.sin(b1), z0 + zc));
+    }
+    var cum = [0];
+    for (var i = 1; i <= pts.length; i++) cum.push(cum[i - 1] + pts[i - 1].distanceTo(pts[i % pts.length]));
+    return { pts: pts, cum: cum, len: cum[pts.length] };
+  }
+  function pointAt(path, s, out, tan) {
+    var L = path.len;
+    s = ((s % L) + L) % L;
+    var lo = 0, hi = path.pts.length;
+    while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (path.cum[mid] <= s) lo = mid; else hi = mid; }
+    var p = path.pts[lo], q = path.pts[(lo + 1) % path.pts.length];
+    var seg = path.cum[lo + 1] - path.cum[lo], k = seg > 0 ? (s - path.cum[lo]) / seg : 0;
+    out.lerpVectors(p, q, k);
+    if (tan) tan.subVectors(q, p).normalize();
+    return out;
+  }
+
+  var belt = { group: new THREE.Group(), path: null, key: "", offset: 0, markers: null, chain: false };
+  scene.add(belt.group);
+  var MARK_N = 26, GHOSTS = 4;
+  function buildBelt(x1, r1, x2, r2, crossed, chain, z0) {
+    var key = [x1, r1, x2, r2, crossed, chain, z0].join(":");
+    belt.group.visible = true;
+    if (key === belt.key) return;
+    belt.key = key;
+    clearGroup(belt.group);
+    belt.path = beltPath(x1, r1, x2, r2, crossed, z0);
+    belt.chain = chain;
+    var curve = new THREE.CatmullRomCurve3(belt.path.pts, true);
+    var tube = new THREE.Mesh(new THREE.TubeGeometry(curve, belt.path.pts.length, chain ? 0.05 : 0.07, 6, true),
+      chain ? new THREE.MeshStandardMaterial({ color: 0x8a939c, metalness: 0.85, roughness: 0.35 })
+            : new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.85 }));
+    belt.group.add(tube);
+    if (chain) {
+      belt.count = Math.max(20, Math.round(belt.path.len / 0.2));
+      belt.markers = new THREE.InstancedMesh(new THREE.BoxGeometry(0.16, 0.09, 0.14), new THREE.MeshStandardMaterial({ color: 0x4b525a, metalness: 0.8, roughness: 0.4 }), belt.count);
+    } else {
+      // Partículas luminosas com rastro: cada marcador + GHOSTS cópias menores atrás.
+      belt.count = MARK_N * (GHOSTS + 1);
+      belt.markers = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), belt.count);
+      var c = new THREE.Color();
+      for (var i = 0; i < belt.count; i++) {
+        var g = i % (GHOSTS + 1);
+        belt.markers.setColorAt(i, c.setHex(COL.vec).multiplyScalar(1 - g * 0.21));
+      }
+    }
+    belt.markers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    belt.markers.frustumCulled = false;
+    belt.group.add(belt.markers);
+  }
+  var bm = new THREE.Matrix4(), bq = new THREE.Quaternion(), bs = new THREE.Vector3(), bp = new THREE.Vector3(), bt = new THREE.Vector3();
+  var ZAX = new THREE.Vector3(0, 0, 1), XAX = new THREE.Vector3(1, 0, 0);
+  function updateBelt(beltSpeedSign) {
+    if (!belt.path) return;
+    var L = belt.path.len;
+    if (belt.chain) {
+      for (var i = 0; i < belt.count; i++) {
+        pointAt(belt.path, belt.offset + i * L / belt.count, bp, bt);
+        bq.setFromUnitVectors(XAX, bt);
+        bm.compose(bp, bq, bs.set(1, 1, 1));
+        belt.markers.setMatrixAt(i, bm);
+      }
+    } else {
+      bq.identity();
+      for (var m = 0; m < MARK_N; m++) {
+        for (var g = 0; g <= GHOSTS; g++) {
+          pointAt(belt.path, belt.offset + m * L / MARK_N - beltSpeedSign * g * 0.11, bp);
+          bm.compose(bp, bq, bs.setScalar(1 - g * 0.17));
+          belt.markers.setMatrixAt(m * (GHOSTS + 1) + g, bm);
+        }
+      }
+    }
+    belt.markers.instanceMatrix.needsUpdate = true;
+  }
+
+  // ==========================================
+  // 6. CENÁRIO: MOTOR, BANCADA, QUADRO DA BICICLETA, CARGA DO REDUTOR
+  // ==========================================
+  var motor = new THREE.Group();
+  var motorBody = new THREE.Mesh(zCyl(0.75, 1.3, 32), new THREE.MeshStandardMaterial({ color: 0x2a3340, metalness: 0.6, roughness: 0.4 }));
+  motorBody.position.z = -1.75;
+  motor.add(motorBody);
+  var stripe = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.04, 8, 40), new THREE.MeshBasicMaterial({ color: COL.d1 }));
+  stripe.position.z = -1.4;
+  motor.add(stripe);
+  scene.add(motor);
+
+  var stands = new THREE.Group();
+  scene.add(stands);
+  function buildStands(xs, yBottom) {
+    clearGroup(stands);
+    xs.forEach(function (x) {
+      var h = -yBottom;
+      var post = new THREE.Mesh(new THREE.BoxGeometry(0.25, h, 0.25), darkMetal);
+      post.material.userData.shared = true;
+      post.position.set(x, yBottom + h / 2, -1.05);
+      stands.add(post);
+    });
+    var plate = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(xs[xs.length - 1] - xs[0]) + 2, 0.18, 1.2), darkMetal);
+    plate.position.set((xs[0] + xs[xs.length - 1]) / 2, yBottom, -1.05);
+    stands.add(plate);
+  }
+  darkMetal.userData.shared = true;
+  metal.userData.shared = true;
+
+  var frame = new THREE.Group();
+  scene.add(frame);
+  function tube(a, b, r) {
+    var dir = new THREE.Vector3().subVectors(b, a), len = dir.length();
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 12), new THREE.MeshStandardMaterial({ color: 0x5d6a78, metalness: 0.6, roughness: 0.35 }));
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return m;
+  }
+  function buildFrame(x1, x2) {
+    clearGroup(frame);
+    var z = -0.45, bb = new THREE.Vector3(x1, 0, z), hub = new THREE.Vector3(x2, 0, z);
+    var seat = new THREE.Vector3(x1 - 1.1, 5.0, z), head = new THREE.Vector3(x1 - 5.6, 4.4, z);
+    frame.add(tube(bb, hub, 0.09), tube(hub, seat, 0.08), tube(bb, seat, 0.13), tube(bb, head, 0.14), tube(seat, head, 0.12));
+    var saddle = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.22, 0.5), new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.8 }));
+    saddle.position.set(seat.x - 0.1, seat.y + 0.5, z);
+    frame.add(saddle, tube(seat, new THREE.Vector3(seat.x - 0.05, seat.y + 0.4, z), 0.06));
+  }
+
+  // Redutor: tambor no eixo do disco 2 enrolando uma corda que ergue uma carga.
+  var load = new THREE.Group();
+  var ropeGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  var rope = new THREE.Line(ropeGeo, new THREE.LineBasicMaterial({ color: 0xd9c9a0 }));
+  rope.frustumCulled = false;
+  var box = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.7, metalness: 0.1 }));
+  var boxEdges = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: 0xffd84a, transparent: true, opacity: 0.6 }));
+  box.add(boxEdges);
+  load.add(rope, box);
+  scene.add(load);
+  var ropeLen = 3, ROPE_MIN = 0.9, ROPE_MAX = 5.2;
+
+  // Vetores velocidade tangencial (amarelos, no topo de cada disco).
+  function makeArrow() {
+    var g = new THREE.Group();
+    var core = new THREE.MeshBasicMaterial({ color: COL.vec });
+    var glow = new THREE.MeshBasicMaterial({ color: COL.vec, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 10), core);
+    var shaftGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 1, 10), glow);
+    var head = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.34, 14), core);
+    var headGlow = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.5, 14), glow);
+    g.add(shaft, shaftGlow, head, headGlow);
+    scene.add(g);
+    var up = new THREE.Vector3(0, 1, 0);
+    return {
+      group: g, tip: new THREE.Vector3(),
+      set: function (origin, dir, len) {
+        if (len < 0.02) { g.visible = false; return; }
+        g.visible = true;
+        g.position.copy(origin);
+        g.quaternion.setFromUnitVectors(up, dir);
+        var hl = Math.min(0.34, len * 0.5), sl = len - hl;
+        shaft.scale.set(1, sl, 1); shaft.position.y = sl / 2;
+        shaftGlow.scale.set(1, sl, 1); shaftGlow.position.y = sl / 2;
+        head.scale.set(1, hl / 0.34, 1); head.position.y = sl + hl / 2;
+        headGlow.scale.set(1, hl / 0.34, 1); headGlow.position.y = sl + hl / 2;
+        this.tip.copy(dir).multiplyScalar(len).add(origin);
+      }
+    };
+  }
+  discs.forEach(function (d) { d.arrow = makeArrow(); });
+
+  // ==========================================
+  // 7. RÓTULOS HTML
+  // ==========================================
+  var labelLayer = document.getElementById("label-layer");
+  function makeTag(cls) {
+    var e = document.createElement("div");
+    e.className = "tag " + (cls || "");
+    labelLayer.appendChild(e);
+    return { el: e, pos: new THREE.Vector3(), show: false, html: "" };
+  }
+  discs.forEach(function (d) { d.tag = makeTag(); d.vtag = makeTag("vel"); });
+  var loadTag = makeTag("vel");
+  var allTags = [];
+  discs.forEach(function (d) { allTags.push(d.tag, d.vtag); });
+  allTags.push(loadTag);
+  var tmp3 = new THREE.Vector3();
+  function placeTags() {
+    var rect = canvas.getBoundingClientRect();
+    allTags.forEach(function (t) {
+      if (!t.show || !cfg.tags) { t.el.style.display = "none"; return; }
+      tmp3.copy(t.pos).project(camera);
+      if (tmp3.z > 1) { t.el.style.display = "none"; return; }
+      if (t.el.innerHTML !== t.html) t.el.innerHTML = t.html;
+      t.el.style.display = "block";
+      t.el.style.left = ((tmp3.x + 1) / 2 * rect.width) + "px";
+      t.el.style.top = ((1 - tmp3.y) / 2 * rect.height) + "px";
+    });
+  }
+
+  // ==========================================
+  // 8. MONTAGEM (layout por modo)
+  // ==========================================
+  var layoutKey = "";
+  function layout() {
+    var m = cfg.mode, c = cfg.coupling;
+    var key = [m, c, cfg.R1, cfg.R2, cfg.R3, cfg.d3, cfg.coroa, cfg.catraca, cfg.redR1, cfg.redR2].join("|");
+    if (key === layoutKey) return;
+    layoutKey = key;
+    d1.extra = d2.extra = d3.extra = null;
+    belt.group.visible = false;
+    motor.visible = true; stands.visible = true; frame.visible = false; load.visible = false;
+    var x1, x2, r1, r2;
+
+    if (m === "livre") {
+      var gear = c === "gear";
+      d1.kind = gear ? "gear" : "pulley"; d1.rCm = cfg.R1; d1.name = "Disco 1";
+      d2.kind = d1.kind; d2.rCm = cfg.R2; d2.name = "Disco 2";
+      d3.kind = "pulley"; d3.rCm = cfg.R3; d3.name = "Disco 3";
+      r1 = cfg.R1 / CM; r2 = cfg.R2 / CM;
+      d2.visible = c !== "axle";
+      d3.visible = c === "axle" || cfg.d3;
+      var D = c === "axle" ? 0 : gear ? r1 + r2 : Math.max(r1 + r2 + 1.6, 6.5);
+      x1 = -D / 2; x2 = D / 2;
+      d1.x = x1; d1.z = 0; d2.x = x2; d2.z = 0;
+      // Disco 3 no mesmo eixo: o maior fica atrás para os dois aparecerem.
+      d3.x = x1; d3.z = cfg.R3 > cfg.R1 ? -0.75 : 0.75;
+      if (c === "belt" || c === "cross") buildBelt(x1, r1, x2, r2, c === "cross", false, 0);
+      var ys = -Math.max(r1, d2.visible ? r2 : 0, d3.visible ? cfg.R3 / CM : 0) - 1.2;
+      buildStands(d2.visible ? [x1, x2] : [x1], ys);
+    } else if (m === "bike") {
+      d1.kind = "sprocket"; d1.rCm = cfg.coroa; d1.name = "Coroa"; d1.extra = addCrank;
+      d2.kind = "sprocket"; d2.rCm = cfg.catraca; d2.name = "Catraca";
+      d3.kind = "wheel"; d3.rCm = WHEEL_CM; d3.name = "Roda";
+      d1.visible = d2.visible = d3.visible = true;
+      x1 = -CHAINSTAY / 2 - 0.4; x2 = x1 + CHAINSTAY;
+      d1.x = x1; d1.z = 0; d2.x = x2; d2.z = 0; d3.x = x2; d3.z = -0.55;
+      buildBelt(x1, cfg.coroa / CM, x2, cfg.catraca / CM, false, true, 0);
+      motor.visible = false; stands.visible = false; frame.visible = true;
+      buildFrame(x1, x2);
+    } else {
+      d1.kind = "gear"; d1.rCm = cfg.redR1; d1.name = "Pinhão";
+      d2.kind = "gear"; d2.rCm = cfg.redR2; d2.name = "Coroa";
+      d3.kind = "drum"; d3.rCm = DRUM_CM; d3.name = "Tambor";
+      d1.visible = d2.visible = d3.visible = true;
+      r1 = cfg.redR1 / CM; r2 = cfg.redR2 / CM;
+      x1 = -(r1 + r2) / 2; x2 = (r1 + r2) / 2;
+      d1.x = x1; d1.z = 0; d2.x = x2; d2.z = 0; d3.x = x2; d3.z = 0.75;
+      load.visible = true;
+      buildStands([x1, x2], -Math.max(r1, r2) - 1.2);
+    }
+    d1.visible = true;
+    discs.forEach(function (d) {
+      d.root.visible = d.visible;
+      if (d.visible) { buildDisc(d); d.root.position.set(d.x, 0, d.z); }
+    });
+    motor.position.set(d1.x, 0, 0);
+  }
+
+  // ==========================================
+  // 9. CINEMÁTICA
+  // ==========================================
+  // Engrenamento: o disco 2 gira θ₂ = −θ₁·R₁/R₂ + φ, com φ = π − π/N₂ para
+  // que, em θ₁ = 0, o dente 0 do disco 1 (no ponto de contato, ângulo 0)
+  // encaixe num vão do disco 2 (ângulo π).
+  var theta1 = 0;
+  function ratio() {
+    var m = cfg.mode;
+    if (m === "bike") return cfg.coroa / cfg.catraca;            // corrente: mesmo sentido
+    if (m === "red") return -cfg.redR1 / cfg.redR2;               // engrenagens
+    if (cfg.coupling === "belt") return cfg.R1 / cfg.R2;
+    return -cfg.R1 / cfg.R2;                                      // engrenagens ou correia cruzada
+  }
+  function isGearPair() { return (cfg.mode === "livre" && cfg.coupling === "gear") || cfg.mode === "red"; }
+
+  function kinematics(dtVis, dtReal) {
+    var w1 = cfg.dir * TAU * cfg.f1, k = ratio();
+    theta1 += w1 * dtVis;
+    d1.omega = w1; d1.theta = theta1;
+    d2.omega = w1 * k;
+    var phase = isGearPair() ? Math.PI - Math.PI / Math.round(2 * d2.rCm) : 0;
+    d2.theta = theta1 * k + phase;
+    var on2 = cfg.mode !== "livre";            // disco 3 no eixo do 2 (bicicleta/redutor) ou do 1
+    d3.omega = on2 ? d2.omega : w1;
+    d3.theta = on2 ? d2.theta : theta1;
+    discs.forEach(function (d) { if (d.visible) d.trav += Math.abs(d.omega) * dtVis; });
+    belt.offset += -w1 * (d1.rCm / CM) * dtVis;
+    if (cfg.mode === "red") {
+      // Tambor gira com o disco 2; a corda desce pelo lado esquerdo do
+      // tambor: ω₂ < 0 (horário) enrola a corda e ergue a carga.
+      ropeLen += d2.omega * (DRUM_CM / CM) * dtVis;
+      if (ropeLen < ROPE_MIN) ropeLen = ROPE_MAX;
+      if (ropeLen > ROPE_MAX) ropeLen = ROPE_MIN;
+    }
+    void dtReal;
+  }
+
+  // ==========================================
+  // 10. VISUAL A CADA QUADRO
+  // ==========================================
+  function vOf(d) { return Math.abs(d.omega) * d.rCm; }   // cm/s
+  function senseTxt(w) { return Math.abs(w) < 1e-9 ? "parado" : w > 0 ? "↺ anti-horário" : "↻ horário"; }
+
+  function updateVisuals() {
+    var vmax = 0;
+    discs.forEach(function (d) { if (d.visible) vmax = Math.max(vmax, vOf(d)); });
+    var kLen = vmax > 0 ? 2.3 / vmax : 0;
+    discs.forEach(function (d) {
+      if (!d.visible) { d.arrow.group.visible = false; d.tag.show = d.vtag.show = false; return; }
+      d.spin.rotation.z = d.theta;
+      if (d.ptr) d.ptr.visible = cfg.ptr;
+      var r = d.rCm / CM;
+      // Vetor v no topo (d3 coaxial ao d1 no modo livre fica à frente dele).
+      var top = d.kind === "wheel" ? r + 0.1 : r + (d.kind === "gear" || d.kind === "sprocket" ? MODULE : 0);
+      var dir = new THREE.Vector3(d.omega >= 0 ? -1 : 1, 0, 0);
+      var origin = new THREE.Vector3(d.x, top + 0.22, d.z + d.front + 0.05);
+      d.arrow.set(origin, dir, cfg.vec ? vOf(d) * kLen : 0);
+      d.vtag.show = cfg.vec && vOf(d) > 0;
+      d.vtag.pos.copy(d.arrow.tip).add(new THREE.Vector3(0, 0.38, 0));
+      d.vtag.html = "v = " + fmt(vOf(d), 1) + " cm/s";
+      var laps = Math.floor(d.trav / TAU + 1e-9);
+      d.tag.show = true;
+      d.tag.pos.set(d.x, -r - 0.55 - (d === d3 && Math.abs(d3.rCm - d1.rCm) < 6 && cfg.mode === "livre" ? 0.5 : 0), d.z);
+      d.tag.html = '<span style="color:#' + new THREE.Color(d.color).getHexString() + '">● ' + d.name + "</span> · " + senseTxt(d.omega) + " · " + laps + (laps === 1 ? " volta" : " voltas");
+    });
+    // Pedais na horizontal (giram ao contrário do braço).
+    pedals.forEach(function (p) { p.rotation.z = -d1.theta; });
+    if (belt.group.visible) updateBelt(Math.sign(-d1.omega) || 1);
+
+    loadTag.show = cfg.mode === "red";
+    if (cfg.mode === "red") {
+      var dx = d2.x - DRUM_CM / CM, topY = 0, z = d3.z;
+      var yBox = topY - ropeLen;
+      var pos = ropeGeo.attributes.position;
+      pos.setXYZ(0, dx, topY, z); pos.setXYZ(1, dx, yBox, z); pos.needsUpdate = true;
+      box.position.set(dx + 0.0, yBox - 0.4, z);
+      loadTag.pos.set(dx - 1.7, yBox - 0.4, z);
+      loadTag.html = "carga " + fmt(loadMass(), 0) + " kg · " + fmt(Math.abs(d2.omega) * DRUM_CM, 1) + " cm/s";
+    }
+  }
+
+  // ==========================================
+  // 11. PAINEL DE LEITURAS
+  // ==========================================
+  function torques() {
+    var w1 = TAU * cfg.f1;
+    var t1 = w1 > 0 ? cfg.power / w1 : 0;
+    return { t1: t1, t2: t1 * cfg.redR2 / cfg.redR1 };
+  }
+  function loadMass() { return torques().t2 / (G * DRUM_CM / 100); }
+
+  var lastInfo = "", lastStatus = "";
+  function hex(c) { return "#" + new THREE.Color(c).getHexString(); }
+  function updateInfo() {
+    var rows = discs.filter(function (d) { return d.visible; }).map(function (d) {
+      var f = Math.abs(d.omega) / TAU;
+      return "<tr><td><span class='dname'><i style='background:" + hex(d.color) + "'></i>" + d.name + "</span></td>" +
+        "<td>" + d.rCm + "</td><td>" + fmt(f, 2) + "</td><td>" + fmt(Math.abs(d.omega), 2) + "</td><td>" + fmt(vOf(d), 1) + "</td></tr>";
+    }).join("");
+    var html = "<table class='readout'><tr><th>Disco</th><th>R (cm)</th><th>f (Hz)</th><th>ω (rad/s)</th><th>v (cm/s)</th></tr>" + rows + "</table>";
+    var f1 = cfg.f1, eq = "", st = "";
+    var m = cfg.mode, c = cfg.coupling;
+
+    if (m === "livre") {
+      var R1 = cfg.R1, R2 = cfg.R2, f2 = f1 * R1 / R2;
+      if (c === "axle") {
+        eq = "<div class='eq'>ω₁ = ω₃  ⇒  f₁ = f₃</div>Mesmo eixo: os dois discos dão o <b>mesmo número de voltas</b> por segundo (" + fmt(f1, 2) + " Hz).<br>" +
+          "Mas a borda do maior anda mais rápido: <b class='y'>v = ω·R</b> → v₃/v₁ = R₃/R₁ = " + fmt(cfg.R3 / R1, 2) + ".";
+        st = "Eixo comum: mesma ω e mesma frequência. A velocidade na borda cresce com o raio (v = ω·R).";
+      } else {
+        var same = c === "belt";
+        eq = "<div class='eq'>v₁ = v₂  ⇒  f₁·R₁ = f₂·R₂</div>" +
+          "f₂ = f₁·R₁/R₂ = " + fmt(f1, 2) + " · " + R1 + "/" + R2 + " = <b class='y'>" + fmt(f2, 2) + " Hz</b><br>" +
+          "Relação R₂/R₁ = " + fmt(R2 / R1, 2) + " → o disco " + (R1 < R2 ? "1 gira " + fmt(R2 / R1, 2) + "× mais rápido que o 2" : R1 > R2 ? "2 gira " + fmt(R1 / R2, 2) + "× mais rápido que o 1" : "1 e o 2 giram juntos") + ".<br>" +
+          "Sentidos: <b>" + (same ? "iguais" : "opostos") + "</b>.";
+        if (cfg.d3) eq += "<br>Disco 3 no eixo do 1: ω₃ = ω₁, v₃ = " + fmt(TAU * f1 * cfg.R3, 1) + " cm/s.";
+        st = c === "gear" ? "Engrenagens: os dentes empurram uns aos outros, então a borda dos dois tem a mesma v e os sentidos se invertem. A menor gira mais rápido."
+          : c === "belt" ? "Correia direta: todos os pontos da correia têm a mesma velocidade v, então as bordas também. Mesmo sentido de rotação."
+          : "Correia cruzada: mesma v nas bordas, mas o cruzamento da correia inverte o sentido de rotação.";
+      }
+      el("info-title").textContent = "Leituras";
+    } else if (m === "bike") {
+      var gear = cfg.coroa / cfg.catraca;
+      var vb = TAU * f1 * gear * WHEEL_CM / 100 * 3.6;
+      eq = "<div class='eq'>f<sub>roda</sub> = f<sub>pedal</sub> · R<sub>coroa</sub>/R<sub>catraca</sub></div>" +
+        "Relação de marcha: " + cfg.coroa + "/" + cfg.catraca + " = <b class='y'>" + fmt(gear, 2) + "</b> → a roda dá " + fmt(gear, 2) + " voltas a cada pedalada.<br>" +
+        "Catraca e roda estão no mesmo eixo: ω<sub>roda</sub> = ω<sub>catraca</sub>." +
+        "<div class='big'>" + fmt(vb, 1) + " km/h<small>velocidade da bicicleta (roda de " + WHEEL_CM + " cm)</small></div>";
+      st = "Catraca menor (marcha mais alta): a cada pedalada a roda dá mais voltas. Você vai mais rápido, mas precisa de mais força no pedal.";
+      el("info-title").textContent = "Bicicleta";
+    } else {
+      var tq = torques(), i = cfg.redR2 / cfg.redR1;
+      var tmax = Math.max(tq.t1, tq.t2) || 1, wmax = TAU * f1 || 1;
+      eq = "<div class='eq'>P = τ₁·ω₁ = τ₂·ω₂</div>" +
+        "Redução i = R₂/R₁ = <b class='y'>" + fmt(i, 2) + "</b>: ω₂ = ω₁/" + fmt(i, 2) + " e τ₂ = " + fmt(i, 2) + "·τ₁." +
+        "<div class='bars'>" +
+        "<span>ω₁</span><div class='bar'><span style='width:" + 100 + "%;background:#2f9bff'></span></div><b>" + fmt(TAU * f1, 2) + " rad/s</b>" +
+        "<span>ω₂</span><div class='bar'><span style='width:" + (100 * Math.abs(d2.omega) / wmax).toFixed(1) + "%;background:#ff3b5c'></span></div><b>" + fmt(Math.abs(d2.omega), 2) + " rad/s</b>" +
+        "<span>τ₁</span><div class='bar'><span style='width:" + (100 * tq.t1 / tmax).toFixed(1) + "%;background:#2f9bff'></span></div><b>" + fmt(tq.t1, 1) + " N·m</b>" +
+        "<span>τ₂</span><div class='bar'><span style='width:" + (100 * tq.t2 / tmax).toFixed(1) + "%;background:#ff3b5c'></span></div><b>" + fmt(tq.t2, 1) + " N·m</b>" +
+        "</div><p style='margin:8px 0 0;color:#aaa;font-size:12px'>Com tambor de " + DRUM_CM + " cm, o eixo de saída sustenta subindo uma carga de <b class='y'>" + fmt(loadMass(), 0) + " kg</b> (m = τ₂ / (g·r)). Perdas desprezadas.</p>";
+      if (cfg.f1 === 0) eq = "<div class='eq'>P = τ·ω</div>Ligue o motor (f₁ &gt; 0) para ver ω e torque.";
+      st = cfg.redR2 > cfg.redR1
+        ? "Pinhão pequeno movendo coroa grande: a velocidade angular cai e o torque aumenta na mesma proporção (P = τ·ω)."
+        : cfg.redR2 < cfg.redR1 ? "Agora é uma multiplicação: a saída gira mais rápido, mas com menos torque." : "Raios iguais: mesma ω e mesmo torque.";
+      el("info-title").textContent = "Redutor industrial";
+    }
+    if (cfg.f1 === 0) st = "Motor desligado: aumente a frequência f₁.";
+    if (cfg.paused) st = "⏸ Pausado. Gire a câmera e confira os ponteiros. " + st;
+    html += "<div class='eq-box'>" + eq + "</div>";
+    if (html !== lastInfo) { el("info-body").innerHTML = html; lastInfo = html; }
+    if (st !== lastStatus) { el("status-bar").textContent = st; lastStatus = st; }
+  }
+
+  // ==========================================
+  // 12. CONTROLES
+  // ==========================================
+  var el = function (id) { return document.getElementById(id); };
+
+  function readouts() {
+    el("r1-val").textContent = cfg.R1 + " cm";
+    el("r2-val").textContent = cfg.R2 + " cm";
+    el("r3-val").textContent = cfg.R3 + " cm";
+    el("r1b-val").textContent = cfg.redR1 + " cm";
+    el("r2b-val").textContent = cfg.redR2 + " cm";
+    el("pow-val").textContent = cfg.power + " W";
+    var bike = cfg.mode === "bike";
+    el("f1-val").textContent = fmt(cfg.f1, 2) + (bike ? " pedaladas/s" : " Hz") + " · " + Math.round(cfg.f1 * 60) + " rpm";
+    el("f1-label").firstChild.textContent = bike ? "Cadência " : "Frequência f₁ ";
+    el("motor-title").textContent = bike ? "Ciclista (pedivela)" : cfg.mode === "red" ? "Motor (pinhão)" : "Motor (disco 1)";
+    el("btn-dir").textContent = cfg.dir > 0 ? "↺ Anti-hor." : "↻ Horário";
+    document.querySelectorAll("[data-mode]").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-mode") === cfg.mode); });
+    document.querySelectorAll("[data-coupling]").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-coupling") === cfg.coupling); });
+    document.querySelectorAll("[data-coroa]").forEach(function (b) { b.classList.toggle("active", +b.getAttribute("data-coroa") === cfg.coroa); });
+    document.querySelectorAll("[data-catraca]").forEach(function (b) { b.classList.toggle("active", +b.getAttribute("data-catraca") === cfg.catraca); });
+    el("sec-livre").style.display = cfg.mode === "livre" ? "" : "none";
+    el("sec-bike").style.display = bike ? "" : "none";
+    el("sec-red").style.display = cfg.mode === "red" ? "" : "none";
+    var axle = cfg.coupling === "axle";
+    el("ctrl-r2").style.display = axle ? "none" : "";
+    el("chk-d3-wrap").style.display = axle ? "none" : "";
+    el("ctrl-r3").style.display = axle || cfg.d3 ? "" : "none";
+  }
+
+  function resetLaps() { discs.forEach(function (d) { d.trav = 0; }); }
+
+  function bindRange(id, key) {
+    var inp = el(id);
+    inp.addEventListener("input", function () { cfg[key] = parseFloat(inp.value); readouts(); });
+  }
+  bindRange("in-r1", "R1"); bindRange("in-r2", "R2"); bindRange("in-r3", "R3");
+  bindRange("in-r1b", "redR1"); bindRange("in-r2b", "redR2"); bindRange("in-pow", "power");
+  bindRange("in-f1", "f1");
+
+  document.querySelectorAll("[data-mode]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      cfg.mode = b.getAttribute("data-mode");
+      if (cfg.mode === "bike" && cfg.f1 > 2) { cfg.f1 = 1; el("in-f1").value = 1; }
+      resetLaps(); readouts(); layout();
+      setView(cfg.mode === "livre" && cfg.coupling === "axle" ? "3d" : "front");
+    });
+  });
+  document.querySelectorAll("[data-coupling]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      cfg.coupling = b.getAttribute("data-coupling");
+      resetLaps(); readouts();
+      setView(cfg.coupling === "axle" ? "3d" : "front");
+    });
+  });
+  document.querySelectorAll("[data-coroa]").forEach(function (b) {
+    b.addEventListener("click", function () { cfg.coroa = +b.getAttribute("data-coroa"); readouts(); });
+  });
+  document.querySelectorAll("[data-catraca]").forEach(function (b) {
+    b.addEventListener("click", function () { cfg.catraca = +b.getAttribute("data-catraca"); readouts(); });
+  });
+  el("chk-d3").addEventListener("change", function (e) { cfg.d3 = e.target.checked; readouts(); });
+  el("chk-vec").addEventListener("change", function (e) { cfg.vec = e.target.checked; });
+  el("chk-ptr").addEventListener("change", function (e) { cfg.ptr = e.target.checked; });
+  el("chk-tags").addEventListener("change", function (e) { cfg.tags = e.target.checked; });
+  el("btn-dir").addEventListener("click", function () { cfg.dir = -cfg.dir; readouts(); });
+  var btnSlow = el("btn-slow");
+  btnSlow.addEventListener("click", function () {
+    cfg.slow = !cfg.slow;
+    btnSlow.classList.toggle("active", cfg.slow);
+    btnSlow.setAttribute("aria-pressed", cfg.slow ? "true" : "false");
+  });
+  var btnPause = el("btn-pause");
+  function togglePause() {
+    cfg.paused = !cfg.paused;
+    btnPause.textContent = cfg.paused ? "▶ Continuar" : "⏸ Pausar";
+  }
+  btnPause.addEventListener("click", togglePause);
+  el("btn-laps").addEventListener("click", resetLaps);
+  el("btn-front").addEventListener("click", function () { setView("front"); });
+  el("btn-3d").addEventListener("click", function () { setView("3d"); });
+
+  document.querySelectorAll("[data-collapse]").forEach(function (btn) {
+    var panel = el(btn.getAttribute("data-collapse"));
+    btn.addEventListener("click", function () {
+      var collapsed = panel.classList.toggle("collapsed");
+      btn.textContent = collapsed ? "+" : "–";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.title = collapsed ? "Expandir painel" : "Recolher painel";
+      centerOffset();
+    });
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var t = e.target && e.target.tagName;
+    if (e.code === "Space" && t !== "BUTTON") { e.preventDefault(); togglePause(); }
+  });
+
+  // ==========================================
+  // 13. AJUSTE AO PALCO (LUF.stage)
+  // ==========================================
+  function applySize(width, height) {
+    var w = Math.max(1, Math.floor(width)), h = Math.max(1, Math.floor(height));
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    // Terceiro argumento false: não definir canvas.style.width/height
+    // (evita o laço de redimensionamento com o ResizeObserver do palco).
+    renderer.setSize(w, h, false);
+    centerOffset();
+  }
+  // Desloca a projeção para que o centro da cena fique no meio do espaço
+  // livre entre os dois painéis (em telas estreitas os painéis empilham).
+  function centerOffset() {
+    var w = Math.max(1, Math.floor(LUF.stage.el.clientWidth)), h = Math.max(1, Math.floor(LUF.stage.el.clientHeight));
+    var dx = 0;
+    if (w > 760) {
+      var st = LUF.stage.el.getBoundingClientRect();
+      var a = el("ui-panel").getBoundingClientRect(), b = el("info-panel").getBoundingClientRect();
+      dx = Math.round(((a.right - st.left) + (b.left - st.left)) / 2 - w / 2);
+    }
+    camera.setViewOffset(w, h, -dx, 0, w, h);
+  }
+  applySize(LUF.stage.el.clientWidth, LUF.stage.el.clientHeight);
+  LUF.stage.onResize(function (size) { applySize(size.width, size.height); });
+
+  // ==========================================
+  // 14. LOOP DE RENDERIZAÇÃO
+  // ==========================================
+  var rafId = null, lastT = performance.now();
+  function tick() {
+    rafId = requestAnimationFrame(tick);
+    var now = performance.now();
+    var dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    layout();
+    if (!cfg.paused) kinematics(dt * (cfg.slow ? 0.25 : 1), dt);
+    updateVisuals();
+    stepTween(dt);
+    controls.update();
+    renderer.render(scene, camera);
+    placeTags();
+    updateInfo();
+  }
+
+  document.addEventListener("luf:visibilitychange", function (e) {
+    if (e.detail.hidden) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+    } else if (!rafId) {
+      lastT = performance.now();
+      tick();
+    }
+  });
+
+  // Inicializa
+  readouts();
+  layout();
+  setView("front", true);
+  tick();
+})();
+</script>
+</body>
+</html>
