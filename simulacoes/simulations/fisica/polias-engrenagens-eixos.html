@@ -16,7 +16,7 @@
 
 <style>
   /* Estilos específicos desta simulação, no mesmo padrão visual de
-     transmissao-de-movimento.html (painéis de vidro escuro, destaque azul). */
+     lancamento-obliquo.html (painéis de vidro escuro, destaque azul). */
   #sim-stage { min-height: 80vh; }
   #sim-content canvas { touch-action: none; }
 
@@ -357,7 +357,7 @@
   fillLight.position.set(-12, -6, 8);
   scene.add(fillLight);
 
-  // Parede de fundo com grade (mesmo estilo de transmissao-de-movimento.html).
+  // Parede de fundo com grade (mesmo estilo das outras simulações 3D).
   var grid = new THREE.GridHelper(60, 60, 0x262626, 0x151515);
   grid.rotation.x = Math.PI / 2;
   grid.position.z = -2.4;
