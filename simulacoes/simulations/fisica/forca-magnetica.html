@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Força Magnética e Regra da Mão Direita — LevelUpFís Simulations</title>
+<meta name="description" content="Veja em 3D a força magnética F = q·v×B sobre uma carga em movimento, com a regra da mão direita, trajetórias circulares e helicoidais e câmera livre.">
+
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/simulation.css">
+
+<!-- Three.js e OrbitControls baixados localmente (sem CDN) -->
+<script src="../../assets/vendor/three.min.js"></script>
+<script src="../../assets/vendor/OrbitControls.js"></script>
+
+<style>
+  /* Estilos específicos desta simulação, no mesmo padrão visual de
+     transmissao-de-movimento.html (painéis de vidro escuro, destaque azul). */
+  #sim-stage { min-height: 78vh; }
+  #sim-content canvas { touch-action: none; }
+
+  .glass {
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 12px;
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  #ui-panel {
+    position: absolute; top: 16px; left: 16px; z-index: 4;
+    width: min(290px, calc(100% - 32px)); max-height: calc(100% - 32px);
+    overflow-y: auto; padding: 14px 16px;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .panel-head h2 { margin: 0; font-size: 1.02rem; }
+  .collapse-btn {
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #555; flex: none;
+    background: rgba(255,255,255,.06); color: #ddd; cursor: pointer; font-size: 16px; line-height: 1;
+  }
+  #panel-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
+  #ui-panel.collapsed #panel-body { display: none; }
+
+  .section { margin-bottom: 14px; }
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: #8a8a8a; margin-bottom: 6px;
+  }
+  .ctrl { margin-bottom: 12px; }
+  #ui-panel label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 12.5px; color: #aaa; }
+  .val-display { float: right; color: #4facfe; font-weight: bold; }
+  input[type="range"] { width: 100%; cursor: pointer; accent-color: #4facfe; }
+  .check { display: flex !important; align-items: center; gap: 8px; cursor: pointer; font-weight: 600 !important; margin-bottom: 6px !important; }
+  .check input { accent-color: #4facfe; }
+
+  .seg { display: grid; gap: 5px; margin-top: 6px; }
+  .seg.c2 { grid-template-columns: repeat(2, 1fr); }
+  .seg.c3 { grid-template-columns: repeat(3, 1fr); }
+  .seg.c4 { grid-template-columns: repeat(4, 1fr); }
+  .seg.c5 { grid-template-columns: repeat(5, 1fr); }
+  .seg-btn, .act-btn {
+    font: inherit; font-size: 12px; font-weight: 600; color: #e6e6e6;
+    background: rgba(255,255,255,.07); border: 1px solid #555; border-radius: 7px;
+    padding: 7px 4px; cursor: pointer; transition: background .15s;
+    display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center;
+  }
+  .seg-btn:hover, .act-btn:hover { background: rgba(255,255,255,.15); }
+  .seg-btn.active, .act-btn.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent;
+  }
+  .act-btn { font-size: 12.5px; padding: 8px 6px; }
+  .act-btn.primary { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #000; border-color: transparent; }
+  .act-btn.primary:hover { filter: brightness(1.1); }
+  #hints { font-size: 11.5px; color: #7d7d7d; margin-top: 8px; line-height: 1.5; }
+
+  #info-panel {
+    position: absolute; top: 62px; right: 16px; z-index: 4;
+    width: min(280px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow-y: auto; padding: 14px 16px;
+  }
+  #info-panel h3 { margin: 0; font-size: .98rem; }
+  #info-panel.collapsed #info-body { display: none; }
+  #info-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
+  .rule { display: grid; gap: 5px; margin-bottom: 10px; }
+  .rule-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #ccc; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot.v { background: #2f9bff; box-shadow: 0 0 8px #2f9bff; }
+  .dot.b { background: #39ff7a; box-shadow: 0 0 8px #39ff7a; }
+  .dot.f { background: #ff3b5c; box-shadow: 0 0 8px #ff3b5c; }
+  .cv { color: #5cb4ff; font-weight: 700; }
+  .cb { color: #5dff95; font-weight: 700; }
+  .cf { color: #ff5f7b; font-weight: 700; }
+  .formula {
+    font-family: 'Cambria Math', 'Times New Roman', serif; font-size: 15px; text-align: center;
+    padding: 7px 6px; margin: 8px 0; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid #3a3a3a;
+  }
+  .formula small { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 11.5px; color: #9a9a9a; margin-top: 3px; }
+  .stat { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed #3a3a3a; }
+  .stat span { color: #9a9a9a; }
+  .stat b { color: #fff; text-align: right; font-weight: 600; }
+  .note { color: #8a8a8a; font-size: 11.5px; line-height: 1.45; margin: 8px 0 0; }
+  .badge {
+    display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    border: 1px solid #555; color: #ddd; margin-bottom: 4px;
+  }
+  .badge.circ { color: #6fd3ff; border-color: rgba(111, 211, 255, .55); }
+  .badge.heli { color: #fcf3c8; border-color: rgba(252, 243, 200, .55); }
+  .badge.reta { color: #ffb347; border-color: rgba(255, 179, 71, .55); }
+
+  #status-bar {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 4;
+    max-width: min(560px, calc(100% - 32px)); padding: 8px 14px; font-size: 12.5px; text-align: center;
+    background: rgba(30, 30, 30, 0.86); border: 1px solid #444; border-radius: 8px; color: #ddd;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; pointer-events: none;
+  }
+  #status-bar:empty { display: none; }
+  #status-bar .warn { color: #ffb347; }
+
+  /* Rótulos que acompanham objetos 3D (posição recalculada a cada quadro) */
+  #label-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .tag {
+    position: absolute; top: 0; left: 0; transform: translate(-50%, -50%); display: none;
+    font: 700 13px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; white-space: nowrap;
+    padding: 2px 8px; border-radius: 999px; background: rgba(10, 10, 16, 0.7);
+  }
+  .tag.v { color: #5cb4ff; border: 1px solid rgba(47, 155, 255, .6); }
+  .tag.b { color: #5dff95; border: 1px solid rgba(57, 255, 122, .6); }
+  .tag.f { color: #ff5f7b; border: 1px solid rgba(255, 59, 92, .6); }
+  .tag.r { transform: translate(14px, 6px); color: #fcf3c8; border: 1px solid rgba(252, 243, 200, .45); font-weight: 600; font-size: 12px; }
+  .tag.axis { color: #bbb; background: none; border: none; font-size: 14px; }
+  .tag .sym { font-size: 15px; margin-left: 4px; }
+
+  button:focus-visible, input:focus-visible { outline: 2px solid #fcf3c8; outline-offset: 2px; }
+
+  @media (max-width: 760px) {
+    #info-panel { top: auto; bottom: 60px; right: 16px; max-height: 40%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seg-btn, .act-btn { transition: none; }
+  }
+</style>
+</head>
+<body data-root="../../" data-page="simulation" data-category="fisica">
+
+<!-- Header (com botão "← Voltar") e footer são injetados por assets/js/layout.js -->
+
+<main>
+  <div class="luf-sub">
+    <h1>Força Magnética e Regra da Mão Direita</h1>
+    <p>Gire a câmera livremente em 3D e veja os vetores velocidade, campo magnético e força sobre uma carga em movimento. A mão direita se alinha sozinha aos vetores, e a carga desenha sua trajetória circular ou helicoidal. Acabou a confusão de vetores "entrando" e "saindo" da página.</p>
+  </div>
+
+  <div class="luf-simwrap">
+    <section id="sim-stage" aria-label="Área da simulação">
+      <div id="sim-content">
+        <!-- O canvas do Three.js é criado e inserido aqui via JS -->
+        <div id="label-layer" aria-hidden="true"></div>
+      </div>
+
+      <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+
+      <div id="ui-panel" class="glass">
+        <div class="panel-head">
+          <h2>Força Magnética</h2>
+          <button type="button" class="collapse-btn" id="btn-collapse" aria-expanded="true" aria-controls="panel-body" title="Recolher painel">–</button>
+        </div>
+
+        <div id="panel-body">
+          <div class="section">
+            <div class="section-title">Grandezas</div>
+            <div class="ctrl">
+              <label for="in-q">Carga (q) <span class="val-display" id="q-val"></span></label>
+              <input type="range" id="in-q" min="-5" max="5" step="0.5" value="2">
+            </div>
+            <div class="ctrl">
+              <label for="in-theta">Ângulo entre v e B (θ) <span class="val-display" id="theta-val"></span></label>
+              <input type="range" id="in-theta" min="0" max="180" step="1" value="90">
+              <div class="seg c5" role="group" aria-label="Ângulos prontos">
+                <button type="button" class="seg-btn" data-theta="0">0°</button>
+                <button type="button" class="seg-btn" data-theta="45">45°</button>
+                <button type="button" class="seg-btn" data-theta="90">90°</button>
+                <button type="button" class="seg-btn" data-theta="135">135°</button>
+                <button type="button" class="seg-btn" data-theta="180">180°</button>
+              </div>
+            </div>
+            <div class="ctrl">
+              <label for="in-b">Campo magnético (B) <span class="val-display" id="b-val"></span></label>
+              <input type="range" id="in-b" min="0.2" max="3" step="0.1" value="1">
+            </div>
+            <div class="ctrl">
+              <label for="in-v">Velocidade (v) <span class="val-display" id="v-val"></span></label>
+              <input type="range" id="in-v" min="200" max="2000" step="50" value="1000">
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Tempo</div>
+            <div class="ctrl">
+              <label for="in-speed">Velocidade de exibição <span class="val-display" id="speed-val"></span></label>
+              <input type="range" id="in-speed" min="0" max="4" step="1" value="3">
+            </div>
+            <div class="seg c3">
+              <button type="button" class="act-btn primary" id="btn-pause">⏸ Pausar</button>
+              <button type="button" class="act-btn" id="btn-slow" aria-pressed="false">🐢 Lenta</button>
+              <button type="button" class="act-btn" id="btn-relaunch">↻ Relançar</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Câmera</div>
+            <div class="seg c4" role="group" aria-label="Vistas da câmera">
+              <button type="button" class="seg-btn" data-view="3d" title="Vista em perspectiva">3D</button>
+              <button type="button" class="seg-btn" data-view="front" title="Plano XZ (olhando ao longo de Y)">Frente</button>
+              <button type="button" class="seg-btn" data-view="top" title="Plano XY (de cima)">Topo</button>
+              <button type="button" class="seg-btn" data-view="along" title="Olhando na direção de B">Eixo B</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Exibir</div>
+            <label class="check"><input type="checkbox" id="show-v" checked> Vetor <span class="cv">v</span>&nbsp;(velocidade)</label>
+            <label class="check"><input type="checkbox" id="show-b" checked> Vetor <span class="cb">B</span>&nbsp;(campo)</label>
+            <label class="check"><input type="checkbox" id="show-f" checked> Vetor <span class="cf">F</span>&nbsp;(força)</label>
+            <label class="check"><input type="checkbox" id="show-hand" checked> Mão direita 3D</label>
+            <label class="check"><input type="checkbox" id="show-field" checked> Linhas do campo B</label>
+            <label class="check"><input type="checkbox" id="show-trail" checked> Rastro da trajetória</label>
+            <label class="check"><input type="checkbox" id="show-radius" checked> Raio de curvatura</label>
+            <label style="margin-top:8px">Grade</label>
+            <div class="seg c4" role="group" aria-label="Plano da grade">
+              <button type="button" class="seg-btn" data-grid="xy">XY</button>
+              <button type="button" class="seg-btn" data-grid="xz">XZ</button>
+              <button type="button" class="seg-btn" data-grid="yz">YZ</button>
+              <button type="button" class="seg-btn" data-grid="off">Sem</button>
+            </div>
+            <div class="seg c3" role="group" aria-label="Espaçamento da grade" style="margin-top:5px">
+              <button type="button" class="seg-btn" data-step="0.5">0,5 m</button>
+              <button type="button" class="seg-btn" data-step="1">1 m</button>
+              <button type="button" class="seg-btn" data-step="2">2 m</button>
+            </div>
+          </div>
+
+          <div id="hints">
+            🎥 <b>Arrastar:</b> girar a câmera em 360° · <b>Roda:</b> zoom<br>
+            🖱️ <b>Botão direito:</b> mover a vista<br>
+            ⌨️ <b>Espaço:</b> pausar · <b>R:</b> relançar
+          </div>
+        </div>
+      </div>
+
+      <div id="info-panel" class="glass" aria-live="polite">
+        <div class="panel-head">
+          <h3>Regra da mão direita</h3>
+          <button type="button" class="collapse-btn" id="btn-collapse-info" aria-expanded="true" aria-controls="info-body" title="Recolher painel">–</button>
+        </div>
+        <div id="info-body">
+          <div class="rule">
+            <div class="rule-row"><span class="dot v"></span>Indicador → <span class="cv">v</span>&nbsp;(velocidade)</div>
+            <div class="rule-row"><span class="dot b"></span>Dedo médio → <span class="cb">B</span>&nbsp;(campo)</div>
+            <div class="rule-row"><span class="dot f"></span>Polegar → <span class="cf">F</span>&nbsp;(força, se q &gt; 0)</div>
+          </div>
+          <div class="formula"><span class="cf">F</span> = q · <span class="cv">v</span> × <span class="cb">B</span><small>|F| = |q| · v · B · sen θ</small></div>
+          <div id="info-live"></div>
+        </div>
+      </div>
+
+      <div id="status-bar" role="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> shell de simulação -->
+<script src="../../data/simulations.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/simulation-shell.js"></script>
+
+<script>
+(function () {
+  "use strict";
+  if (!window.LUF || !LUF.stage || !window.THREE) return;
+
+  // ==========================================
+  // 1. CONSTANTES E CONVENÇÕES
+  // ==========================================
+  // A física é calculada em coordenadas "de livro" (X, Y, Z com Z para
+  // cima, sistema destro). O Three.js usa Y para cima, então convertemos
+  // com toThree(): (x, y, z) -> (x, z, -y). É uma rotação pura, logo os
+  // produtos vetoriais continuam valendo nos dois sistemas.
+  // O campo B é uniforme e aponta para +X; v começa no plano XZ, fazendo
+  // o ângulo θ com B. Para θ = 90° e q > 0, F aponta para +Y.
+  var MASS = 6.0e-9;          // kg (fixa) — escolhida para R ~ alguns metros
+  var BOX = 12;               // m: ao sair desta região a carga é relançada
+  var START_X = 10;           // m: ponto de partida ao longo de B (hélices)
+  var SPEED_STEPS = [2000, 1000, 400, 200, 100]; // "1/N da velocidade real"
+  var COL = { v: 0x2f9bff, b: 0x39ff7a, f: 0xff3b5c, pos: 0x4fb4ff, neg: 0xff4757, zero: 0xbbbbbb };
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var params = { q: 2, theta: 90, B: 1, v: 1000 }; // q em μC, θ em graus, B em T, v em m/s
+  var view = { speedIdx: 3, slow: false, paused: false, hand: true, showV: true, showB: true, showF: true, field: true, trail: true, radius: true, grid: "xy", step: 1 };
+
+  function toThree(p, out) { return (out || new THREE.Vector3()).set(p.x, p.z, -p.y); }
+  function V(x, y, z) { return new THREE.Vector3(x, y, z); }
+  var B_HAT = V(1, 0, 0);
+
+  // ==========================================
+  // 2. FORMATAÇÃO (pt-BR)
+  // ==========================================
+  var SUP = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+  function fmt(x, d) { return x.toFixed(d).replace(".", ","); }
+  function sci(x, d) {
+    if (x === 0) return "0";
+    var e = Math.floor(Math.log10(Math.abs(x)));
+    var m = x / Math.pow(10, e);
+    if (Math.abs(m) >= 9.95) { m /= 10; e += 1; }
+    if (e >= -2 && e <= 3) return fmt(x, Math.max(0, d - e));
+    return fmt(m, d) + " × 10" + String(e).split("").map(function (c) { return SUP[c]; }).join("");
+  }
+
+  // ==========================================
+  // 3. CENA, CÂMERA E CONTROLES
+  // ==========================================
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x050505);
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  LUF.stage.content.appendChild(renderer.domElement);
+  var canvas = renderer.domElement;
+
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+  var controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 5;
+  controls.maxDistance = 80;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  var keyLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  keyLight.position.set(10, 16, 12);
+  scene.add(keyLight);
+  var fillLight = new THREE.DirectionalLight(0x9fc7ff, 0.35);
+  fillLight.position.set(-12, -6, -8);
+  scene.add(fillLight);
+
+  // Vistas prontas (posições em coordenadas físicas).
+  var VIEWS = {
+    "3d":   { pos: V(9, -12, 7) },
+    front:  { pos: V(0, -18, 0.001) },  // olha ao longo de +Y: plano XZ
+    top:    { pos: V(0, -0.001, 18) },  // olha para baixo: plano XY
+    along:  { pos: V(-18, 0.001, 0.001) } // olha na direção de +B
+  };
+  var camTween = null, currentView = "3d";
+  function setView(name) {
+    currentView = name;
+    var to = toThree(VIEWS[name].pos);
+    if (reduceMotion) {
+      camera.position.copy(to);
+      controls.target.set(0, 0, 0);
+      camTween = null;
+    } else {
+      camTween = { t: 0, fromPos: camera.position.clone(), toPos: to, fromTgt: controls.target.clone() };
+    }
+    document.querySelectorAll("[data-view]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-view") === name);
+    });
+  }
+  function stepTween(dt) {
+    if (!camTween) return;
+    camTween.t = Math.min(1, camTween.t + dt / 0.7);
+    var k = camTween.t < 0.5 ? 2 * camTween.t * camTween.t : 1 - Math.pow(-2 * camTween.t + 2, 2) / 2;
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, k);
+    controls.target.lerpVectors(camTween.fromTgt, V(0, 0, 0), k);
+    if (camTween.t >= 1) camTween = null;
+  }
+  // Se o usuário girar a câmera durante a transição, ela é cancelada.
+  controls.addEventListener("start", function () { camTween = null; });
+
+  // ==========================================
+  // 4. EIXOS E GRADE
+  // ==========================================
+  var labelLayer = document.getElementById("label-layer");
+  var tags = [];
+  function makeTag(cls, html, getPos) {
+    var el = document.createElement("div");
+    el.className = "tag " + cls;
+    el.innerHTML = html;
+    labelLayer.appendChild(el);
+    var t = { el: el, getPos: getPos, visible: true };
+    tags.push(t);
+    return t;
+  }
+
+  var AX_LEN = 13;
+  var axisMat = new THREE.LineBasicMaterial({ color: 0x8a8a8a, transparent: true, opacity: 0.7 });
+  [V(1, 0, 0), V(0, 1, 0), V(0, 0, 1)].forEach(function (d, i) {
+    var g = new THREE.BufferGeometry().setFromPoints([toThree(d.clone().multiplyScalar(-AX_LEN)), toThree(d.clone().multiplyScalar(AX_LEN))]);
+    scene.add(new THREE.Line(g, axisMat));
+    var tipPos = toThree(d.clone().multiplyScalar(AX_LEN + 0.7));
+    makeTag("axis", ["X", "Y", "Z"][i], function () { return tipPos; });
+    var cone = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 12), new THREE.MeshBasicMaterial({ color: 0x8a8a8a }));
+    cone.position.copy(toThree(d.clone().multiplyScalar(AX_LEN)));
+    cone.quaternion.setFromUnitVectors(V(0, 1, 0), toThree(d));
+    scene.add(cone);
+  });
+
+  var grid = null;
+  function buildGrid() {
+    if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
+    document.querySelectorAll("[data-grid]").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-grid") === view.grid); });
+    document.querySelectorAll("[data-step]").forEach(function (b) { b.classList.toggle("active", +b.getAttribute("data-step") === view.step); });
+    if (view.grid === "off") return;
+    var size = 24, div = Math.round(size / view.step);
+    grid = new THREE.GridHelper(size, div, 0x2c2c2c, 0x171717);
+    // GridHelper nasce no plano XZ do Three = plano XY físico (chão).
+    if (view.grid === "xz") grid.rotation.x = Math.PI / 2;         // plano físico XZ
+    if (view.grid === "yz") grid.rotation.z = Math.PI / 2;         // plano físico YZ
+    scene.add(grid);
+  }
+
+  // ==========================================
+  // 5. LINHAS DO CAMPO MAGNÉTICO (B uniforme ao longo de +X)
+  // ==========================================
+  var fieldGroup = new THREE.Group();
+  scene.add(fieldGroup);
+  var fieldLineMat = new THREE.LineBasicMaterial({ color: COL.b, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false });
+  var fieldConeMat = new THREE.MeshBasicMaterial({ color: COL.b, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+  var fieldConeGeo = new THREE.ConeGeometry(0.1, 0.32, 10);
+  (function () {
+    var L = 13;
+    for (var iy = -2; iy <= 2; iy++) {
+      for (var iz = -2; iz <= 2; iz++) {
+        var y = iy * 4, z = iz * 4;
+        var g = new THREE.BufferGeometry().setFromPoints([toThree(V(-L, y, z)), toThree(V(L, y, z))]);
+        fieldGroup.add(new THREE.Line(g, fieldLineMat));
+        for (var x = -9; x <= 9; x += 6) {
+          var c = new THREE.Mesh(fieldConeGeo, fieldConeMat);
+          c.position.copy(toThree(V(x, y, z)));
+          c.quaternion.setFromUnitVectors(V(0, 1, 0), toThree(B_HAT));
+          fieldGroup.add(c);
+        }
+      }
+    }
+  })();
+
+  // ==========================================
+  // 6. VETORES NEON (haste + ponta + brilho)
+  // ==========================================
+  var UP = V(0, 1, 0);
+  function makeArrow(color) {
+    var g = new THREE.Group();
+    var core = new THREE.MeshBasicMaterial({ color: color, depthTest: false, transparent: true });
+    var glow = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false });
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 12), core);
+    var shaftGlow = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 1, 12), glow);
+    var head = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 16), core);
+    var headGlow = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 16), glow);
+    [shaft, shaftGlow, head, headGlow].forEach(function (m) { m.renderOrder = 10; g.add(m); });
+    scene.add(g);
+    return {
+      group: g, tip: new THREE.Vector3(),
+      set: function (origin, dir, len) {
+        if (len < 1e-3) { g.visible = false; return; }
+        g.visible = true;
+        g.position.copy(origin);
+        g.quaternion.setFromUnitVectors(UP, dir);
+        var hl = Math.min(0.42, len * 0.45), sl = len - hl;
+        shaft.scale.set(1, sl, 1); shaft.position.y = sl / 2;
+        shaftGlow.scale.set(1, sl, 1); shaftGlow.position.y = sl / 2;
+        head.scale.set(1, hl / 0.42, 1); head.position.y = sl + hl / 2;
+        headGlow.scale.set(1, hl / 0.42, 1); headGlow.position.y = sl + hl / 2;
+        this.tip.copy(dir).multiplyScalar(len + 0.4).add(origin);
+      }
+    };
+  }
+  var arrowV = makeArrow(COL.v), arrowB = makeArrow(COL.b), arrowF = makeArrow(COL.f);
+
+  // ==========================================
+  // 7. MÃO DIREITA SEMITRANSPARENTE
+  // ==========================================
+  // Referencial local da mão: +X = indicador (v), +Z = polegar (v × B),
+  // e o dedo médio fica no plano XY, girado de θ a partir do indicador,
+  // apontando para B. A palma fica voltada para +Y.
+  var handRoot = new THREE.Group();
+  var handScale = new THREE.Group();
+  handRoot.add(handScale);
+  scene.add(handRoot);
+  function glassMat(color, opacity) {
+    return new THREE.MeshStandardMaterial({
+      color: color, emissive: color, emissiveIntensity: 0.18, metalness: 0.1, roughness: 0.45,
+      transparent: true, opacity: opacity, depthWrite: false
+    });
+  }
+  var skinMat = glassMat(0xd9c2ff, 0.2);
+  var idxMat = glassMat(COL.v, 0.38), midMat = glassMat(COL.b, 0.38), thumbMat = glassMat(COL.f, 0.38);
+  var sphereGeo = new THREE.SphereGeometry(1, 16, 12);
+  var cylGeo = new THREE.CylinderGeometry(1, 1, 1, 16, 1, true);
+  cylGeo.rotateZ(-Math.PI / 2); // eixo do cilindro passa a ser X
+  cylGeo.translate(0.5, 0, 0);  // vai de x = 0 a x = 1
+
+  // Falange: cilindro com pontas arredondadas, de 0 a len ao longo de +X.
+  function limb(len, r, mat) {
+    var g = new THREE.Group();
+    var c = new THREE.Mesh(cylGeo, mat); c.scale.set(len, r, r); g.add(c);
+    var s0 = new THREE.Mesh(sphereGeo, mat); s0.scale.setScalar(r); g.add(s0);
+    var s1 = new THREE.Mesh(sphereGeo, mat); s1.scale.setScalar(r); s1.position.x = len; g.add(s1);
+    return g;
+  }
+  // Dedo dobrado: sequência de falanges, cada uma girando "ang" (em Z).
+  function finger(base, parts, mat, r) {
+    var root = new THREE.Group(); root.position.copy(base);
+    var parent = root;
+    parts.forEach(function (p) {
+      var j = new THREE.Group(); j.rotation.z = p[1];
+      parent.add(j);
+      j.add(limb(p[0], r, mat));
+      var next = new THREE.Group(); next.position.x = p[0];
+      j.add(next);
+      parent = next;
+    });
+    return root;
+  }
+
+  var palm = new THREE.Mesh(sphereGeo, skinMat);
+  palm.scale.set(0.5, 0.17, 0.46);
+  palm.position.set(-0.45, 0.02, -0.02);
+  handScale.add(palm);
+  var wrist = limb(0.75, 0.24, skinMat);
+  wrist.scale.y = 0.6;
+  wrist.position.set(-0.85, 0.02, -0.06);
+  wrist.rotation.y = Math.PI; // aponta para -X (antebraço)
+  handScale.add(wrist);
+
+  var indexF = finger(V(-0.05, 0, 0.28), [[0.55, 0], [0.5, 0]], idxMat, 0.085);
+  handScale.add(indexF);
+  var middlePivot = new THREE.Group(); // girado de θ em torno do polegar (Z)
+  middlePivot.position.set(-0.05, 0.04, 0.1);
+  middlePivot.add(finger(V(0, 0, 0), [[0.55, 0], [0.48, 0]], midMat, 0.085));
+  handScale.add(middlePivot);
+  handScale.add(finger(V(-0.08, 0, -0.08), [[0.3, 1.1], [0.24, 1.3], [0.16, 1.0]], skinMat, 0.08));  // anelar dobrado
+  handScale.add(finger(V(-0.12, 0, -0.24), [[0.24, 1.15], [0.2, 1.3], [0.13, 1.0]], skinMat, 0.07)); // mínimo dobrado
+  var thumbF = new THREE.Group();
+  thumbF.position.set(-0.32, 0.04, 0.32);
+  thumbF.rotation.y = -Math.PI / 2; // +X local passa a apontar para +Z da mão
+  thumbF.add(limb(0.5, 0.1, thumbMat));
+  var thumbTip = limb(0.5, 0.095, thumbMat); thumbTip.position.x = 0.5;
+  thumbF.add(thumbTip);
+  handScale.add(thumbF);
+  handScale.scale.setScalar(2.1);
+
+  // ==========================================
+  // 8. PARTÍCULA, BRILHO E RASTRO
+  // ==========================================
+  function glowTexture() {
+    var c = document.createElement("canvas"); c.width = c.height = 64;
+    var g = c.getContext("2d");
+    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.25, "rgba(255,255,255,.55)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }
+  var glowTex = glowTexture();
+  var particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  var particle = new THREE.Mesh(new THREE.SphereGeometry(0.2, 24, 16), particleMat);
+  scene.add(particle);
+  var haloMat = new THREE.SpriteMaterial({ map: glowTex, color: COL.pos, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+  var halo = new THREE.Sprite(haloMat);
+  halo.scale.setScalar(1.6);
+  particle.add(halo);
+
+  var TRAIL_MAX = 2400;
+  var trailPos = new Float32Array(TRAIL_MAX * 3), trailCol = new Float32Array(TRAIL_MAX * 3);
+  var trailGeo = new THREE.BufferGeometry();
+  trailGeo.setAttribute("position", new THREE.BufferAttribute(trailPos, 3));
+  trailGeo.setAttribute("color", new THREE.BufferAttribute(trailCol, 3));
+  trailGeo.setDrawRange(0, 0);
+  var trailLine = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  var trailDots = new THREE.Points(trailGeo, new THREE.PointsMaterial({ size: 0.2, map: glowTex, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  trailLine.frustumCulled = trailDots.frustumCulled = false;
+  scene.add(trailLine, trailDots);
+  var trailCount = 0, trailColor = new THREE.Color(COL.pos), lastTrail = new THREE.Vector3(1e9, 0, 0);
+
+  function clearTrail() { trailCount = 0; trailGeo.setDrawRange(0, 0); lastTrail.set(1e9, 0, 0); }
+  function recolorTrail() {
+    for (var i = 0; i < trailCount; i++) {
+      var k = Math.pow((i + 1) / trailCount, 1.6) * 0.95 + 0.05;
+      trailCol[i * 3] = trailColor.r * k; trailCol[i * 3 + 1] = trailColor.g * k; trailCol[i * 3 + 2] = trailColor.b * k;
+    }
+    trailGeo.attributes.color.needsUpdate = true;
+  }
+  function pushTrail(p3) {
+    if (p3.distanceToSquared(lastTrail) < 0.0016) return;
+    lastTrail.copy(p3);
+    if (trailCount < TRAIL_MAX) trailCount++;
+    else trailPos.copyWithin(0, 3);
+    var i = (trailCount - 1) * 3;
+    trailPos[i] = p3.x; trailPos[i + 1] = p3.y; trailPos[i + 2] = p3.z;
+    trailGeo.attributes.position.needsUpdate = true;
+    trailGeo.setDrawRange(0, trailCount);
+    recolorTrail();
+  }
+
+  // Raio de curvatura: linha tracejada da carga até o centro da curva.
+  var radiusLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([V(0, 0, 0), V(1, 0, 0)]),
+    new THREE.LineDashedMaterial({ color: 0xfcf3c8, dashSize: 0.25, gapSize: 0.15, transparent: true, opacity: 0.8 })
+  );
+  scene.add(radiusLine);
+  var centerDot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfcf3c8 }));
+  scene.add(centerDot);
+
+  // ==========================================
+  // 9. FÍSICA: F = q v × B, trajetória exata por rotação de v em torno de B
+  // ==========================================
+  var state = { p: V(0, 0, 0), v: V(0, 0, 0) };
+  var lastThumb = V(0, 1, 0); // direção de v×B guardada para quando v ∥ B
+
+  function qSI() { return params.q * 1e-6; }
+  function thetaRad() { return params.theta * Math.PI / 180; }
+  function omega() { return qSI() * params.B / MASS; } // rad/s, com sinal
+  function radiusOf(vPerp) { return params.q === 0 ? Infinity : MASS * vPerp / (Math.abs(qSI()) * params.B); }
+
+  function launch() {
+    var th = thetaRad();
+    var vx = params.v * Math.cos(th), vz = params.v * Math.sin(th);
+    state.v.set(vx, 0, vz);
+    var xs = Math.abs(vx) < 1e-6 * params.v ? 0 : (vx > 0 ? -START_X : START_X);
+    state.p.set(xs, 0, 0);
+    // Coloca o centro da curva sobre o eixo X (hélice centrada no eixo).
+    var R = radiusOf(Math.abs(vz));
+    if (R > 1e-9 && R < BOX - 1) {
+      var f = forceDir(state.v);
+      if (f) state.p.addScaledVector(f, -R);
+    }
+    clearTrail();
+  }
+
+  // Direção de q·v×B (unitária) ou null se a força for nula.
+  function forceDir(v) {
+    var c = V(0, 0, 0).crossVectors(v, B_HAT);
+    if (params.q === 0 || c.lengthSq() < 1e-10 * v.lengthSq()) return null;
+    return c.normalize().multiplyScalar(Math.sign(params.q));
+  }
+
+  // Avança a física dtReal segundos (tempo real). Com B ao longo de X,
+  // dv/dt = (q/m) v × B gira (vy, vz) de um ângulo -ω·t em torno de X.
+  // O deslocamento em cada subpasso usa a corda exata do arco.
+  function advance(dtReal) {
+    var w = omega();
+    var n = Math.max(1, Math.ceil(Math.abs(w * dtReal) / 0.02));
+    var h = dtReal / n;
+    for (var i = 0; i < n; i++) {
+      var a = -w * h;
+      var c = Math.cos(a), s = Math.sin(a);
+      var vy0 = state.v.y, vz0 = state.v.z;
+      var vy1 = vy0 * c - vz0 * s, vz1 = vy0 * s + vz0 * c;
+      var k = Math.abs(a) < 1e-9 ? 1 : Math.tan(a / 2) / (a / 2);
+      state.p.x += state.v.x * h;
+      state.p.y += (vy0 + vy1) / 2 * h * k;
+      state.p.z += (vz0 + vz1) / 2 * h * k;
+      state.v.y = vy1; state.v.z = vz1;
+    }
+    var rr = Math.hypot(state.p.y, state.p.z);
+    if (Math.abs(state.p.x) > BOX + 0.5 || rr > BOX) launch();
+  }
+
+  // ==========================================
+  // 10. ATUALIZAÇÃO VISUAL
+  // ==========================================
+  var tmp3 = new THREE.Vector3(), p3 = new THREE.Vector3();
+  var tagV = makeTag("v", "v", function () { return arrowV.group.visible ? arrowV.tip : null; });
+  var tagB = makeTag("b", "B", function () { return arrowB.group.visible ? arrowB.tip : null; });
+  var tagF = makeTag("f", "F", function () { return arrowF.group.visible ? arrowF.tip : (view.showF && (params.theta % 180 === 0 || params.q === 0) ? fZeroPos : null); });
+  var fZeroPos = new THREE.Vector3();
+  var radiusMid = new THREE.Vector3();
+  var tagR = makeTag("r", "R", function () { return radiusLine.visible ? radiusMid : null; });
+  var dirs = { v: V(0, 0, 0), b: V(0, 0, 0), f: V(0, 0, 0) };
+
+  function updateScene(now) {
+    toThree(state.p, p3);
+    particle.position.copy(p3);
+    var colHex = params.q > 0 ? COL.pos : params.q < 0 ? COL.neg : COL.zero;
+    haloMat.color.setHex(colHex);
+    if (trailColor.getHex() !== colHex) { trailColor.setHex(colHex); recolorTrail(); }
+    var pulse = reduceMotion || view.paused ? 1 : 1 + 0.15 * Math.sin(now * 0.012) + 0.06 * Math.sin(now * 0.031);
+    halo.scale.setScalar(1.6 * pulse);
+    if (view.trail) pushTrail(p3);
+    trailLine.visible = trailDots.visible = view.trail;
+
+    // Vetores (comprimentos em escala visual, não em metros).
+    var vLen = 1.8 + 1.8 * (params.v - 200) / 1800;
+    var bLen = 1.8 + 1.8 * (params.B - 0.2) / 2.8;
+    var Fmag = Math.abs(qSI()) * params.v * params.B * Math.sin(thetaRad());
+    var fLen = Fmag < 1e-12 ? 0 : 1.0 + 2.6 * Math.cbrt(Fmag / 0.03);
+    toThree(tmp3.copy(state.v).normalize(), dirs.v);
+    toThree(B_HAT, dirs.b);
+    var fd = forceDir(state.v);
+    arrowV.set(p3, dirs.v, view.showV ? vLen : 0);
+    arrowB.set(p3, dirs.b, view.showB ? bLen : 0);
+    if (fd) toThree(fd, dirs.f);
+    if (fd && fLen > 0 && view.showF) arrowF.set(p3, dirs.f, fLen);
+    else arrowF.set(p3, dirs.f, 0);
+    fZeroPos.copy(p3).add(V(0, -0.75, 0));
+
+    // Mão: referencial (v̂, ŵ, v̂×ŵ) com ŵ = componente de B perpendicular a v.
+    handRoot.visible = view.hand;
+    if (view.hand) {
+      var vh = state.v.clone().normalize();
+      var thumb = V(0, 0, 0).crossVectors(vh, B_HAT);
+      if (thumb.lengthSq() > 1e-6) lastThumb.copy(thumb.normalize());
+      else thumb.copy(lastThumb);
+      var w = V(0, 0, 0).crossVectors(thumb, vh).normalize();
+      var m = new THREE.Matrix4().makeBasis(toThree(vh), toThree(w), toThree(thumb));
+      handRoot.quaternion.setFromRotationMatrix(m);
+      handRoot.position.copy(p3);
+      middlePivot.rotation.z = Math.acos(Math.max(-1, Math.min(1, vh.dot(B_HAT))));
+      var dimThumb = !fd;
+      thumbMat.opacity = dimThumb ? 0.12 : 0.38;
+    }
+
+    // Raio de curvatura (centro instantâneo = p + R·F̂).
+    var vPerp = Math.hypot(state.v.y, state.v.z);
+    var R = radiusOf(vPerp);
+    var showR = view.radius && fd && R < 30;
+    radiusLine.visible = centerDot.visible = !!showR;
+    if (showR) {
+      var c3 = toThree(state.p.clone().addScaledVector(fd, R));
+      var pos = radiusLine.geometry.attributes.position;
+      pos.setXYZ(0, p3.x, p3.y, p3.z); pos.setXYZ(1, c3.x, c3.y, c3.z);
+      pos.needsUpdate = true;
+      radiusLine.geometry.computeBoundingSphere();
+      radiusLine.computeLineDistances();
+      centerDot.position.copy(c3);
+      radiusMid.copy(c3);
+    }
+
+    fieldGroup.visible = view.field;
+    fieldLineMat.opacity = 0.05 + 0.07 * params.B;
+    fieldConeMat.opacity = 0.08 + 0.1 * params.B;
+  }
+
+  // Rótulos HTML + símbolos ⊗ (entrando na tela) / ⊙ (saindo da tela)
+  // quando o vetor está quase alinhado com a direção de visão.
+  var viewDir = new THREE.Vector3();
+  function arrowHtml(letter, dir, extra) {
+    var c = dir.dot(viewDir), sym = "";
+    if (c > 0.9) sym = '<span class="sym">⊗</span> entrando';
+    else if (c < -0.9) sym = '<span class="sym">⊙</span> saindo';
+    return letter + (sym ? " " + sym : "") + (extra || "");
+  }
+  function updateLabels() {
+    camera.getWorldDirection(viewDir);
+    tagV.html = arrowHtml("v", dirs.v);
+    tagB.html = arrowHtml("B", dirs.b);
+    tagF.html = arrowF.group.visible ? arrowHtml(params.q < 0 ? "F (q &lt; 0)" : "F", dirs.f) : "F = 0";
+    var vPerp = Math.hypot(state.v.y, state.v.z);
+    tagR.html = "R = " + fmt(radiusOf(vPerp), 2) + " m";
+    var rect = canvas.getBoundingClientRect();
+    tags.forEach(function (t) {
+      var p = t.getPos();
+      if (!p) { t.el.style.display = "none"; return; }
+      tmp3.copy(p).project(camera);
+      if (tmp3.z > 1) { t.el.style.display = "none"; return; }
+      if (t.html !== undefined && t.el.innerHTML !== t.html) t.el.innerHTML = t.html;
+      t.el.style.display = "block";
+      t.el.style.left = ((tmp3.x + 1) / 2 * rect.width) + "px";
+      t.el.style.top = ((1 - tmp3.y) / 2 * rect.height) + "px";
+    });
+  }
+
+  // ==========================================
+  // 11. PAINÉIS (valores e explicação)
+  // ==========================================
+  var el = function (id) { return document.getElementById(id); };
+  var infoLive = el("info-live"), statusBar = el("status-bar");
+  var lastInfo = "", lastStatus = "";
+
+  function updateInfo() {
+    var th = thetaRad();
+    var q = qSI(), s = Math.sin(th);
+    if (Math.abs(s) < 1e-9) s = 0;
+    var F = Math.abs(q) * params.v * params.B * s;
+    var vPar = params.v * Math.cos(th), vPerp = params.v * s;
+    var R = radiusOf(vPerp);
+    var T = params.q === 0 ? Infinity : 2 * Math.PI * MASS / (Math.abs(q) * params.B);
+    var kind, badge;
+    if (F === 0) { kind = "reta"; badge = "Trajetória retilínea"; }
+    else if (Math.abs(vPar) < 1e-6 * params.v) { kind = "circ"; badge = "Trajetória circular"; }
+    else { kind = "heli"; badge = "Trajetória helicoidal"; }
+
+    var rows = [
+      ["|F|", sci(F, 2) + " N"],
+      ["v⊥ = v · sen θ", fmt(Math.abs(vPerp), 0) + " m/s"],
+      ["v∥ = v · cos θ", fmt(vPar, 0) + " m/s"],
+      ["Raio R", isFinite(R) && R > 0 ? fmt(R, 2) + " m" : (F === 0 ? "— (sem curva)" : "∞")],
+      ["Período T", isFinite(T) ? sci(T, 2) + " s" : "—"]
+    ];
+    if (kind === "heli") rows.push(["Passo da hélice", fmt(Math.abs(vPar) * T, 1) + " m"]);
+    var html = '<span class="badge ' + kind + '">' + badge + "</span>" +
+      '<div class="formula">R = <sup>m · v · sen θ</sup>&frasl;<sub>|q| · B</sub><small>m = 6,0 × 10⁻⁹ kg (fixa)</small></div>' +
+      rows.map(function (r) { return '<div class="stat"><span>' + r[0] + "</span><b>" + r[1] + "</b></div>"; }).join("") +
+      '<p class="note">' + (params.q < 0
+        ? "Carga <b>negativa</b>: a força tem o sentido <b>oposto</b> ao do polegar."
+        : params.q > 0 ? "Carga <b>positiva</b>: a força segue o polegar."
+        : "Carga nula: não há força magnética.") + "</p>";
+    if (html !== lastInfo) { infoLive.innerHTML = html; lastInfo = html; }
+
+    var st;
+    if (params.q === 0) st = "Com q = 0 não existe força magnética: a carga segue em linha reta.";
+    else if (s === 0) st = '<span class="warn">θ = ' + params.theta + "°: v é paralela a B, então sen θ = 0 e F = 0. A carga não desvia.</span>";
+    else if (kind === "circ") st = "θ = 90°: F é sempre perpendicular a v e aponta para o centro. Movimento circular uniforme.";
+    else st = "v∥ não sofre força (segue ao longo de B) e v⊥ gira em círculo: o resultado é uma hélice.";
+    if (view.paused) st = "⏸ Pausado — gire a câmera para ver os vetores de todos os lados. " + st;
+    if (st !== lastStatus) { statusBar.innerHTML = st; lastStatus = st; }
+  }
+
+  function updateReadouts() {
+    el("q-val").textContent = (params.q > 0 ? "+" : params.q < 0 ? "−" : "") + fmt(Math.abs(params.q), 1) + " μC";
+    el("theta-val").textContent = params.theta + "°";
+    el("b-val").textContent = fmt(params.B, 1) + " T";
+    el("v-val").textContent = params.v + " m/s";
+    var n = SPEED_STEPS[view.speedIdx] * (view.slow ? 10 : 1);
+    el("speed-val").textContent = "1/" + n.toLocaleString("pt-BR") + " da real";
+    document.querySelectorAll("[data-theta]").forEach(function (b) {
+      b.classList.toggle("active", +b.getAttribute("data-theta") === params.theta);
+    });
+  }
+
+  // ==========================================
+  // 12. CONTROLES
+  // ==========================================
+  function bindRange(id, fn) {
+    var input = el(id);
+    input.addEventListener("input", function () { fn(parseFloat(input.value)); updateReadouts(); });
+  }
+  // Carga e campo: a carga continua do ponto onde está (a curvatura muda na hora).
+  bindRange("in-q", function (x) { params.q = x; });
+  bindRange("in-b", function (x) { params.B = x; });
+  // Velocidade: mantém a direção atual e muda só o módulo.
+  bindRange("in-v", function (x) { params.v = x; state.v.setLength(x); });
+  // Ângulo: redefine a direção de v, então relança.
+  function setTheta(t) { params.theta = t; el("in-theta").value = t; updateReadouts(); launch(); }
+  bindRange("in-theta", function (x) { params.theta = x; launch(); });
+  document.querySelectorAll("[data-theta]").forEach(function (b) {
+    b.addEventListener("click", function () { setTheta(+b.getAttribute("data-theta")); });
+  });
+  bindRange("in-speed", function (x) { view.speedIdx = x; });
+
+  var btnPause = el("btn-pause"), btnSlow = el("btn-slow");
+  function togglePause() {
+    view.paused = !view.paused;
+    btnPause.textContent = view.paused ? "▶ Continuar" : "⏸ Pausar";
+  }
+  btnPause.addEventListener("click", togglePause);
+  btnSlow.addEventListener("click", function () {
+    view.slow = !view.slow;
+    btnSlow.classList.toggle("active", view.slow);
+    btnSlow.setAttribute("aria-pressed", view.slow ? "true" : "false");
+    updateReadouts();
+  });
+  el("btn-relaunch").addEventListener("click", launch);
+
+  document.querySelectorAll("[data-view]").forEach(function (b) {
+    b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
+  });
+  document.querySelectorAll("[data-grid]").forEach(function (b) {
+    b.addEventListener("click", function () { view.grid = b.getAttribute("data-grid"); buildGrid(); });
+  });
+  document.querySelectorAll("[data-step]").forEach(function (b) {
+    b.addEventListener("click", function () { view.step = +b.getAttribute("data-step"); if (view.grid === "off") view.grid = "xy"; buildGrid(); });
+  });
+  [["show-v", "showV"], ["show-b", "showB"], ["show-f", "showF"], ["show-hand", "hand"], ["show-field", "field"], ["show-trail", "trail"], ["show-radius", "radius"]].forEach(function (p) {
+    el(p[0]).addEventListener("change", function (e) {
+      view[p[1]] = e.target.checked;
+      if (p[1] === "trail" && !view.trail) clearTrail();
+    });
+  });
+
+  function bindCollapse(btnId, panelId) {
+    var btn = el(btnId), panel = el(panelId);
+    btn.addEventListener("click", function () {
+      var collapsed = panel.classList.toggle("collapsed");
+      btn.textContent = collapsed ? "+" : "–";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.title = collapsed ? "Expandir painel" : "Recolher painel";
+    });
+  }
+  bindCollapse("btn-collapse", "ui-panel");
+  bindCollapse("btn-collapse-info", "info-panel");
+
+  document.addEventListener("keydown", function (e) {
+    var t = e.target && e.target.tagName;
+    if (t === "INPUT" && e.target.type !== "range" && e.target.type !== "checkbox") return;
+    if (e.code === "Space" && t !== "BUTTON") { e.preventDefault(); togglePause(); }
+    else if (e.key === "r" || e.key === "R") launch();
+  });
+
+  // ==========================================
+  // 13. AJUSTE AO PALCO (LUF.stage)
+  // ==========================================
+  function applySize(width, height) {
+    var w = Math.max(1, Math.floor(width)), h = Math.max(1, Math.floor(height));
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    // Terceiro argumento false: não definir canvas.style.width/height
+    // (evita o laço de redimensionamento com o ResizeObserver do palco).
+    renderer.setSize(w, h, false);
+  }
+  applySize(LUF.stage.el.clientWidth, LUF.stage.el.clientHeight);
+  LUF.stage.onResize(function (size) { applySize(size.width, size.height); });
+
+  // ==========================================
+  // 14. LOOP DE RENDERIZAÇÃO
+  // ==========================================
+  var rafId = null, lastT = performance.now();
+  function frame() {
+    rafId = requestAnimationFrame(frame);
+    var now = performance.now();
+    var dt = Math.min(0.05, (now - lastT) / 1000);
+    lastT = now;
+    if (!view.paused) advance(dt / (SPEED_STEPS[view.speedIdx] * (view.slow ? 10 : 1)));
+    stepTween(dt);
+    updateScene(now);
+    controls.update();
+    renderer.render(scene, camera);
+    updateLabels();
+    updateInfo();
+  }
+
+  document.addEventListener("luf:visibilitychange", function (e) {
+    if (e.detail.hidden) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+    } else if (!rafId) {
+      lastT = performance.now();
+      frame();
+    }
+  });
+
+  // Inicializa
+  camera.position.copy(toThree(VIEWS["3d"].pos));
+  setView("3d");
+  buildGrid();
+  updateReadouts();
+  launch();
+  frame();
+})();
+</script>
+</body>
+</html>

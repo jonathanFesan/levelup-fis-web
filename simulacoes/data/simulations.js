@@ -50,6 +50,15 @@ window.LUF.simulations = [
     tags: ["cinemática", "lançamento", "parábola", "2D"],
     addedAt: "2026-10-14",
   },
+  {
+    id: "forca-magnetica",
+    title: "Força Magnética e Regra da Mão Direita",
+    summary: "Vetores v, B e F em 3D com a mão direita e trajetórias circulares e helicoidais",
+    category: "fisica",
+    path: "simulations/fisica/forca-magnetica.html",
+    tags: ["eletromagnetismo", "força magnética", "vetores", "3D"],
+    addedAt: "2026-10-19",
+  },
 ];
 
 // DESTAQUES DA HOME: ids na ORDEM em que devem aparecer no carrossel.
