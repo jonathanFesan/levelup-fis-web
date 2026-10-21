@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>LevelUp Fís — Demonstração</title>
+  <meta name="description" content="Seja um dos primeiros a testar o início da maior plataforma de ensino de física do Brasil.">
+  <meta name="theme-color" content="#0E1A40">
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>html,body{background:#0E1A40;margin:0}</style>
+</head>
+<body>
+  <script>
+    window.lupFalha = function () {
+      var a = document.getElementById('app');
+      if (!a || a.getAttribute('data-falha')) return;
+      a.setAttribute('data-falha', '1');
+      a.innerHTML = '<div style="min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;font-family:Nunito,sans-serif;color:#FCF3C8">' +
+        '<b style="font-size:20px">O site foi atualizado</b><span style="color:#7C84B8">Toque no botão para carregar a versão nova.</span>' +
+        '<button onclick="location.reload()" style="padding:14px 22px;border:0;border-radius:14px;font-weight:800;font-size:15px;background:#FFC65C;color:#0E1A40;cursor:pointer">Atualizar página</button></div>';
+    };
+  </script>
+  <canvas id="starfield" aria-hidden="true"></canvas>
+  <main id="app" class="app"></main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+
+  <!-- Mesmo carregador do index.html do site: a versão vem do ../versao.json. -->
+  <script>
+    (function () {
+      var ARQS = [
+        '../css/style.css', '../css/cartoes.css', '../css/demo.css',
+        '../js/config.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js',
+        '../js/cartoes.js', '../js/demo.js'
+      ];
+      function carregar(v) {
+        ARQS.forEach(function (src) {
+          var url = /^https?:/.test(src) ? src : src + '?v=' + encodeURIComponent(v);
+          if (/\.css$/.test(src)) {
+            var l = document.createElement('link');
+            l.rel = 'stylesheet'; l.href = url;
+            document.head.appendChild(l);
+          } else {
+            var s = document.createElement('script');
+            s.src = url; s.async = false;
+            if (!/^https?:/.test(src)) s.onerror = function () { window.lupFalha(); };
+            document.body.appendChild(s);
+          }
+        });
+      }
+      var ok = false;
+      var t = setTimeout(function () { if (!ok) { ok = true; carregar('t' + Date.now()); } }, 6000);
+      fetch('../versao.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (!ok) { ok = true; clearTimeout(t); carregar(d.v || ('t' + Date.now())); } })
+        .catch(function () { if (!ok) { ok = true; clearTimeout(t); carregar('t' + Date.now()); } });
+    })();
+  </script>
+</body>
+</html>

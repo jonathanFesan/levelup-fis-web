@@ -70,6 +70,24 @@ Rotas usadas pelo site (`js/plus.js`, todas com o token do aluno): `GET /plus/st
 Para testar o visual sem banco: os dados ficam só no navegador do aluno e aparecem botões
 **DEMO** para simular pagamento e resposta do professor. Em produção deixe `false`.
 
+## Versão demonstração (`/demo`)
+
+`demo/index.html` + `js/demo.js` + `css/demo.css`. Tela de entrada com a logo grande, nome,
+e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre um Mapa reduzido com as
+abas **Mapa, Plus (só vitrine) e Perfil** — sem Joules, Cargas nem Fótons. O "visto" de cada
+etapa fica só no navegador.
+
+- Fala **direto com o Supabase** (anon key em `js/config.js`), sem o backend do Render — que
+  dorme e faria o visitante esperar. Tabelas e policies: `backend/sql/023_versao_demo.sql`.
+- Conteúdo, cadastros e o redirecionamento ficam no **painel → aba Demo** (Currículo, Vídeos,
+  Simulações, Cadastros + CSV).
+- **Redirecionar:** com o botão ligado, o `index.html` manda quem abre `levelupfis.com.br`
+  sem sessão e sem rota para `/demo/`. Quem está logado ou usa um link com rota
+  (`/#/login`, `/#/register`, `/#/plus`…) entra no site normal.
+- Simulação da demo = qualquer página do site (`/simulacoes/...`) ou link `https://`. Para
+  versões limitadas, crie uma cópia (ex.: `simulacoes/simulations/fisica/x-demo.html`) e
+  aponte a etapa para ela.
+
 ## Layout no computador
 
 A partir de 1024 px de largura (`css/style.css`, seção "Layout de PC"), a barra inferior vira

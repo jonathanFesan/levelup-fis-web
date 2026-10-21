@@ -70,14 +70,47 @@
           }
         });
       }
-      var ok = false;
-      // Sem resposta em 6 s (ou sem internet): carrega com uma versão única,
-      // que nunca está no cache — mais lento, mas sempre consistente.
-      var t = setTimeout(function () { if (!ok) { ok = true; carregar('t' + Date.now()); } }, 6000);
-      fetch('versao.json?t=' + Date.now(), { cache: 'no-store' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { if (!ok) { ok = true; clearTimeout(t); carregar(d.v || ('t' + Date.now())); } })
-        .catch(function () { if (!ok) { ok = true; clearTimeout(t); carregar('t' + Date.now()); } });
+      function iniciar() {
+        var ok = false;
+        // Sem resposta em 6 s (ou sem internet): carrega com uma versão única,
+        // que nunca está no cache — mais lento, mas sempre consistente.
+        var t = setTimeout(function () { if (!ok) { ok = true; carregar('t' + Date.now()); } }, 6000);
+        fetch('versao.json?t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (!ok) { ok = true; clearTimeout(t); carregar(d.v || ('t' + Date.now())); } })
+          .catch(function () { if (!ok) { ok = true; clearTimeout(t); carregar('t' + Date.now()); } });
+      }
+
+      // Versão demonstração (painel → aba Demo → "Redirecionar para /demo"):
+      // quem abre levelupfis.com.br sem estar logado e sem rota nenhuma vai
+      // para /demo. Links com rota (#/login, #/register, #/plus...) e quem já
+      // tem sessão entram normalmente. Lê direto do Supabase (não dorme como
+      // o backend); se não responder em 2,5 s, abre o site normal.
+      // Mesma URL/chave de js/config.js.
+      // ?redir=1 (ou levelupfis.com.br/redir=1, ver redir=1/index.html) abre o
+      // site normal mesmo com o redirecionamento ligado — e vale para a aba
+      // toda (recarregar não manda para a demo).
+      var temSessao = false, semRedir = false;
+      try { temSessao = !!localStorage.getItem('lup.session'); } catch (e) { /* modo privado */ }
+      try {
+        if (/[?&]redir=1(&|$)/.test(location.search)) sessionStorage.setItem('lup.semDemo', '1');
+        semRedir = sessionStorage.getItem('lup.semDemo') === '1';
+      } catch (e) { semRedir = /[?&]redir=1(&|$)/.test(location.search); }
+      if (temSessao || semRedir || !/^#?\/?$/.test(location.hash)) return iniciar();
+      var SB = 'https://rkyhlbqwkiunsxmtgmrj.supabase.co';
+      var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJreWhsYnF3a2l1bnN4bXRnbXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk5NjgsImV4cCI6MjA5ODA4NTk2OH0.AbOCGOYJwlHCWoBhRL246W1Qbv_hes99o5-tL_N6Ujo';
+      var decidido = false;
+      var seguir = function (redirecionar) {
+        if (decidido) return;
+        decidido = true;
+        if (redirecionar) location.replace('demo/');
+        else iniciar();
+      };
+      setTimeout(function () { seguir(false); }, 2500);
+      fetch(SB + '/rest/v1/demo_config?id=eq.1&select=redirecionar', { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (d) { seguir(!!(d[0] && d[0].redirecionar)); })
+        .catch(function () { seguir(false); });
     })();
   </script>
 </body>

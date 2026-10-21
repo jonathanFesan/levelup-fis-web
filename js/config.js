@@ -7,6 +7,13 @@
 window.LUP_CONFIG = {
   API_BASE: 'https://levelup-fis.onrender.com',
 
+  // Versão demonstração (/demo): fala direto com o Supabase, sem o backend
+  // (que dorme no plano grátis). A anon key é pública por natureza — as
+  // policies de backend/sql/023_versao_demo.sql só deixam ler o conteúdo da
+  // demo e gravar cadastros. A mesma URL/chave está no index.html (redirect).
+  SUPABASE_URL: 'https://rkyhlbqwkiunsxmtgmrj.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJreWhsYnF3a2l1bnN4bXRnbXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MDk5NjgsImV4cCI6MjA5ODA4NTk2OH0.AbOCGOYJwlHCWoBhRL246W1Qbv_hes99o5-tL_N6Ujo',
+
   // Espelham AppConstants / backend (progress.py, questions.py)
   CARGAS_MAXIMAS: 5,
   XP_POR_NIVEL: 100,
