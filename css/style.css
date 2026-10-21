@@ -144,7 +144,7 @@ a.btn { text-decoration: none; }
 /* ---------- Formulários ---------- */
 .field { display: block; text-align: left; }
 .field span { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
-input[type=text], input[type=email], input[type=password], select, textarea {
+input[type=text], input[type=email], input[type=password], input[type=tel], select, textarea {
   width: 100%; padding: 14px 16px; border-radius: 14px;
   background: #16214a; color: var(--cream); border: 1.5px solid var(--divider);
   font: inherit; font-size: 16px; outline: none; transition: border-color .15s;

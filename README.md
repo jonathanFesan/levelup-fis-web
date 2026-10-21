@@ -73,20 +73,26 @@ Para testar o visual sem banco: os dados ficam só no navegador do aluno e apare
 ## Versão demonstração (`/demo`)
 
 `demo/index.html` + `js/demo.js` + `css/demo.css`. Tela de entrada com a logo grande, nome,
-e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre um Mapa reduzido com as
-abas **Mapa, Plus (só vitrine) e Perfil** — sem Joules, Cargas nem Fótons. O "visto" de cada
-etapa fica só no navegador.
+e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre o site com as abas
+**Mapa, Plus (só vitrine) e Perfil** — sem Joules, Cargas nem Fótons.
 
+- **Currículo da demo = o mesmo currículo do site**, com Áreas marcadas `demo = true`
+  (`backend/sql/024_demo_com_curriculo.sql`). No painel → aba Demo → Currículo da demo você usa
+  a mesma árvore do Currículo (Áreas, Blocos, Capítulos, perguntas, cartões, cores, mover). Só
+  na demo existem os Capítulos **Vídeo** e **Simulação** e a opção **Trancado** (cadeado +
+  convite para criar conta). Áreas da demo não aparecem no site/app (RLS + filtro em
+  `backend/app/routes/curriculo.py`).
 - Fala **direto com o Supabase** (anon key em `js/config.js`), sem o backend do Render — que
-  dorme e faria o visitante esperar. Tabelas e policies: `backend/sql/023_versao_demo.sql`.
-- Conteúdo, cadastros e o redirecionamento ficam no **painel → aba Demo** (Currículo, Vídeos,
-  Simulações, Cadastros + CSV).
-- **Redirecionar:** com o botão ligado, o `index.html` manda quem abre `levelupfis.com.br`
-  sem sessão e sem rota para `/demo/`. Quem está logado ou usa um link com rota
-  (`/#/login`, `/#/register`, `/#/plus`…) entra no site normal.
+  dorme e faria o visitante esperar. As respostas são corrigidas no navegador (por isso anon pode
+  ler as perguntas das Áreas demo, com a resposta) e o progresso fica no `localStorage`.
+  Prova na demo: versão simples, todas as questões e a nota no fim.
+- **Redirecionar:** com o botão do painel ligado, o `index.html` manda quem abre
+  `levelupfis.com.br` sem sessão e sem rota para `/demo/`. Quem está logado, usa um link com
+  rota (`/#/login`, `/#/register`, `/#/plus`…) ou abre `/?redir=1` (ou `/redir=1`) entra no
+  site normal.
 - Simulação da demo = qualquer página do site (`/simulacoes/...`) ou link `https://`. Para
   versões limitadas, crie uma cópia (ex.: `simulacoes/simulations/fisica/x-demo.html`) e
-  aponte a etapa para ela.
+  aponte o Capítulo para ela.
 
 ## Layout no computador
 

@@ -1,10 +1,14 @@
 // LevelUp Fís — versão demonstração (levelupfis.com.br/demo).
 //
-// A pessoa deixa nome, e-mail e telefone (tabela demo_leads) e testa um
-// Mapa reduzido, montado no painel → aba Demo (demo_modulos / demo_itens).
-// Sem conta e sem backend: lê e grava direto no Supabase com a anon key
-// (policies em backend/sql/023_versao_demo.sql). Não existe Joule, Carga
-// nem Fóton aqui; o "visto" de cada etapa fica só neste navegador.
+// A pessoa deixa nome, e-mail e telefone (tabela demo_leads) e testa o
+// currículo da demo: as Áreas com demo = true, montadas no painel → aba
+// Demo com as mesmas ferramentas do Currículo final (Áreas → Blocos →
+// Capítulos de Resumo, Fixação, Exercícios, Prova, Curiosidade, e os da
+// demo: Vídeo e Simulação). Ver backend/sql/023 e 024.
+//
+// Sem conta e sem backend: lê e grava direto no Supabase com a anon key.
+// As respostas são corrigidas aqui no navegador e não existe Joule, Carga
+// nem Fóton; o progresso fica só neste navegador.
 //
 // Abas: Mapa, Plus (vitrine) e Perfil. Visual e classes de css/style.css,
 // os mesmos de js/app.js — os trechos copiados de lá estão marcados.
@@ -14,7 +18,7 @@
   const $app = document.getElementById('app');
   const SITE = '../'; // raiz do site (login, cadastro, simulações)
   const LEAD_KEY = 'lup.demo.lead';
-  const VISTOS_KEY = 'lup.demo.vistos';
+  const PROG_KEY = 'lup.demo.progresso';
 
   // ================================================================
   // Utilidades (iguais às de js/app.js)
@@ -26,11 +30,16 @@
     user: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.2-3c.9-1.7 3.6-2.8 6.2-2.8s5.3 1.1 6.2 2.8A8 8 0 0 1 12 20z"/></svg>',
     map: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 5.1 9 3 3 5.3V21l6-2.3 6 2.1 6-2.3V2.8zM10 5.4l4 1.4v11.8l-4-1.4z"/></svg>',
     play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.2-6.5a1 1 0 0 0 0-1.7L9.5 4.6A1 1 0 0 0 8 5.5z"/></svg>',
+    playCircle: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l6 4.5z"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2zm-5 8.2a1.7 1.7 0 1 1 0-3.4 1.7 1.7 0 0 1 0 3.4zM14 9h-4V7a2 2 0 0 1 4 0z"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
     book: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 4.5c-1.1-.4-2.4-.5-3.5-.5-1.9 0-4 .4-5.5 1.5C10.5 4.4 8.4 4 6.5 4S2.5 4.4 1 5.5v14.6c0 .3.3.5.5.5h.3C3.1 19.9 4.9 19.5 6.5 19.5c1.9 0 4 .4 5.5 1.5 1.3-.8 3.8-1.5 5.5-1.5s3.4.3 4.7 1.1c.1.1.2.1.3.1.3 0 .5-.3.5-.5V5.5c-.6-.4-1.3-.8-2-1zM21 18c-1.1-.3-2.3-.5-3.5-.5-1.7 0-4.2.7-5.5 1.5V7.5c1.3-.8 3.8-1.5 5.5-1.5 1.2 0 2.4.2 3.5.5z"/></svg>',
-    playCircle: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 14.5v-9l6 4.5z"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm17.6-2.4-1.2-1.2a1 1 0 0 0-1.4 0L12 16.4V19h2.6l6-6a1 1 0 0 0 0-1.4z"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v1a5 5 0 0 0 4.4 5A5 5 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-2.9A5 5 0 0 0 21 8V7a2 2 0 0 0-2-2zM5 8V7h2v3.8A3 3 0 0 1 5 8zm14 0a3 3 0 0 1-2 2.8V7h2z"/></svg>',
+    bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/></svg>',
     atom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
     crown: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 7.5l5 4 4.5-7 4.5 7 5-4L19.5 18h-15zM4.5 19.5h15V21h-15z"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm-4 9h8v2H8zm0-3.5h8v2H8zM8 14.5h5v2H8z"/></svg>',
@@ -41,8 +50,9 @@
     tag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4 11.6l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .6.2 1.1.6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>',
     expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   };
-  const TIPO_ICON = { resumo: 'book', video: 'playCircle', simulacao: 'atom' };
-  const TIPO_NOME = { resumo: 'Resumo', video: 'Vídeo', simulacao: 'Simulação' };
+  const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus', video: 'playCircle', simulacao: 'atom' };
+  const TIPO_NOME = { resumo: 'Resumo', fixacao: 'Fixação', extra: 'Exercícios', prova: 'Prova', curiosidade: 'Curiosidade', video: 'Vídeo', simulacao: 'Simulação' };
+  const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   function toast(msg, ms = 2800) {
     const el = document.getElementById('toast');
@@ -98,10 +108,17 @@
     } catch { /* URL inválida */ }
     return null;
   }
+  function playerHtml(url) {
+    const em = embedUrl(url);
+    if (em && em.startsWith('video:')) return `<div class="video-embed"><video src="${esc(em.slice(6))}" controls></video></div>`;
+    if (em) return `<div class="video-embed"><iframe src="${esc(em)}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>`;
+    return `<a class="btn btn-ghost btn-block" href="${esc(url)}" target="_blank" rel="noopener">${ICON.playCircle} Assistir vídeo</a>`;
+  }
   // Simulação: caminho do próprio site (/simulacoes/...) ou link completo.
   const simUrl = (url) => (/^https?:\/\//i.test(url) ? url : SITE + String(url || '').replace(/^\/+/, ''));
 
-  // Cor tema do Módulo — mesma conta de temaVars() em js/app.js.
+  // Cor tema — mesma conta de temaVars() em js/app.js (Bloco, senão Área).
+  const corTema = (area, bloco) => (bloco && bloco.cor) || (area && area.cor) || '';
   function temaVars(cor) {
     if (!/^#[0-9a-f]{6}$/i.test(cor || '')) return '';
     const n = parseInt(cor.slice(1), 16);
@@ -113,7 +130,7 @@
   }
 
   // ================================================================
-  // Dados: Supabase direto (anon key) + o que fica no navegador
+  // Dados: Supabase direto (anon key) + progresso no navegador
   // ================================================================
   async function sb(path, opts = {}) {
     const res = await fetch(`${CFG.SUPABASE_URL}/rest/v1/${path}`, Object.assign({}, opts, {
@@ -134,25 +151,46 @@
   const ler = (k, padrao) => { try { return JSON.parse(localStorage.getItem(k)) ?? padrao; } catch { return padrao; } };
   const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* modo privado */ } };
   const apagar = (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } };
-
   const lead = () => ler(LEAD_KEY, null);
-  const vistos = () => new Set(ler(VISTOS_KEY, []));
-  const marcarVisto = (id) => { const v = vistos(); v.add(id); gravar(VISTOS_KEY, [...v]); };
 
-  let MODULOS = null; // [{id,titulo,subtitulo,cor,demo_itens:[...]}]
-  async function loadModulos(force = false) {
-    if (MODULOS && !force) return MODULOS;
-    MODULOS = await sb('demo_modulos?select=id,titulo,subtitulo,cor,ordem,demo_itens(id,tipo,titulo,descricao,url,texto,blocos,ordem,bloqueado)'
-      + '&order=ordem.asc,id.asc&demo_itens.order=ordem.asc,id.asc');
-    return MODULOS;
+  // Progresso: Capítulos concluídos (c) e perguntas acertadas (q).
+  const prog = () => Object.assign({ c: {}, q: {} }, ler(PROG_KEY, {}));
+  const salvarProg = (p) => gravar(PROG_KEY, p);
+  const capConcluido = (id) => !!prog().c[id];
+  function concluirCap(id) { const p = prog(); p.c[id] = true; salvarProg(p); }
+  function acertarPergunta(id) { const p = prog(); p.q[id] = true; salvarProg(p); }
+
+  const S = { areas: null, moduloAtual: null, questions: {} };
+  async function loadCurriculo(force = false) {
+    if (S.areas && !force) return S.areas;
+    const areas = await sb('areas?select=id,titulo,icone,ordem,cor,'
+      + 'blocos(id,titulo,ordem,cor,capitulos(id,titulo,tipo,ordem,trancado,capitulo_conteudo(texto,pdf_url,imagem_url,video_url,simulacao_url,blocos)))'
+      + '&demo=eq.true&order=ordem.asc&blocos.order=ordem.asc&blocos.capitulos.order=ordem.asc,id.asc');
+    areas.forEach((a) => (a.blocos || []).forEach((b) => (b.capitulos || []).forEach((c) => {
+      // capitulo_conteudo é 1–1: o PostgREST devolve objeto (ou lista, em versões antigas)
+      const cc = c.capitulo_conteudo;
+      c.conteudo = (Array.isArray(cc) ? cc[0] : cc) || {};
+    })));
+    S.areas = areas;
+    return areas;
   }
-  function findItem(id) {
-    for (const m of MODULOS || []) {
-      const it = (m.demo_itens || []).find((i) => String(i.id) === String(id));
-      if (it) return { modulo: m, item: it };
+  function findCap(id) {
+    for (const area of S.areas || []) {
+      for (const bloco of area.blocos || []) {
+        const cap = (bloco.capitulos || []).find((c) => String(c.id) === String(id));
+        if (cap) return { area, bloco, cap };
+      }
     }
-    return { modulo: null, item: null };
+    return {};
   }
+  async function getQuestions(cap) {
+    if (!S.questions[cap.id]) {
+      S.questions[cap.id] = await sb(`questions?capitulo_id=eq.${cap.id}&select=id,enunciado,tipo,opcoes,resposta_correta,explicacao,ordem&order=ordem.asc,id.asc`);
+    }
+    return S.questions[cap.id];
+  }
+  // Mesma correção do backend (routes/questions.py): sem diferenciar maiúsculas e espaços nas pontas.
+  const corrigir = (q, resposta) => String(resposta).trim().toLowerCase() === String(q.resposta_correta || '').trim().toLowerCase();
 
   // ================================================================
   // Blocos de layout
@@ -193,11 +231,12 @@
   function bindBack() {
     $app.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => go(b.dataset.back); });
   }
-  // Etapa trancada pelo painel: convite para a versão completa.
+  const crumbDe = (area, bloco) => [area?.titulo, bloco?.titulo].filter(Boolean).join(' · ');
+  // Capítulo trancado no painel: convite para a versão completa.
   async function avisoCompleta(titulo) {
     const r = await modal({
       title: titulo ? `"${titulo}" está na versão completa` : 'Disponível na versão completa',
-      text: 'Crie sua conta grátis para liberar a trilha inteira, com exercícios, provas e recompensas.',
+      text: 'Crie sua conta grátis para liberar a trilha inteira, com recompensas e o seu progresso salvo.',
       icon: ICON.lock,
       buttons: [{ label: 'Agora não', value: false }, { label: 'Criar conta', value: true, cls: 'btn-primary' }],
     });
@@ -212,14 +251,17 @@
     const items = nodes.map((n, i) => {
       const x = X[i % 4], top = PAD + i * ROW;
       const cls = n.concluido ? 'done' : n.desbloqueado ? 'current' : 'locked';
-      const iconSvg = n.desbloqueado ? ICON[n.icon] : ICON.lock;
+      const iconSvg = n.concluido ? ICON[n.icon] : n.desbloqueado ? (n.playIcon ? ICON.play : ICON[n.icon]) : ICON.lock;
+      const bx = x >= 50 ? x - 30 : x + 30;
+      const badge = (n.sideBadges || []).map((sb, j) =>
+        `<button class="side-badge ${sb.on ? 'on' : ''}" style="left:${bx}%;top:${top + 24 + j * 58}px" data-badge="${i}:${j}" title="${esc(sb.title || '')}">${sb.on ? ICON[sb.icon] : ICON.lock}</button>`).join('');
       return `
         <button class="tnode ${cls}" style="left:${x}%;top:${top}px" data-node="${i}">
           <span style="width:96px;height:96px;display:flex;align-items:center;justify-content:center">
             <span class="circle">${iconSvg}${n.concluido ? `<span class="check">${ICON.check}</span>` : ''}</span>
           </span>
           <span class="label">${esc(n.titulo)}</span>
-        </button>`;
+        </button>${badge}`;
     }).join('');
     return `<div class="trail" data-trail='${JSON.stringify({ X, ROW, PAD, n: nodes.length })}' style="height:${h}px">
       <svg class="path"></svg>${items}</div>`;
@@ -268,7 +310,6 @@
           <label class="field"><span>Telefone (WhatsApp)</span><input type="tel" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(11) 91234-5678" required></label>
           <div class="error-msg" data-err></div>
           <button class="btn btn-primary btn-block btn-lg" type="submit">Testar agora!</button>
-          <a class="btn btn-text btn-block" href="${SITE}#/login">Já tem conta? Entrar</a>
         </form>
       </div>`;
     const f = $app.querySelector('form');
@@ -301,94 +342,350 @@
   }
 
   // ---------- Mapa ----------
+  // Igual ao viewMap() de js/app.js: faixa de Áreas, um tópico por Bloco e
+  // a trilha dos Capítulos (Exercícios ao lado do capítulo anterior). Na
+  // demo os Blocos ficam todos abertos; dentro de cada um, o próximo
+  // capítulo libera quando o anterior é concluído. Trancado = cadeado
+  // sempre, e não segura o resto da trilha.
   async function viewMap() {
     $app.innerHTML = topBar() + loading() + bottomNav('mapa');
-    let modulos;
-    try { modulos = await loadModulos(true); } catch {
+    let areas;
+    try { areas = await loadCurriculo(true); } catch {
       $app.innerHTML = topBar() + errorBox('Erro ao carregar o mapa.') + bottomNav('mapa');
       return bindRetry();
     }
-    const v = vistos();
+    if (!S.moduloAtual || !areas.some((a) => a.id === S.moduloAtual)) {
+      S.moduloAtual = (areas.find((a) => (a.blocos || []).length) || areas[0] || {}).id;
+    }
+    const modulo = areas.find((a) => a.id === S.moduloAtual);
+    const topicos = modulo ? modulo.blocos || [] : [];
+    const idxAtual = areas.findIndex((a) => a.id === S.moduloAtual);
+    const concluido = (c) => capConcluido(c.id);
+
     let html = topBar();
     html += `<div class="card demo-aviso"><b>Bem-vindo à versão demonstração!</b>
-      <span class="small muted">Explore as etapas abaixo. Aqui você não ganha Joules, Cargas nem Fótons — isso fica para a versão completa.</span></div>`;
-
-    if (!modulos.length) {
-      html += `<div class="card muted" style="margin-top:24px">O conteúdo da demonstração está sendo preparado. Volte em breve!</div>`;
+      <span class="small muted">Explore a trilha à vontade. Aqui você não ganha Joules, Cargas nem Fótons — isso fica para a versão completa.</span></div>`;
+    if (areas.length > 1) {
+      html += `<div class="modstrip">${areas.map((a, i) => `
+        ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}" style="${temaVars(a.cor)}"></span>` : ''}
+        <button class="mod ${a.id === S.moduloAtual ? 'active' : ''} ${(a.blocos || []).length ? 'available' : ''}" data-mod="${esc(a.id)}" style="${temaVars(a.cor)}">
+          <span class="circle">${esc(a.icone || '•')}</span>${esc(a.titulo)}
+        </button>`).join('')}</div>`;
     }
+    if (!areas.length) {
+      html += `<div class="card muted" style="margin-top:24px">O conteúdo da demonstração está sendo preparado. Volte em breve!</div>`;
+    } else if (!topicos.length) {
+      html += `<div class="card muted" style="margin-top:24px">O conteúdo de ${esc(modulo ? modulo.titulo : 'este módulo')} ainda está sendo preparado.</div>`;
+    }
+
     const trilhas = [];
-    html += `<div class="topics">${modulos.map((m) => {
-      const itens = m.demo_itens || [];
-      let b = `<div class="topic-banner">${m.subtitulo ? `<div class="k">${esc(m.subtitulo)}</div>` : ''}<div class="t">${esc(m.titulo)}</div></div>`;
-      if (!itens.length) {
-        b += `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste módulo ainda está sendo preparado.</div>`;
-      } else {
-        const nodes = itens.map((it) => ({
-          titulo: it.titulo, icon: TIPO_ICON[it.tipo] || 'book',
-          desbloqueado: !it.bloqueado, concluido: !it.bloqueado && v.has(it.id),
-        }));
-        trilhas.push(itens);
-        b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
+    const blocos = topicos.map((t) => {
+      let b = `<div class="topic-banner"><div class="k">${esc(modulo.titulo)}</div><div class="t">${esc(t.titulo)}</div></div>`;
+      const todos = t.capitulos || [];
+      const seq = todos.filter((c) => c.tipo !== 'extra');
+      const extrasPorNo = seq.map(() => []);
+      todos.forEach((c, pos) => {
+        if (c.tipo !== 'extra' || !seq.length) return;
+        const antes = todos.slice(0, pos).filter((x) => x.tipo !== 'extra');
+        const ancora = [...antes].reverse().find((x) => x.tipo === 'fixacao') || antes[antes.length - 1] || seq[0];
+        extrasPorNo[seq.indexOf(ancora)].push(c);
+      });
+      if (!seq.length) {
+        return b + `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste tópico ainda está sendo preparado.</div>`;
       }
-      return `<section class="topic-block" style="${temaVars(m.cor)}">${b}</section>`;
-    }).join('')}</div>`;
+      const nodes = seq.map((c, k) => {
+        const anterior = seq.slice(0, k).reverse().find((x) => !x.trancado);
+        return {
+          titulo: c.titulo,
+          icon: TIPO_ICON[c.tipo] || 'bulb',
+          desbloqueado: !c.trancado && (!anterior || concluido(anterior) || concluido(c)),
+          concluido: !c.trancado && concluido(c),
+          sideBadges: extrasPorNo[k].map((e) => ({ icon: 'plus', on: !e.trancado && !c.trancado && concluido(c), title: e.titulo, cap: e })),
+        };
+      });
+      trilhas.push({ seq, nodes });
+      return b + `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
+    });
+    html += `<div class="topics">${blocos.map((b, i) => `<section class="topic-block" style="${temaVars(corTema(modulo, topicos[i]))}">${b}</section>`).join('')}</div>`;
     html += bottomNav('mapa');
     $app.innerHTML = html;
     drawTrails();
 
+    $app.querySelectorAll('[data-mod]').forEach((b) => {
+      b.onclick = () => {
+        const a = areas.find((x) => x.id === b.dataset.mod);
+        if (a.id === S.moduloAtual) return window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (!(a.blocos || []).length) return modal({ title: 'Quase lá!', text: 'Esse módulo ainda está sendo preparado.', icon: ICON.lock });
+        S.moduloAtual = a.id;
+        viewMap();
+      };
+    });
     $app.querySelectorAll('[data-trilha]').forEach((wrap) => {
-      const itens = trilhas[+wrap.dataset.trilha];
+      const tr = trilhas[+wrap.dataset.trilha];
       wrap.querySelectorAll('[data-node]').forEach((b) => {
         b.onclick = () => {
-          const it = itens[+b.dataset.node];
-          if (it.bloqueado) return avisoCompleta(it.titulo);
-          go(`#/i/${it.id}`);
+          const i = +b.dataset.node;
+          if (tr.seq[i].trancado) return avisoCompleta(tr.seq[i].titulo);
+          if (!tr.nodes[i].desbloqueado) return toast('Conclua o capítulo anterior para desbloquear.');
+          go(`#/c/${tr.seq[i].id}`);
+        };
+      });
+      wrap.querySelectorAll('[data-badge]').forEach((b) => {
+        b.onclick = () => {
+          const [i, j] = b.dataset.badge.split(':').map(Number);
+          const sb = tr.nodes[i].sideBadges[j];
+          if (sb.cap.trancado) return avisoCompleta(sb.cap.titulo);
+          if (!sb.on) return toast(`Conclua "${tr.seq[i].titulo}" para desbloquear.`);
+          go(`#/c/${sb.cap.id}`);
         };
       });
     });
   }
 
-  // ---------- Etapa (Resumo / Vídeo / Simulação) ----------
-  async function viewItem(id) {
+  // ---------- Capítulo: abre a tela do tipo dele ----------
+  async function viewCapitulo(capId) {
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    try { await loadModulos(); } catch {
+    try { await loadCurriculo(); } catch {
       $app.innerHTML = pageHead('Demo', '', '#/map') + errorBox('Erro ao carregar o conteúdo.');
       bindBack(); return bindRetry();
     }
-    const { modulo, item } = findItem(id);
-    if (!item) return go('#/map');
-    if (item.bloqueado) { go('#/map'); return avisoCompleta(item.titulo); }
-    $app.style.cssText = temaVars(modulo.cor);
-
-    let body;
-    if (item.tipo === 'resumo') {
-      const cartoes = window.Cartoes && Cartoes.temConteudo(item.blocos) ? Cartoes.render(item.blocos) : '';
-      body = cartoes || `<div class="card">${item.texto && item.texto.trim()
-        ? `<div class="prose">${esc(item.texto)}</div>`
-        : '<p class="muted">O conteúdo deste resumo ainda não foi cadastrado.</p>'}</div>`;
-    } else if (item.tipo === 'video') {
-      const em = embedUrl(item.url);
-      let player;
-      if (em && em.startsWith('video:')) player = `<div class="video-embed"><video src="${esc(em.slice(6))}" controls></video></div>`;
-      else if (em) player = `<div class="video-embed"><iframe src="${esc(em)}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>`;
-      else if (item.url) player = `<a class="btn btn-ghost btn-block" href="${esc(item.url)}" target="_blank" rel="noopener">${ICON.playCircle} Assistir vídeo</a>`;
-      else player = '<p class="muted">O vídeo desta etapa ainda não foi cadastrado.</p>';
-      body = `<div class="card stack">${player}${item.descricao ? `<div class="prose" style="font-size:15px">${esc(item.descricao)}</div>` : ''}</div>`;
-    } else {
-      body = item.url
-        ? `<div class="sim-frame"><iframe src="${esc(simUrl(item.url))}" title="${esc(item.titulo)}" allow="fullscreen" allowfullscreen></iframe></div>
-           <div class="row" style="margin-top:10px">${item.descricao ? `<span class="small muted" style="flex:1">${esc(item.descricao)}</span>` : '<span class="spacer"></span>'}
-           <a class="btn btn-text" href="${esc(simUrl(item.url))}" target="_blank" rel="noopener">${ICON.expand} Tela cheia</a></div>`
-        : '<div class="card"><p class="muted">A simulação desta etapa ainda não foi cadastrada.</p></div>';
+    const ctx = findCap(capId);
+    if (!ctx.cap) return go('#/map');
+    if (ctx.cap.trancado) { go('#/map'); return avisoCompleta(ctx.cap.titulo); }
+    $app.style.cssText = temaVars(corTema(ctx.area, ctx.bloco));
+    switch (ctx.cap.tipo) {
+      case 'fixacao': case 'extra': return viewTrilha(ctx);
+      case 'prova': return viewProva(ctx);
+      default: return viewConteudo(ctx);
     }
+  }
 
-    const jaVisto = vistos().has(item.id);
-    $app.innerHTML = pageHead(item.titulo || TIPO_NOME[item.tipo], [modulo.subtitulo, modulo.titulo].filter(Boolean).join(' · '), '#/map') + `
+  // Resumo, Curiosidade, Vídeo e Simulação: conteúdo + CONTINUAR.
+  function viewConteudo({ area, bloco, cap }) {
+    const c = cap.conteudo || {};
+    const cartoes = window.Cartoes && Cartoes.temConteudo(c.blocos) ? Cartoes.render(c.blocos) : '';
+    const descricao = c.texto && c.texto.trim() ? `<div class="prose" style="font-size:15px">${esc(c.texto)}</div>` : '';
+    let body;
+    if (cap.tipo === 'video') {
+      body = `<div class="card stack">${c.video_url ? playerHtml(c.video_url) : '<p class="muted">O vídeo deste capítulo ainda não foi cadastrado.</p>'}${descricao}</div>`;
+    } else if (cap.tipo === 'simulacao') {
+      body = c.simulacao_url
+        ? `<div class="sim-frame"><iframe src="${esc(simUrl(c.simulacao_url))}" title="${esc(cap.titulo)}" allow="fullscreen" allowfullscreen></iframe></div>
+           <div class="row" style="margin-top:10px">${c.texto ? `<span class="small muted" style="flex:1">${esc(c.texto)}</span>` : '<span class="spacer"></span>'}
+           <a class="btn btn-text" href="${esc(simUrl(c.simulacao_url))}" target="_blank" rel="noopener">${ICON.expand} Tela cheia</a></div>`
+        : '<div class="card"><p class="muted">A simulação deste capítulo ainda não foi cadastrada.</p></div>';
+    } else if (cartoes) {
+      body = cartoes;
+    } else {
+      // Mesma ordem do site: Resumo → PDF, senão texto; Curiosidade → tudo que tiver.
+      const parts = [];
+      if (c.imagem_url) parts.push(`<img class="media-img" src="${esc(c.imagem_url)}" alt="" onerror="this.outerHTML='<p class=muted>Não foi possível carregar a imagem.</p>'">`);
+      if (c.pdf_url) parts.push(`<iframe class="pdf-frame" src="${esc(c.pdf_url)}#toolbar=0" title="PDF"></iframe><p class="small muted" style="text-align:center"><a href="${esc(c.pdf_url)}" target="_blank" rel="noopener">Abrir o PDF em outra aba</a></p>`);
+      if (c.texto && c.texto.trim() && !(cap.tipo === 'resumo' && c.pdf_url)) parts.push(`<div class="prose">${esc(c.texto)}</div>`);
+      if (c.video_url) parts.push(playerHtml(c.video_url));
+      if (!parts.length) parts.push(`<p class="muted">O conteúdo deste capítulo ainda não foi cadastrado.</p>`);
+      body = `<div class="card stack">${parts.join('')}</div>`;
+    }
+    const jaVisto = capConcluido(cap.id);
+    $app.innerHTML = pageHead(cap.titulo || TIPO_NOME[cap.tipo], crumbDe(area, bloco), '#/map') + `
       ${body}
-      <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>${item.tipo === 'resumo' && !jaVisto ? 'ENTENDIDO' : 'CONTINUAR'}</button></div>`;
+      <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>${cap.tipo === 'resumo' && !jaVisto ? 'ENTENDIDO' : 'CONTINUAR'}</button></div>`;
     bindBack();
-    $app.querySelector('[data-ok]').onclick = () => { marcarVisto(item.id); go('#/map'); };
+    $app.querySelector('[data-ok]').onclick = () => { concluirCap(cap.id); go('#/map'); };
+  }
+
+  // ---------- Fixação / Exercícios: trilha de fases ----------
+  async function viewTrilha({ area, bloco, cap }) {
+    let qs;
+    try { qs = await getQuestions(cap); } catch {
+      $app.innerHTML = pageHead(cap.titulo, '', '#/map') + errorBox('Erro ao carregar os exercícios.');
+      bindBack(); return bindRetry();
+    }
+    let html = pageHead(cap.titulo || TIPO_NOME[cap.tipo], crumbDe(area, bloco), '#/map');
+    if (!qs.length) {
+      html += `<div class="card muted" style="margin-top:20px">Nenhum exercício cadastrado ainda.</div>`;
+      $app.innerHTML = html; return bindBack();
+    }
+    const p = prog();
+    const feitas = qs.filter((q) => p.q[q.id]).length;
+    html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--acc)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
+      <span style="font-weight:800">${cap.tipo === 'extra' ? 'EXERCÍCIOS' : 'FIXAÇÃO'}</span><span class="spacer"></span>
+      <span class="muted" style="font-weight:800">${feitas}/${qs.length}</span></div>`;
+    const nodes = qs.map((q, i) => ({
+      titulo: `Fase ${i + 1}`, icon: 'play',
+      concluido: !!p.q[q.id],
+      desbloqueado: i === 0 || !!p.q[qs[i - 1].id] || !!p.q[q.id],
+    }));
+    html += trailHtml(nodes);
+    $app.innerHTML = html;
+    bindBack();
+    drawTrails();
+    $app.querySelectorAll('[data-node]').forEach((b) => {
+      b.onclick = () => {
+        const i = +b.dataset.node;
+        if (!nodes[i].desbloqueado) return toast('Conclua a fase anterior para desbloquear.');
+        go(`#/q/${cap.id}/${i}`);
+      };
+    });
+    const atual = nodes.findIndex((n) => !n.concluido);
+    if (atual > 1) $app.querySelectorAll('[data-node]')[atual]?.scrollIntoView({ block: 'center' });
+  }
+
+  // Tela de uma pergunta (igual ao viewExercicio de js/app.js, sem Cargas).
+  // aoResponder(resposta) faz o resto: corrige e mostra o resultado.
+  function telaPergunta({ area, bloco, q, titulo, sair, botao = 'RESPONDER', aoResponder }) {
+    let selecionada = null;
+    const isMC = q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
+    $app.innerHTML = `
+      <div class="ex-top">
+        <button class="back" data-back="${esc(sair)}" aria-label="Sair">${ICON.close}</button>
+        <div class="title"><div class="k">${esc(area?.icone || '')} ${esc(area?.titulo || '')}</div>${esc(bloco?.titulo || '')} · ${esc(titulo)}</div>
+        <span class="timer" data-timer>00:00</span>
+      </div>
+      <div class="enunciado">${esc(q.enunciado)}</div>
+      ${isMC
+        ? `<div class="opts">${q.opcoes.map((o, i) => `
+            <button class="opt" data-opt="${i}"><span class="letter">${LETRAS[i] || i + 1}</span><span class="txt">${esc(o)}</span></button>`).join('')}</div>`
+        : `<label class="field"><span>Sua resposta</span><input type="text" data-text autocomplete="off"></label>`}
+      <div class="bottom-cta"><button class="btn btn-primary btn-block" data-send>${esc(botao)}</button></div>`;
+    bindBack();
+    let seg = 0;
+    clearInterval(exTimer);
+    const tEl = $app.querySelector('[data-timer]');
+    exTimer = setInterval(() => {
+      if (!document.body.contains(tEl)) return clearInterval(exTimer);
+      seg++;
+      tEl.textContent = `${String(Math.floor(seg / 60) % 60).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
+    }, 1000);
+    $app.querySelectorAll('[data-opt]').forEach((b) => {
+      b.onclick = () => {
+        $app.querySelectorAll('[data-opt]').forEach((x) => x.classList.remove('sel'));
+        b.classList.add('sel');
+        selecionada = q.opcoes[+b.dataset.opt];
+      };
+    });
+    const txt = $app.querySelector('[data-text]');
+    const send = $app.querySelector('[data-send]');
+    if (txt) { txt.focus(); txt.onkeydown = (e) => { if (e.key === 'Enter') send.click(); }; }
+    send.onclick = () => {
+      const resposta = isMC ? selecionada : (txt.value || '').trim();
+      if (!resposta) return toast('Escolha ou digite uma resposta');
+      clearInterval(exTimer);
+      aoResponder(resposta);
+    };
+  }
+  let exTimer = null;
+
+  async function viewExercicio(capId, idx) {
+    idx = +idx;
+    $app.className = 'app no-nav';
+    $app.innerHTML = loading();
+    let ctx, qs;
+    try {
+      await loadCurriculo();
+      ctx = findCap(capId);
+      if (!ctx.cap || ctx.cap.trancado) return go('#/map');
+      qs = await getQuestions(ctx.cap);
+    } catch {
+      $app.innerHTML = errorBox('Erro ao carregar a questão.'); return bindRetry();
+    }
+    $app.style.cssText = temaVars(corTema(ctx.area, ctx.bloco));
+    const trilhaHash = `#/c/${ctx.cap.id}`;
+    const q = qs[idx];
+    const p = prog();
+    if (!q || (idx > 0 && !p.q[qs[idx - 1].id] && !p.q[q.id])) return go(trilhaHash);
+
+    telaPergunta({
+      area: ctx.area, bloco: ctx.bloco, q, titulo: `Fase ${idx + 1}`, sair: trilhaHash,
+      aoResponder(resposta) {
+        const acertou = corrigir(q, resposta);
+        let concluiuAgora = false;
+        if (acertou) {
+          acertarPergunta(q.id);
+          const pp = prog();
+          if (!pp.c[ctx.cap.id] && qs.every((x) => pp.q[x.id])) { concluirCap(ctx.cap.id); concluiuAgora = true; }
+        }
+        viewResultado({ acertou, q, concluiuAgora, backHash: trilhaHash });
+      },
+    });
+  }
+
+  // Resultado (igual ao viewResultado de js/app.js, sem Joules/Cargas).
+  function viewResultado({ acertou, q, concluiuAgora, backHash }) {
+    const cor = acertou ? 'var(--success)' : 'var(--error)';
+    $app.innerHTML = `
+      <div class="result">
+        <div class="badge" style="background:${acertou ? 'rgba(76,217,123,.15)' : 'rgba(255,92,122,.15)'};color:${cor}">${acertou ? ICON.check : ICON.close}</div>
+        <h2 style="color:${cor}">${acertou ? 'Mandou bem!' : 'Quase lá!'}</h2>
+        <div class="answer-box" style="margin-bottom:16px"><div class="k">RESPOSTA CORRETA</div><div style="font-weight:800;margin-top:4px">${esc(q.resposta_correta)}</div></div>
+        ${concluiuAgora ? `<div class="unlock"><div class="k">CAPÍTULO CONCLUÍDO!</div>
+          <div class="small">Próximo capítulo liberado na trilha.</div></div>` : ''}
+        ${q.explicacao ? `<div class="card explain"><div class="k">EXPLICAÇÃO</div><div class="prose">${esc(q.explicacao)}</div></div>` : ''}
+        <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>CONTINUAR</button></div>
+      </div>`;
+    $app.querySelector('[data-ok]').onclick = () => go(backHash);
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- Prova (versão simples: todas as perguntas, nota no fim) ----------
+  async function viewProva(ctx) {
+    const { area, bloco, cap } = ctx;
+    let qs;
+    try { qs = await getQuestions(cap); } catch {
+      $app.innerHTML = pageHead(cap.titulo, '', '#/map') + errorBox('Erro ao carregar a prova.');
+      bindBack(); return bindRetry();
+    }
+    $app.innerHTML = pageHead(cap.titulo || 'Prova', crumbDe(area, bloco), '#/map') + (qs.length ? `
+      <div class="card stack" style="margin-top:12px;text-align:center">
+        <div style="color:var(--acc);width:44px;height:44px;margin:0 auto">${ICON.trophy}</div>
+        <b style="font-size:19px">${qs.length} ${qs.length === 1 ? 'questão' : 'questões'}</b>
+        <span class="small muted">Responda todas e veja sua nota no final. Na versão completa a prova tem modo fácil e difícil, histórico de tentativas e recompensas.</span>
+      </div>
+      <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>COMEÇAR PROVA</button></div>`
+      : `<div class="card muted" style="margin-top:20px">Nenhuma questão cadastrada nesta prova ainda.</div>`);
+    bindBack();
+    const ok = $app.querySelector('[data-ok]');
+    if (!ok) return;
+    ok.onclick = () => {
+      const respostas = [];
+      const proxima = (i) => {
+        if (i >= qs.length) return viewProvaResultado(ctx, qs, respostas);
+        window.scrollTo(0, 0);
+        telaPergunta({
+          area, bloco, q: qs[i], titulo: `Questão ${i + 1}/${qs.length}`, sair: '#/map',
+          botao: i === qs.length - 1 ? 'FINALIZAR' : 'PRÓXIMA',
+          aoResponder(resposta) { respostas[i] = resposta; proxima(i + 1); },
+        });
+      };
+      proxima(0);
+    };
+  }
+
+  function viewProvaResultado({ cap }, qs, respostas) {
+    concluirCap(cap.id);
+    const certas = qs.filter((q, i) => corrigir(q, respostas[i])).length;
+    const pct = Math.round((certas / qs.length) * 100);
+    const cor = pct >= 60 ? 'var(--success)' : 'var(--error)';
+    $app.innerHTML = `
+      <div class="result">
+        <div class="badge" style="background:${pct >= 60 ? 'rgba(76,217,123,.15)' : 'rgba(255,92,122,.15)'};color:${cor}">${pct >= 60 ? ICON.trophy : ICON.close}</div>
+        <h2 style="color:${cor}">${certas}/${qs.length} acertos</h2>
+        <p class="muted" style="margin:-6px 0 18px">${pct >= 60 ? 'Mandou bem na prova!' : 'Revise o conteúdo e tente de novo.'}</p>
+        <div class="stack" style="text-align:left">${qs.map((q, i) => {
+          const ok = corrigir(q, respostas[i]);
+          return `<div class="card">
+            <div class="row" style="align-items:flex-start"><span style="color:${ok ? 'var(--success)' : 'var(--error)'};width:22px;height:22px;flex:0 0 22px">${ok ? ICON.check : ICON.close}</span>
+            <div style="flex:1;min-width:0"><div class="small muted">Questão ${i + 1}</div><div style="white-space:pre-wrap">${esc(q.enunciado)}</div>
+            ${ok ? '' : `<div class="small" style="margin-top:6px">Sua resposta: <b>${esc(respostas[i])}</b></div>`}
+            <div class="small" style="margin-top:4px">Correta: <b>${esc(q.resposta_correta)}</b></div>
+            ${q.explicacao ? `<div class="small muted" style="margin-top:6px;white-space:pre-wrap">${esc(q.explicacao)}</div>` : ''}</div></div>
+          </div>`;
+        }).join('')}</div>
+        <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>CONTINUAR</button></div>
+      </div>`;
+    $app.querySelector('[data-ok]').onclick = () => go('#/map');
+    window.scrollTo(0, 0);
   }
 
   // ---------- Plus (vitrine) ----------
@@ -437,8 +734,8 @@
   // ---------- Perfil ----------
   function viewProfile() {
     const l = lead() || {};
-    const total = (MODULOS || []).reduce((s, m) => s + (m.demo_itens || []).filter((i) => !i.bloqueado).length, 0);
-    const feitos = vistos().size;
+    const caps = (S.areas || []).flatMap((a) => (a.blocos || []).flatMap((b) => b.capitulos || [])).filter((c) => !c.trancado);
+    const feitos = caps.filter((c) => capConcluido(c.id)).length;
     $app.innerHTML = `
       <div class="pagehead"><h2>Perfil</h2></div>
       <div class="profile-grid"><div class="pcol">
@@ -450,7 +747,7 @@
       </div><div class="pcol">
       <div class="card demo-aviso">
         <b>Você está na versão demonstração</b>
-        <span class="small muted">Aqui não tem Joules, Cargas nem Fótons, e o que você já viu fica salvo só neste navegador.${MODULOS ? ` Etapas vistas: ${Math.min(feitos, total)} de ${total}.` : ''}</span>
+        <span class="small muted">Aqui não tem Joules, Cargas nem Fótons, e o seu progresso fica salvo só neste navegador.${S.areas ? ` Capítulos concluídos: ${feitos} de ${caps.length}.` : ''}</span>
       </div>
       <a class="btn btn-primary btn-block btn-lg" style="margin-top:14px" href="${SITE}#/register">Criar minha conta completa</a>
       <button class="btn btn-ghost btn-block" style="margin-top:10px" data-sair>Sair da demonstração</button>
@@ -458,11 +755,11 @@
       ${bottomNav('perfil')}`;
     $app.querySelector('[data-sair]').onclick = async () => {
       const ok = await modal({
-        title: 'Sair da demonstração?', text: 'Seus dados e as etapas vistas são apagados deste navegador.',
+        title: 'Sair da demonstração?', text: 'Seus dados e o progresso são apagados deste navegador.',
         buttons: [{ label: 'Cancelar', value: false }, { label: 'Sair', value: true, cls: 'btn-primary' }],
       });
       if (!ok) return;
-      apagar(LEAD_KEY); apagar(VISTOS_KEY);
+      apagar(LEAD_KEY); apagar(PROG_KEY);
       go('#/');
     };
   }
@@ -471,6 +768,7 @@
   // Roteador
   // ================================================================
   function render() {
+    clearInterval(exTimer);
     document.getElementById('modal-root').innerHTML = '';
     $app.className = 'app';
     $app.removeAttribute('style');
@@ -482,7 +780,8 @@
       case 'map': return viewMap();
       case 'plus': return viewPlus();
       case 'profile': return viewProfile();
-      case 'i': return viewItem(parts[1]);
+      case 'c': return viewCapitulo(parts[1]);
+      case 'q': return viewExercicio(parts[1], parts[2]);
       default: return go('#/map');
     }
   }
