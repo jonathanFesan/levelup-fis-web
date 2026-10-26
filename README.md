@@ -94,6 +94,10 @@ e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre o site com as
   (painel → botão 🧪 do Capítulo, grava `capitulo_conteudo.simulacao_url`); ela aparece no topo de
   cada questão. O conteúdo inicial da demo (3 Áreas: Resumo → Simulação → Exercícios com simulação →
   Exercícios teóricos → Prova final, sem vídeos) está em `backend/sql/025_demo_conteudo_completo.sql`.
+- **Tutorial das simulações:** no Capítulo Simulação aparece uma checklist de desafios ("Aumente a
+  velocidade para 50 m/s"…), que se marca sozinha lendo os controles da simulação, com um "i" que
+  explica a variável e os extremos. Os desafios ficam em `js/demo-tutoriais.js`, pelo nome do arquivo
+  da simulação.
 - Simulação da demo = qualquer página do site (`/simulacoes/...`) ou link `https://`. Para
   versões limitadas, crie uma cópia (ex.: `simulacoes/simulations/fisica/x-demo.html`) e
   aponte o Capítulo para ela.

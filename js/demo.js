@@ -63,7 +63,7 @@
   }
 
   // Modal simples (versão enxuta do modal() de js/app.js).
-  function modal({ title, text = '', icon = '', buttons = [{ label: 'Entendi', value: true, cls: 'btn-primary' }] }) {
+  function modal({ title, text = '', html = '', icon = '', buttons = [{ label: 'Entendi', value: true, cls: 'btn-primary' }] }) {
     return new Promise((resolve) => {
       const wrap = document.createElement('div');
       wrap.className = 'modal-backdrop';
@@ -71,7 +71,7 @@
         <div class="modal" role="dialog" aria-modal="true">
           ${icon ? `<div style="color:var(--gold);width:34px;height:34px;margin:0 auto">${icon}</div>` : ''}
           <h3>${esc(title)}</h3>
-          ${text ? `<p>${esc(text)}</p>` : ''}
+          ${text ? `<p>${esc(text)}</p>` : ''}${html}
           <div class="actions">
             ${buttons.map((b, i) => `<button class="btn ${b.cls || 'btn-ghost'}" data-i="${i}">${esc(b.label)}</button>`).join('')}
           </div>
@@ -168,8 +168,9 @@
   const apagar = (k) => { try { localStorage.removeItem(k); } catch { /* ignore */ } };
   const lead = () => ler(LEAD_KEY, null);
 
-  // Progresso: Capítulos concluídos (c) e perguntas acertadas (q).
-  const prog = () => Object.assign({ c: {}, q: {} }, ler(PROG_KEY, {}));
+  // Progresso: Capítulos concluídos (c), perguntas acertadas (q) e
+  // desafios do tutorial da simulação (t: capítulo → índices feitos).
+  const prog = () => Object.assign({ c: {}, q: {}, t: {} }, ler(PROG_KEY, {}));
   const salvarProg = (p) => gravar(PROG_KEY, p);
   const capConcluido = (id) => !!prog().c[id];
   function concluirCap(id) { const p = prog(); p.c[id] = true; salvarProg(p); }
@@ -485,9 +486,11 @@
     if (cap.tipo === 'video') {
       body = `<div class="card stack">${c.video_url ? playerHtml(c.video_url) : '<p class="muted">O vídeo deste capítulo ainda não foi cadastrado.</p>'}${descricao}</div>`;
     } else if (cap.tipo === 'simulacao') {
+      const tut = tutorialDe(c.simulacao_url);
       body = c.simulacao_url
-        ? simFrameHtml(c.simulacao_url, cap.titulo)
-          + (c.texto ? `<p class="small muted" style="margin:10px 0 0">${esc(c.texto)}</p>` : '')
+        ? `<div class="${tut ? 'sim-tut-layout' : ''}"><div>${simFrameHtml(c.simulacao_url, cap.titulo)
+          + (c.texto ? `<p class="small muted" style="margin:10px 0 0">${esc(c.texto)}</p>` : '')}</div>
+          ${tut ? tutorialHtml(cap, tut) : ''}</div>`
         : '<div class="card"><p class="muted">A simulação deste capítulo ainda não foi cadastrada.</p></div>';
     } else if (cartoes) {
       body = cartoes;
@@ -506,7 +509,88 @@
       ${body}
       <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>${cap.tipo === 'resumo' && !jaVisto ? 'ENTENDIDO' : 'CONTINUAR'}</button></div>`;
     bindBack();
+    if (cap.tipo === 'simulacao' && tutorialDe(c.simulacao_url)) ligarTutorial(cap, tutorialDe(c.simulacao_url));
     $app.querySelector('[data-ok]').onclick = () => { concluirCap(cap.id); go('#/map'); };
+  }
+
+  // ---------- Tutorial da simulação (desafios em checklist) ----------
+  // Os desafios ficam em js/demo-tutoriais.js, pelo nome do arquivo da
+  // simulação. A simulação é do mesmo domínio, então a demo lê os
+  // controles dela por dentro do iframe e marca cada desafio sozinha.
+  function tutorialDe(url) {
+    const nome = String(url || '').split(/[?#]/)[0].split('/').pop().replace(/\.html?$/i, '');
+    const t = (window.LUP_TUTORIAIS || {})[nome];
+    return t && t.length ? t : null;
+  }
+  function tutorialHtml(cap, tut) {
+    const feitos = prog().t[cap.id] || {};
+    const n = tut.filter((_, i) => feitos[i]).length;
+    return `
+      <aside class="card sim-tut">
+        <div class="sim-tut-head"><b>Desafios</b><span class="small muted" data-tut-cont>${n}/${tut.length}</span></div>
+        <p class="small muted" style="margin:0 0 8px">Faça na simulação: cada desafio se marca sozinho.</p>
+        <ul>${tut.map((d, i) => `
+          <li class="sim-tut-item ${feitos[i] ? 'done' : ''}" data-tut="${i}">
+            <span class="box">${ICON.check}</span><span class="t">${esc(d.titulo)}</span>
+            ${d.info ? `<button type="button" class="sim-tut-i" data-tut-info="${i}" aria-label="O que isso muda?">i</button>` : ''}
+          </li>`).join('')}
+        </ul>
+      </aside>`;
+  }
+  let tutTimer = null;
+  function ligarTutorial(cap, tut) {
+    const feitos = Object.assign({}, prog().t[cap.id]);
+    $app.querySelectorAll('[data-tut-info]').forEach((b) => {
+      b.onclick = () => {
+        const inf = tut[+b.dataset.tutInfo].info;
+        modal({
+          title: inf.titulo,
+          html: `<div class="tut-info">
+            <p>${esc(inf.texto)}</p>
+            ${inf.min ? `<div class="ext"><span class="k">NO MÍNIMO</span>${esc(inf.min)}</div>` : ''}
+            ${inf.max ? `<div class="ext"><span class="k">NO MÁXIMO</span>${esc(inf.max)}</div>` : ''}
+          </div>`,
+        });
+      };
+    });
+    const concluir = (i) => {
+      feitos[i] = true;
+      const p = prog(); p.t[cap.id] = Object.assign({}, p.t[cap.id], { [i]: true }); salvarProg(p);
+      $app.querySelector(`[data-tut="${i}"]`)?.classList.add('done', 'pop');
+      const n = tut.filter((_, k) => feitos[k]).length;
+      const cont = $app.querySelector('[data-tut-cont]');
+      if (cont) cont.textContent = `${n}/${tut.length}`;
+      toast(n === tut.length ? 'Você completou todos os desafios! 🎉' : `✓ ${tut[i].titulo}`);
+    };
+    const fr = $app.querySelector('.sim-frame iframe');
+    if (!fr) return;
+    const ligar = () => {
+      let doc;
+      try { doc = fr.contentDocument; } catch { return; }
+      if (!doc || !doc.body) return;
+      const leitor = (clique) => ({
+        num: (id) => { const el = doc.getElementById(id); return el ? parseFloat(el.value) : NaN; },
+        marcado: (id) => !!(doc.getElementById(id) || {}).checked,
+        ativo: (sel) => !!doc.querySelector(sel + '.active'),
+        clicou: (sel) => !!(clique && clique.closest && clique.closest(sel)),
+      });
+      const checar = (clique) => {
+        if (!document.body.contains(fr)) return clearInterval(tutTimer);
+        tut.forEach((d, i) => {
+          if (feitos[i]) return;
+          let ok = false;
+          try { ok = !!d.ok(leitor(clique)); } catch { /* controle não existe nesta versão da simulação */ }
+          if (ok) concluir(i);
+        });
+      };
+      doc.addEventListener('input', () => checar(null));
+      doc.addEventListener('change', () => checar(null));
+      // Depois do clique, para a simulação já ter atualizado os botões (.active).
+      doc.addEventListener('click', (e) => { const alvo = e.target; setTimeout(() => checar(alvo), 40); }, true);
+      clearInterval(tutTimer);
+      tutTimer = setInterval(() => checar(null), 800);
+    };
+    fr.addEventListener('load', ligar);
   }
 
   // ---------- Fixação / Exercícios: trilha de fases ----------
@@ -838,6 +922,7 @@
   // ================================================================
   function render() {
     clearInterval(exTimer);
+    clearInterval(tutTimer);
     document.body.classList.remove('sim-fs-on');
     if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     document.getElementById('modal-root').innerHTML = '';
