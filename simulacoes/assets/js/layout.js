@@ -88,9 +88,34 @@
     });
   }
 
+  // ------------------------------------------------------------
+  // MODO EMBUTIDO (?embed=1)
+  // Usado quando a simulação aparece dentro de outra página do
+  // LevelUp Fís (ex.: a versão demo). Sem header, footer nem título:
+  // só o palco, ocupando a janela toda (assets/css/simulation.css,
+  // seção "Modo embutido"). Nada leva para fora: links, janelas
+  // novas e o menu do botão direito ficam bloqueados.
+  // ------------------------------------------------------------
+  var EMBED = /(?:^|[?&])embed=1(?:&|$)/.test(location.search.slice(1));
+
+  function setupEmbed() {
+    document.documentElement.classList.add("luf-embed");
+    document.addEventListener("click", function (e) {
+      var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+      if (a) e.preventDefault();
+    }, true);
+    document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    window.open = function () { return null; };
+  }
+
   function init() {
     var body = document.body;
     if (!body) return;
+
+    if (EMBED) {
+      setupEmbed();
+      return;
+    }
 
     // Idempotência: se já existe um header injetado, não faz nada de novo.
     if (document.querySelector("header.luf-header")) return;

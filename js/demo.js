@@ -114,8 +114,21 @@
     if (em) return `<div class="video-embed"><iframe src="${esc(em)}" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>`;
     return `<a class="btn btn-ghost btn-block" href="${esc(url)}" target="_blank" rel="noopener">${ICON.playCircle} Assistir vídeo</a>`;
   }
-  // Simulação: caminho do próprio site (/simulacoes/...) ou link completo.
-  const simUrl = (url) => (/^https?:\/\//i.test(url) ? url : SITE + String(url || '').replace(/^\/+/, ''));
+  // Simulação: caminho do próprio site (/simulacoes/...) ou link completo,
+  // sempre no modo embutido (?embed=1, ver simulacoes/assets/js/layout.js):
+  // só o palco, sem o cabeçalho do site de simulações.
+  function simUrl(url) {
+    const u = /^https?:\/\//i.test(url) ? url : SITE + String(url || '').replace(/^\/+/, '');
+    return u + (u.includes('?') ? '&' : '?') + 'embed=1';
+  }
+  // A simulação fica presa na demo: sandbox sem allow-top-navigation nem
+  // allow-popups (não navega a página nem abre abas). Fica invisível até
+  // carregar, para não piscar nada antes do modo embutido aplicar.
+  function simFrameHtml(url, titulo, cls = '') {
+    return `<div class="sim-frame ${cls}"><div class="spinner"></div>
+      <iframe src="${esc(simUrl(url))}" title="${esc(titulo)}" sandbox="allow-scripts allow-same-origin"
+        allow="fullscreen" allowfullscreen referrerpolicy="no-referrer" onload="this.classList.add('ok')"></iframe></div>`;
+  }
 
   // Cor tema — mesma conta de temaVars() em js/app.js (Bloco, senão Área).
   const corTema = (area, bloco) => (bloco && bloco.cor) || (area && area.cor) || '';
@@ -471,9 +484,8 @@
       body = `<div class="card stack">${c.video_url ? playerHtml(c.video_url) : '<p class="muted">O vídeo deste capítulo ainda não foi cadastrado.</p>'}${descricao}</div>`;
     } else if (cap.tipo === 'simulacao') {
       body = c.simulacao_url
-        ? `<div class="sim-frame"><iframe src="${esc(simUrl(c.simulacao_url))}" title="${esc(cap.titulo)}" allow="fullscreen" allowfullscreen></iframe></div>
-           <div class="row" style="margin-top:10px">${c.texto ? `<span class="small muted" style="flex:1">${esc(c.texto)}</span>` : '<span class="spacer"></span>'}
-           <a class="btn btn-text" href="${esc(simUrl(c.simulacao_url))}" target="_blank" rel="noopener">${ICON.expand} Tela cheia</a></div>`
+        ? simFrameHtml(c.simulacao_url, cap.titulo)
+          + (c.texto ? `<p class="small muted" style="margin:10px 0 0">${esc(c.texto)}</p>` : '')
         : '<div class="card"><p class="muted">A simulação deste capítulo ainda não foi cadastrada.</p></div>';
     } else if (cartoes) {
       body = cartoes;
@@ -540,9 +552,8 @@
   // capitulo_conteudo.simulacao_url — painel → aba Demo → botão 🧪).
   function simNaQuestaoHtml(url, dica, titulo) {
     if (!url) return '';
-    return `<div class="sim-frame sim-ex"><iframe src="${esc(simUrl(url))}" title="${esc(titulo)}" allow="fullscreen" allowfullscreen></iframe></div>
-      <div class="row" style="margin:6px 0 14px">${dica ? `<span class="small muted" style="flex:1">${esc(dica)}</span>` : '<span class="small muted" style="flex:1">Use a simulação para responder.</span>'}
-      <a class="btn btn-text" href="${esc(simUrl(url))}" target="_blank" rel="noopener">${ICON.expand} Tela cheia</a></div>`;
+    return simFrameHtml(url, titulo, 'sim-ex')
+      + `<p class="small muted" style="margin:6px 0 14px">${esc(dica || 'Use a simulação para responder.')}</p>`;
   }
 
   // Tela de uma pergunta (igual ao viewExercicio de js/app.js, sem Cargas).

@@ -144,3 +144,28 @@
   max-width: calc(100% - 28px);
 }
 #sim-controls:empty { display: none; }
+
+/* ------------------------------------------------------------
+   Modo embutido (?embed=1 — ver assets/js/layout.js): só o palco,
+   ocupando a janela inteira, sem título nem descrição.
+   ------------------------------------------------------------ */
+html.luf-embed,
+html.luf-embed body {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+html.luf-embed body { background: var(--bg); }
+html.luf-embed .luf-sub { display: none; }
+html.luf-embed main { height: 100%; min-height: 0; }
+html.luf-embed .luf-simwrap {
+  max-width: none;
+  height: 100%;
+  padding: 0;
+}
+html.luf-embed #sim-stage {
+  min-height: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}

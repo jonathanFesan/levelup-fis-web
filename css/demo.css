@@ -24,10 +24,16 @@
 
 /* ---------- Simulação embutida ---------- */
 .sim-frame {
+  position: relative;
   width: 100%; height: min(78vh, 760px); border-radius: 14px; overflow: hidden;
   border: 1px solid var(--divider); background: #0b1433;
 }
-.sim-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+.sim-frame .spinner { position: absolute; top: 50%; left: 50%; margin: -18px 0 0 -18px; }
+.sim-frame iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;
+  opacity: 0; transition: opacity .25s;
+}
+.sim-frame iframe.ok { opacity: 1; }
 /* Simulação no topo de uma questão (exercícios com simulação) */
 .sim-frame.sim-ex { height: min(58vh, 560px); margin-top: 6px; }
 
