@@ -90,6 +90,10 @@ e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre o site com as
   `levelupfis.com.br` sem sessão e sem rota para `/demo/`. Quem está logado, usa um link com
   rota (`/#/login`, `/#/register`, `/#/plus`…) ou abre `/?redir=1` (ou `/redir=1`) entra no
   site normal.
+- **Exercícios com simulação:** um Capítulo de Fixação/Exercícios da demo pode ter uma simulação
+  (painel → botão 🧪 do Capítulo, grava `capitulo_conteudo.simulacao_url`); ela aparece no topo de
+  cada questão. O conteúdo inicial da demo (3 Áreas: Resumo → Simulação → Exercícios com simulação →
+  Exercícios teóricos → Prova final, sem vídeos) está em `backend/sql/025_demo_conteudo_completo.sql`.
 - Simulação da demo = qualquer página do site (`/simulacoes/...`) ou link `https://`. Para
   versões limitadas, crie uma cópia (ex.: `simulacoes/simulations/fisica/x-demo.html`) e
   aponte o Capítulo para ela.

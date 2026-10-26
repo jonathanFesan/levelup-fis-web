@@ -512,6 +512,10 @@
     html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--acc)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
       <span style="font-weight:800">${cap.tipo === 'extra' ? 'EXERCÍCIOS' : 'FIXAÇÃO'}</span><span class="spacer"></span>
       <span class="muted" style="font-weight:800">${feitas}/${qs.length}</span></div>`;
+    if (cap.conteudo && cap.conteudo.simulacao_url) {
+      html += `<div class="card row small" style="margin:8px 0 4px"><span style="color:var(--acc);width:22px;height:22px;flex:0 0 22px">${ICON.atom}</span>
+        <span class="muted">Estas questões usam a simulação: ela aparece junto de cada fase.</span></div>`;
+    }
     const nodes = qs.map((q, i) => ({
       titulo: `Fase ${i + 1}`, icon: 'play',
       concluido: !!p.q[q.id],
@@ -532,9 +536,18 @@
     if (atual > 1) $app.querySelectorAll('[data-node]')[atual]?.scrollIntoView({ block: 'center' });
   }
 
+  // Simulação embutida no topo de uma questão (Fixação/Exercícios com
+  // capitulo_conteudo.simulacao_url — painel → aba Demo → botão 🧪).
+  function simNaQuestaoHtml(url, dica, titulo) {
+    if (!url) return '';
+    return `<div class="sim-frame sim-ex"><iframe src="${esc(simUrl(url))}" title="${esc(titulo)}" allow="fullscreen" allowfullscreen></iframe></div>
+      <div class="row" style="margin:6px 0 14px">${dica ? `<span class="small muted" style="flex:1">${esc(dica)}</span>` : '<span class="small muted" style="flex:1">Use a simulação para responder.</span>'}
+      <a class="btn btn-text" href="${esc(simUrl(url))}" target="_blank" rel="noopener">${ICON.expand} Tela cheia</a></div>`;
+  }
+
   // Tela de uma pergunta (igual ao viewExercicio de js/app.js, sem Cargas).
   // aoResponder(resposta) faz o resto: corrige e mostra o resultado.
-  function telaPergunta({ area, bloco, q, titulo, sair, botao = 'RESPONDER', aoResponder }) {
+  function telaPergunta({ area, bloco, q, titulo, sair, botao = 'RESPONDER', sim = null, aoResponder }) {
     let selecionada = null;
     const isMC = q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
     $app.innerHTML = `
@@ -543,6 +556,7 @@
         <div class="title"><div class="k">${esc(area?.icone || '')} ${esc(area?.titulo || '')}</div>${esc(bloco?.titulo || '')} · ${esc(titulo)}</div>
         <span class="timer" data-timer>00:00</span>
       </div>
+      ${sim ? simNaQuestaoHtml(sim.url, sim.dica, titulo) : ''}
       <div class="enunciado">${esc(q.enunciado)}</div>
       ${isMC
         ? `<div class="opts">${q.opcoes.map((o, i) => `
@@ -596,8 +610,10 @@
     const p = prog();
     if (!q || (idx > 0 && !p.q[qs[idx - 1].id] && !p.q[q.id])) return go(trilhaHash);
 
+    const cc = ctx.cap.conteudo || {};
     telaPergunta({
       area: ctx.area, bloco: ctx.bloco, q, titulo: `Fase ${idx + 1}`, sair: trilhaHash,
+      sim: cc.simulacao_url ? { url: cc.simulacao_url, dica: cc.texto } : null,
       aoResponder(resposta) {
         const acertou = corrigir(q, resposta);
         let concluiuAgora = false;
