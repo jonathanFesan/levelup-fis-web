@@ -37,6 +37,49 @@
 /* Simulação no topo de uma questão (exercícios com simulação) */
 .sim-frame.sim-ex { height: min(58vh, 560px); margin-top: 6px; }
 
+/* Tela cheia (pedida pelo botão ⛶ da simulação — ver simFs em js/demo.js):
+   o quadro cobre a janela; a barra da pergunta fica em cima e a
+   simulação ocupa o resto. */
+.sim-frame.fs {
+  position: fixed; inset: 0; z-index: 1000;
+  width: 100vw; height: 100vh; height: 100dvh;
+  border: 0; border-radius: 0;
+  display: flex; flex-direction: column;
+}
+.sim-frame.fs iframe { position: relative; inset: auto; flex: 1; height: auto; min-height: 0; }
+body.sim-fs-on { overflow: hidden; }
+
+/* Barra da pergunta: discreta, só aparece em tela cheia */
+.sim-q { display: none; }
+.sim-frame.fs .sim-q {
+  display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto;
+  padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+  background: rgba(11, 20, 51, .92); border-bottom: 1px solid rgba(255,255,255,.06);
+  font-family: 'Nunito', sans-serif;
+}
+.sim-q-enun {
+  all: unset; cursor: pointer; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; font-size: 13px; line-height: 1.4; color: rgba(252,243,200,.78);
+}
+.sim-q-enun.open { -webkit-line-clamp: unset; display: block; white-space: pre-wrap; }
+.sim-q-opts { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.sim-q-opts::-webkit-scrollbar { display: none; }
+.sim-q-opt {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 4px 10px 4px 4px; border-radius: 999px; border: 1px solid rgba(255,255,255,.1);
+  background: transparent; color: rgba(255,255,255,.72); font: 600 12px 'Nunito', sans-serif;
+  white-space: nowrap; transition: border-color .15s, color .15s, background .15s;
+}
+.sim-q-opt b {
+  width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; background: rgba(255,255,255,.08); color: rgba(255,255,255,.7);
+}
+.sim-q-opt.sel { border-color: var(--acc); color: var(--white); background: rgba(var(--acc-rgb), .12); }
+.sim-q-opt.sel b { background: var(--acc); color: var(--acc-ink, var(--bg)); }
+@media (min-width: 1024px) {
+  .sim-q-opts { flex-wrap: wrap; overflow: visible; }
+}
+
 @media (min-width: 1024px) {
   .demo-gate { padding-top: 10vh; max-width: 520px; }
   .demo-gate h1 { font-size: 30px; }

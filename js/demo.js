@@ -124,8 +124,10 @@
   // A simulação fica presa na demo: sandbox sem allow-top-navigation nem
   // allow-popups (não navega a página nem abre abas). Fica invisível até
   // carregar, para não piscar nada antes do modo embutido aplicar.
-  function simFrameHtml(url, titulo, cls = '') {
-    return `<div class="sim-frame ${cls}"><div class="spinner"></div>
+  // topo = barra que só aparece com a simulação em tela cheia (a pergunta
+  // do exercício, ver simNaQuestaoHtml).
+  function simFrameHtml(url, titulo, cls = '', topo = '') {
+    return `<div class="sim-frame ${cls}">${topo}<div class="spinner"></div>
       <iframe src="${esc(simUrl(url))}" title="${esc(titulo)}" sandbox="allow-scripts allow-same-origin"
         allow="fullscreen" allowfullscreen referrerpolicy="no-referrer" onload="this.classList.add('ok')"></iframe></div>`;
   }
@@ -550,9 +552,45 @@
 
   // Simulação embutida no topo de uma questão (Fixação/Exercícios com
   // capitulo_conteudo.simulacao_url — painel → aba Demo → botão 🧪).
-  function simNaQuestaoHtml(url, dica, titulo) {
+  // Tela cheia da simulação: o botão ⛶ de dentro dela pede por mensagem
+  // (simulacoes/assets/js/simulation-shell.js) e a demo põe o quadro todo
+  // em tela cheia — barra da pergunta + simulação. Sem a API de tela cheia
+  // (iPhone), a classe .fs sozinha cobre a janela.
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  function simFs(wrap, on) {
+    if (!wrap) return;
+    wrap.classList.toggle('fs', on);
+    document.body.classList.toggle('sim-fs-on', on);
+    if (on) {
+      const req = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+      if (req) { try { const p = req.call(wrap); if (p && p.catch) p.catch(() => {}); } catch { /* fica só a classe */ } }
+    } else if (fsElement()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+    const fr = wrap.querySelector('iframe');
+    try { fr.contentWindow.postMessage({ luf: 'fs-state', on }, location.origin); } catch { /* ignore */ }
+  }
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || e.data.luf !== 'fullscreen-toggle') return;
+    const fr = [...document.querySelectorAll('.sim-frame iframe')].find((f) => f.contentWindow === e.source);
+    if (fr) { const wrap = fr.closest('.sim-frame'); simFs(wrap, !wrap.classList.contains('fs')); }
+  });
+  // Esc / botão voltar do celular saem da tela cheia do navegador: desfaz a classe também.
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => {
+    if (!fsElement()) document.querySelectorAll('.sim-frame.fs').forEach((w) => simFs(w, false));
+  }));
+
+  // Em tela cheia, a pergunta e as alternativas ficam numa barra discreta
+  // no topo; dá para já marcar a alternativa ali (sincroniza com a tela).
+  function simNaQuestaoHtml(url, dica, titulo, q) {
     if (!url) return '';
-    return simFrameHtml(url, titulo, 'sim-ex')
+    const isMC = q && q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
+    const topo = q ? `<div class="sim-q">
+        <button type="button" class="sim-q-enun" data-fsenun title="Toque para ver a pergunta inteira">${esc(q.enunciado)}</button>
+        ${isMC ? `<div class="sim-q-opts">${q.opcoes.map((o, i) => `
+          <button type="button" class="sim-q-opt" data-fsopt="${i}"><b>${LETRAS[i] || i + 1}</b>${esc(o)}</button>`).join('')}</div>` : ''}
+      </div>` : '';
+    return simFrameHtml(url, titulo, 'sim-ex', topo)
       + `<p class="small muted" style="margin:6px 0 14px">${esc(dica || 'Use a simulação para responder.')}</p>`;
   }
 
@@ -567,7 +605,7 @@
         <div class="title"><div class="k">${esc(area?.icone || '')} ${esc(area?.titulo || '')}</div>${esc(bloco?.titulo || '')} · ${esc(titulo)}</div>
         <span class="timer" data-timer>00:00</span>
       </div>
-      ${sim ? simNaQuestaoHtml(sim.url, sim.dica, titulo) : ''}
+      ${sim ? simNaQuestaoHtml(sim.url, sim.dica, titulo, q) : ''}
       <div class="enunciado">${esc(q.enunciado)}</div>
       ${isMC
         ? `<div class="opts">${q.opcoes.map((o, i) => `
@@ -583,13 +621,17 @@
       seg++;
       tEl.textContent = `${String(Math.floor(seg / 60) % 60).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
     }, 1000);
-    $app.querySelectorAll('[data-opt]').forEach((b) => {
-      b.onclick = () => {
-        $app.querySelectorAll('[data-opt]').forEach((x) => x.classList.remove('sel'));
-        b.classList.add('sel');
-        selecionada = q.opcoes[+b.dataset.opt];
-      };
-    });
+    // Alternativas da tela e da barra da tela cheia andam juntas.
+    const marcar = (i) => {
+      $app.querySelectorAll('[data-opt],[data-fsopt]').forEach((x) => {
+        x.classList.toggle('sel', +(x.dataset.opt ?? x.dataset.fsopt) === i);
+      });
+      selecionada = q.opcoes[i];
+    };
+    $app.querySelectorAll('[data-opt]').forEach((b) => { b.onclick = () => marcar(+b.dataset.opt); });
+    $app.querySelectorAll('[data-fsopt]').forEach((b) => { b.onclick = () => marcar(+b.dataset.fsopt); });
+    const enun = $app.querySelector('[data-fsenun]');
+    if (enun) enun.onclick = () => enun.classList.toggle('open');
     const txt = $app.querySelector('[data-text]');
     const send = $app.querySelector('[data-send]');
     if (txt) { txt.focus(); txt.onkeydown = (e) => { if (e.key === 'Enter') send.click(); }; }
@@ -796,6 +838,8 @@
   // ================================================================
   function render() {
     clearInterval(exTimer);
+    document.body.classList.remove('sim-fs-on');
+    if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     document.getElementById('modal-root').innerHTML = '';
     $app.className = 'app';
     $app.removeAttribute('style');

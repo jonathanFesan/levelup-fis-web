@@ -31,6 +31,13 @@
 
   var resizeCallbacks = [];
 
+  // Modo embutido (?embed=1, ver layout.js) dentro de uma página do
+  // LevelUp Fís: a tela cheia é da página de fora (que coloca, por
+  // exemplo, a pergunta do exercício em cima da simulação). O botão só
+  // pede à página de fora e recebe de volta o estado.
+  var EMBED = /(?:^|[?&])embed=1(?:&|$)/.test(location.search.slice(1)) && window.parent !== window;
+  var embedFs = false;
+
   function supportsFullscreen() {
     return !!(
       stageEl &&
@@ -42,6 +49,7 @@
   }
 
   function isFullscreen() {
+    if (EMBED) return embedFs;
     return !!(
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
@@ -78,6 +86,20 @@
 
   function setupFullscreenButton() {
     if (!fsBtn || !stageEl) return;
+
+    if (EMBED) {
+      fsBtn.addEventListener("click", function () {
+        window.parent.postMessage({ luf: "fullscreen-toggle" }, location.origin);
+      });
+      window.addEventListener("message", function (e) {
+        if (e.origin !== location.origin || !e.data || e.data.luf !== "fs-state") return;
+        embedFs = !!e.data.on;
+        updateFsButton();
+        setTimeout(notifyResize, 50);
+      });
+      updateFsButton();
+      return;
+    }
 
     if (!supportsFullscreen()) {
       // API indisponível (ex.: Safari no iPhone): esconde graciosamente.
