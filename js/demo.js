@@ -488,7 +488,7 @@
     } else if (cap.tipo === 'simulacao') {
       const tut = tutorialDe(c.simulacao_url);
       body = c.simulacao_url
-        ? `<div class="${tut ? 'sim-tut-layout' : ''}"><div>${simFrameHtml(c.simulacao_url, cap.titulo)
+        ? `<div class="${tut ? 'sim-tut-layout' : ''}"><div>${simFrameHtml(c.simulacao_url, cap.titulo, tut ? 'com-tut' : '', tut ? tutorialFsHtml(cap, tut) : '')
           + (c.texto ? `<p class="small muted" style="margin:10px 0 0">${esc(c.texto)}</p>` : '')}</div>
           ${tut ? tutorialHtml(cap, tut) : ''}</div>`
         : '<div class="card"><p class="muted">A simulação deste capítulo ainda não foi cadastrada.</p></div>';
@@ -537,6 +537,19 @@
         </ul>
       </aside>`;
   }
+  // A mesma checklist, enxuta, à direita da simulação em tela cheia (sem o
+  // "i": o popup ficaria por trás da tela cheia).
+  function tutorialFsHtml(cap, tut) {
+    const feitos = prog().t[cap.id] || {};
+    const n = tut.filter((_, i) => feitos[i]).length;
+    return `
+      <div class="sim-fs-tut">
+        <button type="button" class="sim-fs-tut-head" data-fs-tut-toggle><b>Desafios</b><span data-tut-cont>${n}/${tut.length}</span></button>
+        <ul>${tut.map((d, i) => `
+          <li class="sim-tut-item ${feitos[i] ? 'done' : ''}" data-tut="${i}"><span class="box">${ICON.check}</span><span class="t">${esc(d.titulo)}</span></li>`).join('')}
+        </ul>
+      </div>`;
+  }
   let tutTimer = null;
   function ligarTutorial(cap, tut) {
     const feitos = Object.assign({}, prog().t[cap.id]);
@@ -556,12 +569,13 @@
     const concluir = (i) => {
       feitos[i] = true;
       const p = prog(); p.t[cap.id] = Object.assign({}, p.t[cap.id], { [i]: true }); salvarProg(p);
-      $app.querySelector(`[data-tut="${i}"]`)?.classList.add('done', 'pop');
+      $app.querySelectorAll(`[data-tut="${i}"]`).forEach((li) => li.classList.add('done', 'pop'));
       const n = tut.filter((_, k) => feitos[k]).length;
-      const cont = $app.querySelector('[data-tut-cont]');
-      if (cont) cont.textContent = `${n}/${tut.length}`;
+      $app.querySelectorAll('[data-tut-cont]').forEach((el) => { el.textContent = `${n}/${tut.length}`; });
       toast(n === tut.length ? 'Você completou todos os desafios! 🎉' : `✓ ${tut[i].titulo}`);
     };
+    const fsTog = $app.querySelector('[data-fs-tut-toggle]');
+    if (fsTog) fsTog.onclick = () => fsTog.parentElement.classList.toggle('min');
     const fr = $app.querySelector('.sim-frame iframe');
     if (!fr) return;
     const ligar = () => {
