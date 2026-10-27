@@ -146,6 +146,146 @@
 #sim-controls:empty { display: none; }
 
 /* ------------------------------------------------------------
+   Painéis das simulações (#ui-panel, #info-panel, #data-panel).
+   Abrem recolhidos (simulation-shell.js); o título também abre/fecha.
+   ------------------------------------------------------------ */
+#sim-stage .panel-head { cursor: pointer; }
+
+/* Celular (em pé, ou deitado com pouca altura): cena em primeiro plano.
+   Recolhidos, os painéis viram pílulas discretas nos cantos; abertos,
+   viram uma gaveta embaixo (em pé) ou uma coluna lateral (deitado). Os
+   seletores com #sim-stage vencem os @media de cada simulação. */
+@media (max-width: 760px), (max-height: 520px) and (pointer: coarse) {
+  #sim-stage .luf-fs-btn { top: 8px; right: 8px; width: 34px; height: 34px; font-size: 16px; border-radius: 50%; }
+
+  #sim-stage #ui-panel,
+  #sim-stage #info-panel,
+  #sim-stage #data-panel {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  #sim-stage #ui-panel.collapsed,
+  #sim-stage #info-panel.collapsed,
+  #sim-stage #data-panel.collapsed {
+    top: 8px; bottom: auto; left: 8px; right: auto;
+    width: auto; max-width: calc(50% - 30px); max-height: none; overflow: hidden;
+    padding: 4px 4px 4px 12px; border-radius: 999px;
+    background: rgba(14, 20, 40, .72); border-color: rgba(255, 255, 255, .1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  }
+  #sim-stage #info-panel.collapsed,
+  #sim-stage #data-panel.collapsed { left: auto; right: 50px; }
+  #sim-stage .collapsed .panel-head h2,
+  #sim-stage .collapsed .panel-head h3 {
+    font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #sim-stage .collapsed .panel-head .collapse-btn,
+  #sim-stage .collapsed .panel-head #btn-collapse {
+    width: 26px; height: 26px; border-radius: 50%; font-size: 15px; border-color: transparent;
+    background: rgba(255, 255, 255, .1);
+  }
+
+  #sim-stage #ui-panel:not(.collapsed),
+  #sim-stage #info-panel:not(.collapsed),
+  #sim-stage #data-panel:not(.collapsed) {
+    top: auto; bottom: 6px; left: 6px; right: 6px; width: auto;
+    max-height: min(58%, 520px); overflow-y: auto;
+    padding: 6px 14px 14px; border-radius: 18px; z-index: 6;
+    background: rgba(18, 22, 38, .94);
+    animation: luf-sheet .22s ease-out;
+  }
+  /* "alça" da gaveta */
+  #sim-stage #ui-panel:not(.collapsed) > .panel-head,
+  #sim-stage #info-panel:not(.collapsed) > .panel-head,
+  #sim-stage #data-panel:not(.collapsed) > .panel-head {
+    position: sticky; top: -6px; z-index: 1; margin: 0 -14px; padding: 14px 14px 8px;
+    background: inherit; border-radius: 18px 18px 0 0;
+  }
+  #sim-stage #ui-panel:not(.collapsed) > .panel-head::before,
+  #sim-stage #info-panel:not(.collapsed) > .panel-head::before,
+  #sim-stage #data-panel:not(.collapsed) > .panel-head::before {
+    content: ""; position: absolute; top: 5px; left: 50%; width: 36px; height: 4px; margin-left: -18px;
+    border-radius: 2px; background: rgba(255, 255, 255, .22);
+  }
+
+  #sim-stage #status-bar { bottom: 8px; font-size: 12px; padding: 6px 12px; border-radius: 999px; }
+  #sim-stage #axes-legend { bottom: 8px; left: 8px; font-size: 10.5px; padding: 6px 10px; }
+}
+/* Deitado com pouca altura: gaveta vira coluna lateral */
+@media (max-height: 520px) and (pointer: coarse) and (orientation: landscape) {
+  #sim-stage #ui-panel:not(.collapsed),
+  #sim-stage #info-panel:not(.collapsed),
+  #sim-stage #data-panel:not(.collapsed) {
+    top: 6px; bottom: 6px; left: 6px; right: auto; width: min(300px, 42%); max-height: none;
+    animation-name: luf-side;
+  }
+  #sim-stage #info-panel:not(.collapsed),
+  #sim-stage #data-panel:not(.collapsed) { left: auto; right: 6px; top: 48px; }
+  #sim-stage #ui-panel:not(.collapsed) > .panel-head::before,
+  #sim-stage #info-panel:not(.collapsed) > .panel-head::before,
+  #sim-stage #data-panel:not(.collapsed) > .panel-head::before { display: none; }
+}
+/* Dicas de mouse/teclado não servem no toque */
+@media (pointer: coarse) {
+  #sim-stage #hints { display: none; }
+}
+@keyframes luf-sheet { from { transform: translateY(24px); opacity: 0; } }
+@keyframes luf-side { from { transform: translateX(-16px); opacity: 0; } }
+
+/* Aviso "deite o celular" (simulation-shell.js) */
+.luf-rotate {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(8, 17, 46, .55);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  animation: luf-fade .25s ease-out;
+}
+.luf-rotate[hidden] { display: none; }
+.luf-rotate-card {
+  width: min(300px, 100%); text-align: center; color: var(--text);
+  padding: 22px 20px 14px; border-radius: 20px;
+  background: rgba(14, 26, 64, .92); border: 1px solid var(--line);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
+}
+.luf-rotate-card b { display: block; font-size: 16px; color: var(--accent); margin-top: 14px; }
+.luf-rotate-card p { margin: 6px 0 16px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.luf-rotate-phone {
+  width: 30px; height: 50px; margin: 0 auto; border-radius: 7px;
+  border: 2.5px solid var(--accent); position: relative;
+  animation: luf-girar 2.4s ease-in-out infinite;
+}
+.luf-rotate-phone::after {
+  content: ""; position: absolute; bottom: 4px; left: 50%; width: 8px; height: 2px; margin-left: -4px;
+  border-radius: 1px; background: var(--accent);
+}
+.luf-rotate-go, .luf-rotate-skip {
+  display: block; width: 100%; border: 0; cursor: pointer; font: inherit;
+}
+.luf-rotate-go {
+  padding: 12px; border-radius: 12px; font-size: 14.5px; font-weight: 700;
+  background: var(--accent); color: var(--bg);
+}
+.luf-rotate-skip {
+  margin-top: 6px; padding: 10px; background: none; color: var(--muted); font-size: 13px;
+}
+.luf-rotate-tip { display: none; }
+/* Depois do botão: some o cartão e fica só uma dica até girar */
+.luf-rotate.tip { background: none; backdrop-filter: none; -webkit-backdrop-filter: none; pointer-events: none; align-items: flex-end; padding-bottom: 70px; }
+.luf-rotate.tip .luf-rotate-card { display: none; }
+.luf-rotate.tip .luf-rotate-tip {
+  display: block; pointer-events: auto; cursor: pointer;
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: rgba(14, 26, 64, .9); color: var(--accent); border: 1px solid var(--line);
+}
+@keyframes luf-girar { 0%, 25% { transform: rotate(0); } 55%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+@keyframes luf-fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .luf-rotate-phone { animation: none; transform: rotate(-90deg); }
+  .luf-rotate, #sim-stage #ui-panel, #sim-stage #info-panel, #sim-stage #data-panel { animation: none !important; }
+}
+
+/* ------------------------------------------------------------
    Modo embutido (?embed=1 — ver assets/js/layout.js): só o palco,
    ocupando a janela inteira, sem título nem descrição.
    ------------------------------------------------------------ */

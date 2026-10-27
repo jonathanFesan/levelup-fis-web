@@ -84,6 +84,31 @@
     fsBtn.setAttribute("title", fs ? "Sair da tela cheia" : "Tela cheia");
   }
 
+  // Celular deitado: só funciona com a página em tela cheia (Android);
+  // no iPhone não existe, e o aviso "gire o celular" cobre esse caso.
+  function lockLandscape() {
+    try {
+      var p = screen.orientation.lock("landscape");
+      if (p && p.catch) p.catch(function () {});
+    } catch (err) { /* sem suporte */ }
+  }
+
+  // Tela cheia já deitada (botão do aviso de girar o celular).
+  function fullscreenLandscape() {
+    if (EMBED) {
+      window.parent.postMessage({ luf: "fullscreen-toggle", on: true, landscape: true }, location.origin);
+      return;
+    }
+    if (!supportsFullscreen()) return;
+    if (isFullscreen()) { lockLandscape(); return; }
+    var fn = stageEl.requestFullscreen || stageEl.webkitRequestFullscreen || stageEl.mozRequestFullScreen || stageEl.msRequestFullscreen;
+    try {
+      var p = fn.call(stageEl);
+      if (p && p.then) p.then(lockLandscape, function () {});
+      else setTimeout(lockLandscape, 300);
+    } catch (err) { /* ignore */ }
+  }
+
   function setupFullscreenButton() {
     if (!fsBtn || !stageEl) return;
 
@@ -197,12 +222,104 @@
     });
   }
 
+  // ------------------------------------------------------------
+  // Painéis (#ui-panel, #info-panel, #data-panel com botão de recolher).
+  // Toda simulação abre com eles recolhidos, para a cena aparecer
+  // inteira. O título do painel também abre/fecha. No celular em pé, os
+  // painéis abertos viram uma gaveta embaixo (simulation.css) e só um
+  // fica aberto por vez.
+  // ------------------------------------------------------------
+  var PANELS = "#ui-panel, #info-panel, #data-panel";
+  var COLLAPSE_BTN = ".collapse-btn, #btn-collapse";
+  var mqPortrait = window.matchMedia ? window.matchMedia("(max-width: 760px) and (orientation: portrait)") : null;
+
+  function panelButton(panel) {
+    return panel.querySelector(".panel-head " + COLLAPSE_BTN.split(", ").join(", .panel-head "));
+  }
+
+  function setupPanels() {
+    // Os handlers de cada simulação são ligados no <script> dela, que roda
+    // depois deste arquivo: recolhe só quando a página terminou de montar.
+    document.addEventListener("DOMContentLoaded", function () {
+      stageEl.querySelectorAll(PANELS).forEach(function (panel) {
+        var btn = panelButton(panel);
+        if (btn && !panel.classList.contains("collapsed")) btn.click();
+      });
+    });
+
+    stageEl.addEventListener("click", function (e) {
+      var panel = e.target.closest && e.target.closest(PANELS);
+      if (!panel) return;
+      var btn = panelButton(panel);
+      if (!btn) return;
+      if (!e.target.closest(COLLAPSE_BTN)) {
+        if (e.target.closest(".panel-head")) btn.click();
+        return;
+      }
+      // Clique no botão (o handler da simulação já rodou): no celular em
+      // pé, abrir um painel fecha os outros.
+      if (mqPortrait && mqPortrait.matches && !panel.classList.contains("collapsed")) {
+        stageEl.querySelectorAll(PANELS).forEach(function (p) {
+          var b = p !== panel && !p.classList.contains("collapsed") && panelButton(p);
+          if (b) b.click();
+        });
+      }
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Celular em pé: sugere deitar, com um botão que põe a simulação em
+  // tela cheia e deitada. Some ao girar o celular ou em "Continuar assim"
+  // (lembrado até fechar a aba).
+  // ------------------------------------------------------------
+  function setupRotateHint() {
+    var touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    if (!touch || !mqPortrait) return;
+    try { if (sessionStorage.getItem("luf.deitar") === "off") return; } catch (err) { /* ignore */ }
+
+    var podeFs = EMBED || supportsFullscreen();
+    var box = document.createElement("div");
+    box.className = "luf-rotate";
+    box.innerHTML =
+      '<div class="luf-rotate-card" role="dialog" aria-label="Deitar o celular">' +
+        '<div class="luf-rotate-phone" aria-hidden="true"></div>' +
+        "<b>Fica melhor com o celular deitado</b>" +
+        "<p>A simulação ocupa a tela inteira e sobra espaço para os controles.</p>" +
+        (podeFs ? '<button type="button" class="luf-rotate-go">⟳ Deitar e tela cheia</button>' : "") +
+        '<button type="button" class="luf-rotate-skip">' + (podeFs ? "Continuar assim" : "Entendi") + "</button>" +
+      "</div>" +
+      '<div class="luf-rotate-tip" aria-live="polite">⟳ Gire o celular</div>';
+    stageEl.appendChild(box);
+
+    function fechar() {
+      try { sessionStorage.setItem("luf.deitar", "off"); } catch (err) { /* ignore */ }
+      if (box.parentNode) box.parentNode.removeChild(box);
+    }
+    function sync() {
+      if (!mqPortrait.matches) { fechar(); return; }
+      box.hidden = false;
+    }
+    var go = box.querySelector(".luf-rotate-go");
+    if (go) go.addEventListener("click", function () {
+      fullscreenLandscape();
+      // Sem como travar deitado (iPhone), fica só a dica até girar.
+      box.classList.add("tip");
+    });
+    box.querySelector(".luf-rotate-skip").addEventListener("click", fechar);
+    box.querySelector(".luf-rotate-tip").addEventListener("click", fechar);
+    if (mqPortrait.addEventListener) mqPortrait.addEventListener("change", sync);
+    else if (mqPortrait.addListener) mqPortrait.addListener(sync);
+    sync();
+  }
+
   function init() {
     if (!stageEl) return; // Página sem palco de simulação; nada a fazer.
 
     setupFullscreenButton();
     setupResizeObserver();
     setupVisibilityEvent();
+    setupPanels();
+    setupRotateHint();
 
     window.LUF.stage = {
       el: stageEl,

@@ -30,8 +30,8 @@
   }
   .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .panel-head h2 { margin: 0; font-size: 1.02rem; }
-  #btn-collapse {
-    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #555;
+  #btn-collapse, .collapse-btn {
+    flex: none; width: 28px; height: 28px; border-radius: 6px; border: 1px solid #555;
     background: rgba(255,255,255,.06); color: #ddd; cursor: pointer; font-size: 16px; line-height: 1;
   }
   #panel-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
@@ -87,7 +87,9 @@
     position: absolute; top: 62px; right: 16px; z-index: 4;
     width: min(270px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow-y: auto; padding: 14px 16px;
   }
-  #info-panel h3 { margin: 0 0 10px; font-size: .98rem; border-bottom: 1px solid #555; padding-bottom: 8px; }
+  #info-panel h3 { margin: 0; font-size: .98rem; }
+  #info-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 10px; }
+  #info-panel.collapsed #info-body { display: none; }
   #info-panel .muted { color: #9a9a9a; font-size: 12.5px; margin: 0 0 8px; line-height: 1.45; }
   #info-panel .note { color: #8a8a8a; font-size: 11.5px; line-height: 1.45; margin: 8px 0 0; }
   .stat { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 4px 0; border-bottom: 1px dashed #3a3a3a; }
@@ -231,7 +233,13 @@
         </div>
       </div>
 
-      <div id="info-panel" class="glass" aria-live="polite"></div>
+      <div id="info-panel" class="glass">
+        <div class="panel-head">
+          <h3>Dados do lançamento</h3>
+          <button type="button" class="collapse-btn" id="btn-collapse-info" aria-expanded="true" aria-controls="info-body" title="Recolher painel">–</button>
+        </div>
+        <div id="info-body" aria-live="polite"></div>
+      </div>
       <div id="tooltip" class="glass"></div>
       <div id="status-bar" role="status" aria-live="polite"></div>
     </section>
@@ -359,9 +367,14 @@
       T = 60;
       if (R - L < 280) { L = 0; R = W; }
     } else {
-      var ip = infoPanel.getBoundingClientRect();
-      T = uiPanel.getBoundingClientRect().bottom - st.top + 6;
-      if (ip.height) B = ip.top - st.top - 6;
+      // Celular: painéis recolhidos ficam em cima; aberto, a gaveta fica embaixo.
+      T = 50; B = H - 8;
+      [uiPanel, infoPanel].forEach(function (p) {
+        var r = p.getBoundingClientRect();
+        if (!r.height) return;
+        if (r.top - st.top > H * 0.35) B = Math.min(B, r.top - st.top - 6);
+        else T = Math.max(T, r.bottom - st.top + 6);
+      });
       if (B - T < 160) { T = 50; B = H - 50; }
     }
     return { L: L, R: R, T: T, B: B };
@@ -817,6 +830,12 @@
     $("btn-collapse").title = c ? "Mostrar painel" : "Recolher painel";
   }
   $("btn-collapse").addEventListener("click", function () { setCollapsed(!uiPanel.classList.contains("collapsed")); });
+  $("btn-collapse-info").addEventListener("click", function () {
+    var c = infoPanel.classList.toggle("collapsed");
+    this.textContent = c ? "+" : "–";
+    this.setAttribute("aria-expanded", !c);
+    this.title = c ? "Mostrar painel" : "Recolher painel";
+  });
 
   document.addEventListener("keydown", function (e) {
     var t = e.target.tagName;
@@ -889,9 +908,9 @@
   function renderInfo() {
     var html = "";
     if (game) html += htmlJogo();
-    html += "<h3>Dados do lançamento</h3><div id='stats'></div>";
+    html += "<div id='stats'></div>";
     html += "<p class='note'>Sem resistência do ar. <span style='color:#ff5c7a'>vx</span> é constante; <span style='color:#4cd97b'>vy</span> diminui " + fmtG(cfg.g) + " m/s a cada segundo.</p>";
-    infoPanel.innerHTML = html;
+    $("info-body").innerHTML = html;
     if (game) ligaJogo();
     renderStats();
   }
@@ -958,6 +977,8 @@
     if (tipo !== "angulo") cfg.angle = ang;
     hideX = tipo === "distancia";
     syncUI(); renderInfo(); status("🎯 Leia o desafio no painel e responda.");
+    // O desafio fica no painel de dados: abre se estiver recolhido.
+    if (infoPanel.classList.contains("collapsed")) $("btn-collapse-info").click();
   }
 
   function sairDoJogo() {

@@ -135,6 +135,15 @@ body.sim-fs-on { overflow: hidden; }
   .sim-fs-tut.min ul { display: none; }
 }
 
+/* Celular deitado em tela cheia: pouca altura, então tudo mais enxuto */
+@media (max-height: 520px) and (orientation: landscape) {
+  .sim-frame.fs .sim-fs-tut { flex-basis: 210px; padding: 8px 10px; padding-right: max(10px, env(safe-area-inset-right)); }
+  .sim-fs-tut .sim-tut-item { padding: 5px 0; font-size: 12px; }
+  .sim-frame.fs .sim-q { padding: 5px 12px; gap: 4px; padding-left: max(12px, env(safe-area-inset-left)); }
+  .sim-q-enun { -webkit-line-clamp: 1; font-size: 12.5px; }
+  .sim-q-opts { flex-wrap: nowrap; overflow-x: auto; }
+}
+
 .tut-info { text-align: left; }
 .tut-info p { margin: 6px 0 10px; }
 .tut-info .ext { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.04); font-size: 14px; line-height: 1.45; }

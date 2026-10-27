@@ -655,15 +655,24 @@
   // em tela cheia — barra da pergunta + simulação. Sem a API de tela cheia
   // (iPhone), a classe .fs sozinha cobre a janela.
   const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-  function simFs(wrap, on) {
+  // deitar: botão "Deitar e tela cheia" da simulação no celular — trava a
+  // tela deitada (só Android; no iPhone a simulação pede para girar).
+  function simFs(wrap, on, deitar) {
     if (!wrap) return;
     wrap.classList.toggle('fs', on);
     document.body.classList.toggle('sim-fs-on', on);
     if (on) {
-      const req = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
-      if (req) { try { const p = req.call(wrap); if (p && p.catch) p.catch(() => {}); } catch { /* fica só a classe */ } }
-    } else if (fsElement()) {
-      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      const travar = () => {
+        if (!deitar) return;
+        try { const p = screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch { /* sem suporte */ }
+      };
+      const req = fsElement() ? null : (wrap.requestFullscreen || wrap.webkitRequestFullscreen);
+      if (req) {
+        try { const p = req.call(wrap); if (p && p.then) p.then(travar, () => {}); else setTimeout(travar, 300); } catch { /* fica só a classe */ }
+      } else travar();
+    } else {
+      try { screen.orientation.unlock(); } catch { /* ignore */ }
+      if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     }
     const fr = wrap.querySelector('iframe');
     try { fr.contentWindow.postMessage({ luf: 'fs-state', on }, location.origin); } catch { /* ignore */ }
@@ -671,7 +680,9 @@
   window.addEventListener('message', (e) => {
     if (e.origin !== location.origin || !e.data || e.data.luf !== 'fullscreen-toggle') return;
     const fr = [...document.querySelectorAll('.sim-frame iframe')].find((f) => f.contentWindow === e.source);
-    if (fr) { const wrap = fr.closest('.sim-frame'); simFs(wrap, !wrap.classList.contains('fs')); }
+    if (!fr) return;
+    const wrap = fr.closest('.sim-frame');
+    simFs(wrap, e.data.on === true || !wrap.classList.contains('fs'), !!e.data.landscape);
   });
   // Esc / botão voltar do celular saem da tela cheia do navegador: desfaz a classe também.
   ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => {

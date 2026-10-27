@@ -25,7 +25,16 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 4; color: #fff;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
-  #ui-panel h2 { margin: 0 0 10px; font-size: 1.05rem; border-bottom: 1px solid #555; padding-bottom: 10px; }
+  #ui-panel { max-height: calc(100% - 32px); overflow-y: auto; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #ui-panel h2 { margin: 0; font-size: 1.05rem; }
+  #ui-panel .collapse-btn {
+    width: 28px; height: 28px; padding: 0; margin: 0; flex: none; border-radius: 6px; border: 1px solid #555;
+    background: rgba(255,255,255,.06); color: #ddd; font-size: 16px; font-weight: normal; line-height: 1;
+  }
+  #ui-panel .collapse-btn:hover { filter: none; transform: none; background: rgba(255,255,255,.15); }
+  .panel-body { margin-top: 10px; border-top: 1px solid #555; padding-top: 12px; }
+  .collapsed .panel-body { display: none; }
   #ui-panel .control-group { margin-bottom: 16px; }
   #ui-panel .control-group:last-of-type { margin-bottom: 10px; }
   #ui-panel label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 13px; color: #aaa; }
@@ -118,8 +127,12 @@
       <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
 
       <div id="ui-panel">
-        <h2>Coordenadas Esféricas</h2>
+        <div class="panel-head">
+          <h2>Coordenadas Esféricas</h2>
+          <button type="button" class="collapse-btn" aria-expanded="true" aria-controls="panel-body" title="Recolher painel">–</button>
+        </div>
 
+        <div class="panel-body" id="panel-body">
         <div class="control-group">
           <label>Raio (r) <span id="r-val" class="val-display">5.0</span></label>
           <input type="range" id="r" min="1" max="10" step="0.1" value="5">
@@ -141,6 +154,7 @@
         <div id="hints">
           🖱️ <b>Arrastar:</b> Girar câmera <br>
           🔍 <b>Scroll:</b> Zoom in/out
+        </div>
         </div>
       </div>
 
@@ -164,6 +178,17 @@
 (function () {
   "use strict";
   if (!window.LUF || !LUF.stage) return;
+
+  // Recolher/expandir o painel (abre recolhido — ver simulation-shell.js)
+  document.querySelectorAll("#ui-panel .collapse-btn").forEach(function (btn) {
+    var panel = document.getElementById("ui-panel");
+    btn.addEventListener("click", function () {
+      var collapsed = panel.classList.toggle("collapsed");
+      btn.textContent = collapsed ? "+" : "–";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.title = collapsed ? "Expandir painel" : "Recolher painel";
+    });
+  });
 
   // ==========================================
   // 1. CONFIGURAÇÃO DA CENA E CÂMERA
