@@ -17,6 +17,7 @@
   const CFG = window.LUP_CONFIG;
   const $app = document.getElementById('app');
   const SITE = '../'; // raiz do site (login, cadastro, simulações)
+  const WHATSAPP = 'https://w.app/levelupfisapp'; // botão do Perfil
   const LEAD_KEY = 'lup.demo.lead';
   const PROG_KEY = 'lup.demo.progresso';
 
@@ -894,15 +895,10 @@
         <aside class="plus-side">
           <div class="card checkout-card">
             <div class="section-title" style="margin-top:0">Planos</div>
-            <div class="prices">${(PC.PLANOS || []).map((p) => `
-              <div class="price-card">
-                <div class="k">${esc(p.nome)}</div>
-                <div class="v">${esc(p.preco)}<small>${esc(p.sufixo || '')}</small></div>
-                <div class="small muted">${esc(p.obs || '')}</div>
-              </div>`).join('')}
+            <div class="demo-embreve">
+              <span class="demo-pill">Em breve</span>
+              <p class="small muted">Os planos do LevelUp Plus abrem em breve. Fique de olho!</p>
             </div>
-            <a class="btn btn-primary btn-block btn-lg" href="${SITE}#/register">${ICON.crown} Criar conta para assinar</a>
-            <p class="small muted" style="text-align:center;margin:8px 0 0">Na demonstração o Plus é só uma vitrine — a assinatura fica na versão completa.</p>
           </div>
         </aside>
       </div>
@@ -927,7 +923,7 @@
         <b>Você está na versão demonstração</b>
         <span class="small muted">Aqui não tem Joules, Cargas nem Fótons, e o seu progresso fica salvo só neste navegador.${S.areas ? ` Capítulos concluídos: ${feitos} de ${caps.length}.` : ''}</span>
       </div>
-      <a class="btn btn-primary btn-block btn-lg" style="margin-top:14px" href="${SITE}#/register">Criar minha conta completa</a>
+      <a class="btn btn-primary btn-block btn-lg" style="margin-top:14px" href="${WHATSAPP}" target="_blank" rel="noopener">${ICON.chat} Falar no WhatsApp</a>
       <button class="btn btn-ghost btn-block" style="margin-top:10px" data-sair>Sair da demonstração</button>
       </div></div>
       ${bottomNav('perfil')}`;

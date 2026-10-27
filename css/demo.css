@@ -20,6 +20,8 @@
   background: linear-gradient(135deg, var(--gold), var(--gold-deep));
 }
 .demo-ola { font-weight: 800; color: var(--cream); flex: 1; padding: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.demo-embreve { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 18px 8px 6px; }
+.demo-embreve p { margin: 0; }
 .demo-aviso { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 18px; border-color: rgba(255,198,92,.35); }
 
 /* ---------- Simulação embutida ---------- */
