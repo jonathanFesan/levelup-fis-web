@@ -86,10 +86,9 @@ e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre o site com as
   dorme e faria o visitante esperar. As respostas são corrigidas no navegador (por isso anon pode
   ler as perguntas das Áreas demo, com a resposta) e o progresso fica no `localStorage`.
   Prova na demo: versão simples, todas as questões e a nota no fim.
-- **Redirecionar:** com o botão do painel ligado, o `index.html` manda quem abre
-  `levelupfis.com.br` sem sessão e sem rota para `/demo/`. Quem está logado, usa um link com
-  rota (`/#/login`, `/#/register`, `/#/plus`…) ou abre `/?redir=1` (ou `/redir=1`) entra no
-  site normal.
+- **Redirecionar:** o `index.html` manda **todo** acesso a `levelupfis.com.br` (com ou sem
+  rota, logado ou não) para `/demo/`. Só `/?redir=1` (ou `/redir=1`) abre o site normal, e
+  vale para a aba toda. O botão "Redirecionar" do painel não é mais lido.
 - **Exercícios com simulação:** um Capítulo de Fixação/Exercícios da demo pode ter uma simulação
   (painel → botão 🧪 do Capítulo, grava `capitulo_conteudo.simulacao_url`); ela aparece no topo de
   cada questão. O conteúdo inicial da demo (3 Áreas: Resumo → Simulação → Exercícios com simulação →

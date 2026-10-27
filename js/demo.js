@@ -253,11 +253,12 @@
   async function avisoCompleta(titulo) {
     const r = await modal({
       title: titulo ? `"${titulo}" está na versão completa` : 'Disponível na versão completa',
-      text: 'Crie sua conta grátis para liberar a trilha inteira, com recompensas e o seu progresso salvo.',
+      text: 'A versão completa, com a trilha inteira, recompensas e o seu progresso salvo, chega em breve. Fale com a gente no WhatsApp!',
       icon: ICON.lock,
-      buttons: [{ label: 'Agora não', value: false }, { label: 'Criar conta', value: true, cls: 'btn-primary' }],
+      buttons: [{ label: 'Agora não', value: false }, { label: 'Falar no WhatsApp', value: true, cls: 'btn-primary' }],
     });
-    if (r) location.href = `${SITE}#/register`;
+    // O site completo manda para a demo (index.html), então nada de cadastro aqui.
+    if (r) window.open(WHATSAPP, '_blank', 'noopener');
   }
 
   // Trilha em zigue-zague — cópia de trailHtml()/drawTrails() de js/app.js.
