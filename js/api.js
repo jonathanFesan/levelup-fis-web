@@ -175,7 +175,8 @@
     buyCharge: () => authed(`/profile/${uid()}/buy-charge`, { method: 'POST' }),
 
     // --- Currículo / conteúdo ---
-    getCurriculo: () => authed('/curriculo/areas'),
+    // simulacoes=true: o site sabe abrir Capítulos tipo "simulacao" (o app Android ainda não).
+    getCurriculo: () => authed('/curriculo/areas?simulacoes=true'),
     getTopicContent: (topico) => authed(`/topic-content/${encodeURIComponent(topico)}`),
 
     // --- Progresso ---

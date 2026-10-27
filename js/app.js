@@ -62,9 +62,10 @@
     phone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-5 21a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm5-4H7V4h10z"/></svg>',
     clock: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg>',
+    atom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
   };
 
-  const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus' };
+  const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus', simulacao: 'atom' };
   const CATEGORIAS = {
     fixacao: { label: 'FIXAÇÃO', vazio: 'Nenhum exercício cadastrado ainda.' },
     extra: { label: 'EXERCÍCIOS', vazio: 'Nenhum exercício extra cadastrado ainda.' },
@@ -155,6 +156,186 @@
     const e = embedUrl(url);
     if (e && e.includes('youtube.com/embed/')) return `https://img.youtube.com/vi/${e.split('/embed/')[1].split(/[?&]/)[0]}/hqdefault.jpg`;
     return null;
+  }
+
+  // ================================================================
+  // Simulação embutida (mesma de js/demo.js; estilos em css/simulacao.css)
+  // ================================================================
+  // Caminho do próprio site (/simulacoes/...) ou link completo, sempre no
+  // modo embutido (?embed=1, ver simulacoes/assets/js/layout.js): só o
+  // palco, sem o cabeçalho do site de simulações.
+  function simUrl(url) {
+    const u = /^https?:\/\//i.test(url) ? url : String(url || '').replace(/^\/+/, '');
+    return u + (u.includes('?') ? '&' : '?') + 'embed=1';
+  }
+  // Presa na página: sandbox sem allow-top-navigation nem allow-popups.
+  // topo = barra que só aparece em tela cheia (a pergunta do exercício).
+  function simFrameHtml(url, titulo, cls = '', topo = '') {
+    return `<div class="sim-frame ${cls}">${topo}<div class="spinner"></div>
+      <iframe src="${esc(simUrl(url))}" title="${esc(titulo)}" sandbox="allow-scripts allow-same-origin"
+        allow="fullscreen" allowfullscreen referrerpolicy="no-referrer" onload="this.classList.add('ok')"></iframe></div>`;
+  }
+  // Simulação de uma questão: a dela (questions.simulacao_url, sql/028),
+  // senão a padrão do Capítulo (capitulo_conteudo.simulacao_url, botão 🧪).
+  function simDaQuestao(q, cap) {
+    const c = (cap && cap.conteudo) || {};
+    const url = q.simulacao_url || c.simulacao_url;
+    if (!url) return null;
+    return { url, dica: q.simulacao_dica || (q.simulacao_url ? '' : c.texto) || '' };
+  }
+  // Em tela cheia, a pergunta e as alternativas ficam numa barra discreta
+  // no topo; dá para já marcar a alternativa ali (sincroniza com a tela).
+  function simNaQuestaoHtml(sim, titulo, q) {
+    const isMC = q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
+    const topo = `<div class="sim-q">
+        <button type="button" class="sim-q-enun" data-fsenun title="Toque para ver a pergunta inteira">${esc(q.enunciado)}</button>
+        ${isMC ? `<div class="sim-q-opts">${q.opcoes.map((o, i) => `
+          <button type="button" class="sim-q-opt" data-fsopt="${i}"><b>${LETRAS[i] || i + 1}</b>${esc(o)}</button>`).join('')}</div>` : ''}
+      </div>`;
+    return simFrameHtml(sim.url, titulo, 'sim-ex', topo)
+      + `<p class="small muted" style="margin:6px 0 14px">${esc(sim.dica || 'Use a simulação para responder.')}</p>`;
+  }
+
+  // Tela cheia: o botão ⛶ de dentro da simulação pede por mensagem
+  // (simulacoes/assets/js/simulation-shell.js) e o site põe o quadro todo
+  // em tela cheia — barra da pergunta + simulação. Sem a API de tela cheia
+  // (iPhone), a classe .fs sozinha cobre a janela.
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  // deitar: botão "Deitar e tela cheia" da simulação no celular — trava a
+  // tela deitada (só Android; no iPhone a simulação pede para girar).
+  function simFs(wrap, on, deitar) {
+    if (!wrap) return;
+    wrap.classList.toggle('fs', on);
+    document.body.classList.toggle('sim-fs-on', on);
+    if (on) {
+      const travar = () => {
+        if (!deitar) return;
+        try { const p = screen.orientation.lock('landscape'); if (p && p.catch) p.catch(() => {}); } catch { /* sem suporte */ }
+      };
+      const req = fsElement() ? null : (wrap.requestFullscreen || wrap.webkitRequestFullscreen);
+      if (req) {
+        try { const p = req.call(wrap); if (p && p.then) p.then(travar, () => {}); else setTimeout(travar, 300); } catch { /* fica só a classe */ }
+      } else travar();
+    } else {
+      try { screen.orientation.unlock(); } catch { /* ignore */ }
+      if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+    const fr = wrap.querySelector('iframe');
+    try { fr.contentWindow.postMessage({ luf: 'fs-state', on }, location.origin); } catch { /* ignore */ }
+  }
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || e.data.luf !== 'fullscreen-toggle') return;
+    const fr = [...document.querySelectorAll('.sim-frame iframe')].find((f) => f.contentWindow === e.source);
+    if (!fr) return;
+    const wrap = fr.closest('.sim-frame');
+    simFs(wrap, e.data.on === true || !wrap.classList.contains('fs'), !!e.data.landscape);
+  });
+  // Esc / botão voltar do celular saem da tela cheia do navegador: desfaz a classe também.
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => {
+    if (!fsElement()) document.querySelectorAll('.sim-frame.fs').forEach((w) => simFs(w, false));
+  }));
+
+  // Tutorial do Capítulo "Simulação" (desafios em checklist): os desafios
+  // ficam em js/demo-tutoriais.js, pelo nome do arquivo da simulação. A
+  // simulação é do mesmo domínio, então o site lê os controles dela por
+  // dentro do iframe e marca cada desafio sozinho. O que já foi feito fica
+  // só neste navegador (não dá Joules).
+  const TUT_KEY = 'lup.simDesafios';
+  const tutFeitos = (capId) => { try { return (JSON.parse(localStorage.getItem(TUT_KEY)) || {})[capId] || {}; } catch { return {}; } };
+  function tutMarcar(capId, i) {
+    try {
+      const t = JSON.parse(localStorage.getItem(TUT_KEY)) || {};
+      t[capId] = Object.assign({}, t[capId], { [i]: true });
+      localStorage.setItem(TUT_KEY, JSON.stringify(t));
+    } catch { /* modo privado */ }
+  }
+  function tutorialDe(url) {
+    const nome = String(url || '').split(/[?#]/)[0].split('/').pop().replace(/\.html?$/i, '');
+    const t = (window.LUP_TUTORIAIS || {})[nome];
+    return t && t.length ? t : null;
+  }
+  function tutorialHtml(cap, tut) {
+    const feitos = tutFeitos(cap.id);
+    const n = tut.filter((_, i) => feitos[i]).length;
+    return `
+      <aside class="card sim-tut">
+        <div class="sim-tut-head"><b>Desafios</b><span class="small muted" data-tut-cont>${n}/${tut.length}</span></div>
+        <p class="small muted" style="margin:0 0 8px">Faça na simulação: cada desafio se marca sozinho.</p>
+        <ul>${tut.map((d, i) => `
+          <li class="sim-tut-item ${feitos[i] ? 'done' : ''}" data-tut="${i}">
+            <span class="box">${ICON.check}</span><span class="t">${esc(d.titulo)}</span>
+            ${d.info ? `<button type="button" class="sim-tut-i" data-tut-info="${i}" aria-label="O que isso muda?">i</button>` : ''}
+          </li>`).join('')}
+        </ul>
+      </aside>`;
+  }
+  // A mesma checklist, enxuta, à direita da simulação em tela cheia.
+  function tutorialFsHtml(cap, tut) {
+    const feitos = tutFeitos(cap.id);
+    const n = tut.filter((_, i) => feitos[i]).length;
+    return `
+      <div class="sim-fs-tut">
+        <button type="button" class="sim-fs-tut-head" data-fs-tut-toggle><b>Desafios</b><span data-tut-cont>${n}/${tut.length}</span></button>
+        <ul>${tut.map((d, i) => `
+          <li class="sim-tut-item ${feitos[i] ? 'done' : ''}" data-tut="${i}"><span class="box">${ICON.check}</span><span class="t">${esc(d.titulo)}</span></li>`).join('')}
+        </ul>
+      </div>`;
+  }
+  let tutTimer = null;
+  function ligarTutorial(cap, tut) {
+    const feitos = Object.assign({}, tutFeitos(cap.id));
+    $app.querySelectorAll('[data-tut-info]').forEach((b) => {
+      b.onclick = () => {
+        const inf = tut[+b.dataset.tutInfo].info;
+        modal({
+          title: inf.titulo,
+          html: `<div class="tut-info">
+            <p>${esc(inf.texto)}</p>
+            ${inf.min ? `<div class="ext"><span class="k">NO MÍNIMO</span>${esc(inf.min)}</div>` : ''}
+            ${inf.max ? `<div class="ext"><span class="k">NO MÁXIMO</span>${esc(inf.max)}</div>` : ''}
+          </div>`,
+        });
+      };
+    });
+    const concluir = (i) => {
+      feitos[i] = true;
+      tutMarcar(cap.id, i);
+      $app.querySelectorAll(`[data-tut="${i}"]`).forEach((li) => li.classList.add('done', 'pop'));
+      const n = tut.filter((_, k) => feitos[k]).length;
+      $app.querySelectorAll('[data-tut-cont]').forEach((el) => { el.textContent = `${n}/${tut.length}`; });
+      toast(n === tut.length ? 'Você completou todos os desafios! 🎉' : `✓ ${tut[i].titulo}`);
+    };
+    const fsTog = $app.querySelector('[data-fs-tut-toggle]');
+    if (fsTog) fsTog.onclick = () => fsTog.parentElement.classList.toggle('min');
+    const fr = $app.querySelector('.sim-frame iframe');
+    if (!fr) return;
+    const ligar = () => {
+      let doc;
+      try { doc = fr.contentDocument; } catch { return; }
+      if (!doc || !doc.body) return;
+      const leitor = (clique) => ({
+        num: (id) => { const el = doc.getElementById(id); return el ? parseFloat(el.value) : NaN; },
+        marcado: (id) => !!(doc.getElementById(id) || {}).checked,
+        ativo: (sel) => !!doc.querySelector(sel + '.active'),
+        clicou: (sel) => !!(clique && clique.closest && clique.closest(sel)),
+      });
+      const checar = (clique) => {
+        if (!document.body.contains(fr)) return clearInterval(tutTimer);
+        tut.forEach((d, i) => {
+          if (feitos[i]) return;
+          let ok = false;
+          try { ok = !!d.ok(leitor(clique)); } catch { /* controle não existe nesta versão da simulação */ }
+          if (ok) concluir(i);
+        });
+      };
+      doc.addEventListener('input', () => checar(null));
+      doc.addEventListener('change', () => checar(null));
+      // Depois do clique, para a simulação já ter atualizado os botões (.active).
+      doc.addEventListener('click', (e) => { const alvo = e.target; setTimeout(() => checar(alvo), 40); }, true);
+      clearInterval(tutTimer);
+      tutTimer = setInterval(() => checar(null), 800);
+    };
+    fr.addEventListener('load', ligar);
   }
 
   // ================================================================
@@ -601,6 +782,7 @@
       case 'fixacao': return go(`#/t/${t}/trilha/${cap.id}`);
       case 'prova': return go(`#/t/${t}/prova/${cap.id}`);
       case 'curiosidade': return go(`#/t/${t}/cur/${cap.id}`);
+      case 'simulacao': return go(`#/t/${t}/sim/${cap.id}`);
     }
   }
 
@@ -705,6 +887,44 @@
     };
   }
 
+  // ---------- Simulação ----------
+  // Capítulo tipo "simulacao": a simulação embutida, a dica (texto) e, se
+  // a simulação tiver tutorial, a checklist de desafios. CONTINUAR conclui
+  // o Capítulo (capitulo_progress, sem Joules) e libera o próximo.
+  async function viewSimulacao(topicoId, capId) {
+    $app.innerHTML = loading();
+    try { await loadCurriculo(); } catch {
+      $app.innerHTML = errorBox('Erro ao carregar o currículo.'); return bindRetry();
+    }
+    const { area, topico } = findTopico(topicoId);
+    const cap = topico?.capitulos?.find((c) => String(c.id) === String(capId));
+    if (!cap) return go('#/map');
+    aplicarTema(area, topico);
+    const c = cap.conteudo || {};
+    const tut = tutorialDe(c.simulacao_url);
+    const body = c.simulacao_url
+      ? `<div class="${tut ? 'sim-tut-layout' : ''}"><div>${simFrameHtml(c.simulacao_url, cap.titulo, tut ? 'com-tut' : '', tut ? tutorialFsHtml(cap, tut) : '')
+        + (c.texto ? `<p class="small muted" style="margin:10px 0 0">${esc(c.texto)}</p>` : '')}</div>
+        ${tut ? tutorialHtml(cap, tut) : ''}</div>`
+      : '<div class="card"><p class="muted">A simulação deste capítulo ainda não foi cadastrada.</p></div>';
+
+    $app.className = 'app no-nav';
+    $app.innerHTML = pageHead(cap.titulo || 'Simulação', [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map') + `
+      ${body}
+      <div class="bottom-cta"><div class="error-msg" data-err style="margin-bottom:8px"></div>
+      <button class="btn btn-primary btn-block" data-ok>CONTINUAR</button></div>`;
+    bindBack();
+    if (tut) ligarTutorial(cap, tut);
+    const btn = $app.querySelector('[data-ok]');
+    btn.onclick = async () => {
+      btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
+      try { await API.concluirCapitulo(cap.id); go('#/map'); } catch {
+        $app.querySelector('[data-err]').textContent = 'Não foi possível continuar agora. Tente de novo.';
+        btn.disabled = false; btn.textContent = 'CONTINUAR';
+      }
+    };
+  }
+
   // ---------- Trilha de exercícios (Fixação / Exercícios extra) ----------
   async function viewTrilha(topicoId, capRef) {
     $app.className = 'app no-nav';
@@ -734,6 +954,12 @@
     html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--acc)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
       <span style="font-weight:800">${catInfo.label}</span><span class="spacer"></span>
       <span class="muted" style="font-weight:800">${feitas}/${qs.length}</span></div>`;
+    const comSim = qs.filter((q) => simDaQuestao(q, cap)).length;
+    if (comSim) {
+      html += `<div class="card row small" style="margin:8px 0 4px"><span style="color:var(--acc);width:22px;height:22px;flex:0 0 22px">${ICON.atom}</span>
+        <span class="muted">${comSim === qs.length ? 'Estas questões usam uma simulação: ela aparece junto de cada fase.'
+          : `${comSim} de ${qs.length} fases usam uma simulação: ela aparece junto da questão.`}</span></div>`;
+    }
     const nodes = qs.map((q, i) => ({
       titulo: `Fase ${i + 1}`,
       icon: 'play',
@@ -790,6 +1016,7 @@
     };
 
     const isMC = q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
+    const sim = simDaQuestao(q, cap);
     $app.innerHTML = `
       <div class="ex-top">
         <button class="back" data-back="${trilhaHash}" aria-label="Sair">${ICON.close}</button>
@@ -797,6 +1024,7 @@
         <span class="timer" data-timer>00:00</span>
         ${cargasHtml()}
       </div>
+      ${sim ? simNaQuestaoHtml(sim, `Fase ${idx + 1}`, q) : ''}
       <div class="enunciado">${esc(q.enunciado)}</div>
       ${isMC
         ? `<div class="opts">${q.opcoes.map((o, i) => `
@@ -813,13 +1041,17 @@
       tEl.textContent = `${String(Math.floor(seg / 60) % 60).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`;
     }, 1000);
 
-    $app.querySelectorAll('[data-opt]').forEach((b) => {
-      b.onclick = () => {
-        $app.querySelectorAll('[data-opt]').forEach((x) => x.classList.remove('sel'));
-        b.classList.add('sel');
-        selecionada = q.opcoes[+b.dataset.opt];
-      };
-    });
+    // Alternativas da tela e da barra da simulação em tela cheia andam juntas.
+    const marcar = (i) => {
+      $app.querySelectorAll('[data-opt],[data-fsopt]').forEach((x) => {
+        x.classList.toggle('sel', +(x.dataset.opt ?? x.dataset.fsopt) === i);
+      });
+      selecionada = q.opcoes[i];
+    };
+    $app.querySelectorAll('[data-opt]').forEach((b) => { b.onclick = () => marcar(+b.dataset.opt); });
+    $app.querySelectorAll('[data-fsopt]').forEach((b) => { b.onclick = () => marcar(+b.dataset.fsopt); });
+    const enun = $app.querySelector('[data-fsenun]');
+    if (enun) enun.onclick = () => enun.classList.toggle('open');
     const txt = $app.querySelector('[data-text]');
     if (txt) { txt.focus(); txt.onkeydown = (e) => { if (e.key === 'Enter') send.click(); }; }
 
@@ -1847,6 +2079,10 @@
   async function render() {
     if (examCleanup && !emProvaRun()) examCleanup();
     clearInterval(exTimer);
+    clearInterval(tutTimer);
+    // Saiu da tela com a simulação em tela cheia (ex.: botão voltar).
+    document.querySelectorAll('.sim-frame.fs').forEach((w) => simFs(w, false));
+    document.body.classList.remove('sim-fs-on');
     document.getElementById('modal-root').innerHTML = '';
     $app.className = 'app';
     $app.removeAttribute('style');
@@ -1885,6 +2121,7 @@
         const [, topico, kind, a, b, c] = parts;
         if (kind === 'resumo') return viewResumo(topico, a);
         if (kind === 'cur') return viewCuriosidade(topico, a);
+        if (kind === 'sim') return viewSimulacao(topico, a);
         if (kind === 'trilha') return viewTrilha(topico, a);
         if (kind === 'q') return viewExercicio(topico, a, b);
         // Links antigos sem o id do Capítulo (#/t/x/prova/run/facil) abrem a primeira Prova.

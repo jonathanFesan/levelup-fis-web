@@ -46,14 +46,17 @@
   <script>
     (function () {
       var ARQS = [
-        'css/style.css', 'css/cartoes.css',
+        'css/style.css', 'css/cartoes.css', 'css/simulacao.css',
         'js/config.js', 'js/api.js', 'js/plus.js',
         // Resumo/Curiosidade em cartões: DOMPurify limpa o texto rico que vem do painel
         'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js',
         // Fórmulas em LaTeX (KaTeX)
         'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css',
         'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js',
-        'js/cartoes.js', 'js/app.js'
+        'js/cartoes.js',
+        // Desafios dos Capítulos "Simulação" (os mesmos da demo)
+        'js/demo-tutoriais.js',
+        'js/app.js'
       ];
       function carregar(v) {
         ARQS.forEach(function (src) {

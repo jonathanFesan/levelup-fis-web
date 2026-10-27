@@ -202,7 +202,8 @@
   }
   async function getQuestions(cap) {
     if (!S.questions[cap.id]) {
-      S.questions[cap.id] = await sb(`questions?capitulo_id=eq.${cap.id}&select=id,enunciado,tipo,opcoes,resposta_correta,explicacao,ordem&order=ordem.asc,id.asc`);
+      // select=* para vir simulacao_url/simulacao_dica (sql/028) quando existirem.
+      S.questions[cap.id] = await sb(`questions?capitulo_id=eq.${cap.id}&select=*&order=ordem.asc,id.asc`);
     }
     return S.questions[cap.id];
   }
@@ -626,7 +627,7 @@
     html += `<div class="card row" style="margin:8px 0 4px"><span style="color:var(--acc)">${ICON.edit.replace('<svg', '<svg width="22" height="22"')}</span>
       <span style="font-weight:800">${cap.tipo === 'extra' ? 'EXERCÍCIOS' : 'FIXAÇÃO'}</span><span class="spacer"></span>
       <span class="muted" style="font-weight:800">${feitas}/${qs.length}</span></div>`;
-    if (cap.conteudo && cap.conteudo.simulacao_url) {
+    if ((cap.conteudo && cap.conteudo.simulacao_url) || qs.some((q) => q.simulacao_url)) {
       html += `<div class="card row small" style="margin:8px 0 4px"><span style="color:var(--acc);width:22px;height:22px;flex:0 0 22px">${ICON.atom}</span>
         <span class="muted">Estas questões usam a simulação: ela aparece junto de cada fase.</span></div>`;
     }
@@ -777,7 +778,9 @@
     const cc = ctx.cap.conteudo || {};
     telaPergunta({
       area: ctx.area, bloco: ctx.bloco, q, titulo: `Fase ${idx + 1}`, sair: trilhaHash,
-      sim: cc.simulacao_url ? { url: cc.simulacao_url, dica: cc.texto } : null,
+      // A simulação da questão (sql/028), senão a padrão do Capítulo (🧪).
+      sim: q.simulacao_url ? { url: q.simulacao_url, dica: q.simulacao_dica }
+        : cc.simulacao_url ? { url: cc.simulacao_url, dica: q.simulacao_dica || cc.texto } : null,
       aoResponder(resposta) {
         const acertou = corrigir(q, resposta);
         let concluiuAgora = false;
