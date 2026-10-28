@@ -42,6 +42,15 @@ window.LUF.simulations = [
     addedAt: "2026-09-28",
   },
   {
+    id: "unidades-de-medida",
+    title: "Unidades de Medida",
+    summary: "Tabela de prefixos do SI e conversões de tempo, velocidade, temperatura e mais",
+    category: "matematica",
+    path: "simulations/matematica/unidades-de-medida.html",
+    tags: ["unidades", "conversão", "prefixos", "SI"],
+    addedAt: "2026-10-28",
+  },
+  {
     id: "lancamento-obliquo",
     title: "Lançamento Oblíquo",
     summary: "Canhão, bola e mangueira: altura, ângulo, velocidade e minigame do alvo",

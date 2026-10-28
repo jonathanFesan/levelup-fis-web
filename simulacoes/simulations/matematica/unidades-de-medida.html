@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unidades de Medida — LevelUpFís Simulations</title>
+<meta name="description" content="Conversor de unidades de medida: prefixos do SI na tabela decimal e conversões de tempo, velocidade, temperatura e outras grandezas.">
+
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="../../assets/css/simulation.css">
+
+<style>
+  /* Estilos específicos desta simulação, escopados a #sim-stage. Não há
+     canvas: a simulação é feita de elementos DOM dentro de #sim-content. */
+  #sim-content {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 76px 24px 28px;
+    overflow-y: auto;
+  }
+
+  /* ---------- Barra superior (tipo de conversão / prefixos) ---------- */
+  .uc-bar {
+    position: absolute; top: 12px; z-index: 5;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .uc-bar.l { left: 14px; }
+  .uc-bar.r { right: 62px; }
+  .uc-bar-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .uc-pick { position: relative; display: inline-flex; }
+  .uc-pick::after {
+    content: "▾"; position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); pointer-events: none; font-size: 13px;
+  }
+  .uc-pick select {
+    appearance: none; -webkit-appearance: none;
+    font: 600 13px inherit; font-family: inherit; letter-spacing: .04em;
+    color: var(--text); cursor: pointer;
+    padding: 9px 34px 9px 15px; border-radius: 999px;
+    background: var(--glass); border: 1px solid var(--line);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: border-color .2s, background .2s;
+  }
+  .uc-pick select:hover { border-color: var(--accent); background: rgba(255, 255, 255, .11); }
+  .uc-pick select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  #sim-stage option { background: var(--bg-deep); color: var(--text); }
+
+  /* ---------- Tabela (escada de unidades) ---------- */
+  .uc-scroller {
+    width: 100%; max-width: 1000px;
+    overflow-x: auto; overflow-y: hidden;
+    padding-bottom: 6px;
+    scrollbar-width: thin; scrollbar-color: rgba(252, 243, 200, .3) transparent;
+  }
+  .uc-track {
+    position: relative;
+    width: max-content; min-width: 100%;
+    padding: 46px 2px 2px;
+  }
+  /* O SVG das setas cobre a trilha toda (position:absolute vem de
+     simulation.css); não captura cliques. */
+  .uc-track svg { pointer-events: none; z-index: 2; overflow: visible; }
+
+  .uc-strip {
+    display: flex;
+    border: 1px solid rgba(252, 243, 200, .32);
+    border-radius: 14px;
+    background: rgba(8, 17, 46, .5);
+    overflow: hidden;
+  }
+  .uc-cell {
+    --cell-w: 74px;
+    position: relative;
+    flex: 1 0 var(--cell-w);
+    min-width: var(--cell-w);
+    display: flex; flex-direction: column;
+  }
+  .uc-cell + .uc-cell { border-left: 1px solid var(--line); }
+  .uc-all .uc-cell { --cell-w: 54px; }
+  .uc-special .uc-cell { --cell-w: 86px; }
+
+  .uc-unit {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    padding: 16px 6px 12px;
+    border: 0; background: transparent; color: var(--text);
+    font-family: inherit; cursor: pointer;
+    transition: background .18s;
+  }
+  .uc-unit:hover { background: rgba(255, 255, 255, .07); }
+  .uc-unit:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; border-radius: 10px; }
+  .uc-sym { font-size: 26px; font-weight: 600; line-height: 1.1; white-space: nowrap; }
+  .uc-all .uc-sym { font-size: 19px; }
+  .uc-special .uc-sym { font-size: 17px; }
+  .uc-sym .un { color: var(--cyan); }
+  .uc-cap { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* Unidade de referência (centro): fundo levemente dourado */
+  .uc-cell.is-ref { background: rgba(252, 243, 200, .07); }
+  .uc-cell.is-ref .uc-sym { color: var(--accent); }
+
+  /* Degraus percorridos entre origem e destino */
+  .uc-cell.is-path { background: rgba(111, 211, 255, .07); }
+
+  .uc-cell.is-origin .uc-unit { box-shadow: inset 0 0 0 2px var(--cyan); background: rgba(111, 211, 255, .12); }
+  .uc-cell.is-target .uc-unit { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(252, 243, 200, .12); }
+  .uc-cell.is-origin { border-radius: 0; }
+
+  /* Seletor da unidade base dentro da célula central */
+  .uc-base-pick {
+    position: relative; align-self: center; margin: -6px 0 9px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    color: var(--bg); background: var(--accent);
+    padding: 3px 9px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  }
+  .uc-base-pick select {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; font-size: 14px;
+  }
+  .uc-base-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .uc-hint { font-size: 13px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+  /* ---------- Linha de conversão (4 blocos) ---------- */
+  .uc-io {
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  }
+  .uc-pair { display: flex; gap: 8px; align-items: stretch; }
+  .uc-box {
+    height: 58px; border-radius: 12px;
+    background: rgba(8, 17, 46, .55); border: 1px solid rgba(252, 243, 200, .32);
+    color: var(--text); font-family: inherit;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .uc-val, .uc-out { width: min(240px, 42vw); font-size: 22px; font-weight: 600; padding: 0 14px; }
+  .uc-val { text-align: center; outline: none; transition: border-color .2s, box-shadow .2s; }
+  .uc-val:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(111, 211, 255, .18); }
+  .uc-val.is-bad { border-color: #ff6b81; }
+  .uc-out {
+    overflow-x: auto; white-space: nowrap; justify-content: center;
+    scrollbar-width: none; color: var(--accent);
+  }
+  .uc-out::-webkit-scrollbar { display: none; }
+  .uc-ubox { min-width: 62px; padding: 0 10px; font-size: 18px; font-weight: 700; white-space: nowrap; }
+  .uc-ubox.o { color: var(--cyan); }
+  .uc-ubox.t { color: var(--accent); }
+  .uc-ubox.empty { color: var(--muted); font-weight: 400; }
+
+  .uc-swap {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--glass); color: var(--text);
+    font-size: 20px; cursor: pointer; transition: transform .25s, background .25s, color .25s;
+  }
+  .uc-swap:hover:not(:disabled) { background: var(--accent); color: var(--bg); transform: rotate(180deg); }
+  .uc-swap:disabled { opacity: .4; cursor: default; }
+  .uc-swap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- Explicação ---------- */
+  .uc-explain {
+    width: 100%; max-width: 720px; min-height: 64px;
+    padding: 14px 18px; border-radius: 14px;
+    background: rgba(14, 26, 64, .6); border: 1px solid var(--line);
+    font-size: 14.5px; line-height: 1.6; color: var(--muted); text-align: center;
+  }
+  .uc-explain b { color: var(--text); }
+  .uc-explain .o { color: var(--cyan); font-weight: 700; }
+  .uc-explain .t { color: var(--accent); font-weight: 700; }
+  .uc-explain .eq { display: block; margin-top: 6px; font-size: 17px; color: var(--text); font-weight: 600; }
+  .uc-explain .note { display: block; margin-top: 4px; font-size: 12.5px; }
+
+  /* ---------- Tooltip (nome da unidade) ---------- */
+  #uc-tip {
+    position: absolute; z-index: 8; pointer-events: none;
+    transform: translateX(-50%);
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(8, 17, 46, .96); border: 1px solid var(--line);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    font-size: 12.5px; color: var(--muted); text-align: center; white-space: nowrap;
+  }
+  #uc-tip b { display: block; font-size: 14.5px; color: var(--accent); margin-bottom: 2px; }
+
+  @media (max-width: 760px) {
+    #sim-content { padding: 100px 12px 20px; gap: 20px; }
+    .uc-bar.l { left: 8px; top: 8px; }
+    .uc-bar.r { left: 8px; right: auto; top: 50px; }
+    .uc-bar-label { display: none; }
+    .uc-cell { --cell-w: 56px; }
+    .uc-sym { font-size: 21px; }
+    .uc-box { height: 50px; }
+    .uc-val, .uc-out { font-size: 18px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .uc-unit, .uc-swap, .uc-val, .uc-pick select { transition: none; }
+    .uc-swap:hover:not(:disabled) { transform: none; }
+  }
+</style>
+</head>
+<body data-root="../../" data-page="simulation" data-category="matematica">
+
+<!-- Header (com botão "← Voltar") e footer são injetados por assets/js/layout.js -->
+
+<main>
+  <div class="luf-sub">
+    <h1>Unidades de Medida</h1>
+    <p>Escolha a unidade base no centro da tabela, clique na unidade de origem e depois na de destino para ver a conversão. Passe o mouse sobre uma unidade para ver o nome. No canto superior esquerdo há outras conversões (tempo, velocidade, temperatura...).</p>
+  </div>
+
+  <div class="luf-simwrap">
+    <section id="sim-stage" aria-label="Área da simulação">
+      <div id="sim-content">
+        <div class="uc-scroller" id="uc-scroller">
+          <div class="uc-track" id="uc-track">
+            <svg id="uc-arrows" aria-hidden="true"></svg>
+            <div class="uc-strip" id="uc-strip" role="group" aria-label="Tabela de unidades"></div>
+          </div>
+        </div>
+
+        <div class="uc-io">
+          <div class="uc-pair">
+            <input class="uc-box uc-val" id="uc-val" type="text" inputmode="decimal" autocomplete="off" value="3" aria-label="Valor a converter">
+            <div class="uc-box uc-ubox o" id="uc-ubox-o" aria-label="Unidade de origem">?</div>
+          </div>
+          <button type="button" class="uc-swap" id="uc-swap" title="Inverter conversão" aria-label="Inverter conversão">⇄</button>
+          <div class="uc-pair">
+            <output class="uc-box uc-out" id="uc-out" aria-live="polite">—</output>
+            <div class="uc-box uc-ubox t" id="uc-ubox-t" aria-label="Unidade de destino">?</div>
+          </div>
+        </div>
+
+        <div class="uc-explain" id="uc-explain" aria-live="polite"></div>
+      </div>
+
+      <div class="uc-bar l">
+        <span class="uc-bar-label">Conversão</span>
+        <label class="uc-pick"><select id="uc-cat" aria-label="Tipo de conversão"></select></label>
+      </div>
+      <div class="uc-bar r">
+        <span class="uc-bar-label">Unidades</span>
+        <label class="uc-pick">
+          <select id="uc-mode" aria-label="Quantidade de unidades na tabela">
+            <option value="comum">Comum</option>
+            <option value="todos">Todos</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="uc-tip" hidden></div>
+
+      <button type="button" class="luf-fs-btn" id="sim-fullscreen-btn" aria-label="Tela cheia" title="Tela cheia">⛶</button>
+    </section>
+  </div>
+</main>
+
+<!-- Ordem obrigatória: registro de dados -> layout -> shell de simulação -->
+<script src="../../data/simulations.js"></script>
+<script src="../../assets/js/layout.js"></script>
+<script src="../../assets/js/simulation-shell.js"></script>
+
+<script>
+(function () {
+  "use strict";
+  if (!window.LUF || !LUF.stage) return;
+
+  // ==========================================
+  // 1. DADOS
+  // ==========================================
+
+  // Prefixos do SI, do maior para o menor. "Comum" usa só de k até m.
+  var PREFIXES = [
+    { s: "Q", n: "quetta", e: 30 }, { s: "R", n: "ronna", e: 27 }, { s: "Y", n: "yotta", e: 24 },
+    { s: "Z", n: "zetta", e: 21 }, { s: "E", n: "exa", e: 18 }, { s: "P", n: "peta", e: 15 },
+    { s: "T", n: "tera", e: 12 }, { s: "G", n: "giga", e: 9 }, { s: "M", n: "mega", e: 6 },
+    { s: "k", n: "quilo", e: 3 }, { s: "h", n: "hecto", e: 2 }, { s: "da", n: "deca", e: 1 },
+    { s: "", n: "", e: 0 },
+    { s: "d", n: "deci", e: -1 }, { s: "c", n: "centi", e: -2 }, { s: "m", n: "mili", e: -3 },
+    { s: "µ", n: "micro", e: -6 }, { s: "n", n: "nano", e: -9 }, { s: "p", n: "pico", e: -12 },
+    { s: "f", n: "femto", e: -15 }, { s: "a", n: "atto", e: -18 }, { s: "z", n: "zepto", e: -21 },
+    { s: "y", n: "yocto", e: -24 }, { s: "r", n: "ronto", e: -27 }, { s: "q", n: "quecto", e: -30 }
+  ];
+
+  // Unidades base da tabela decimal (seletor da célula central).
+  // accent: o prefixo ganha acento antes de "metro" (quilômetro, decímetro).
+  // dim: cada degrau vale "dim" casas (m² = 2, m³ = 3).
+  var BASES = [
+    { sym: "m", name: "metro", accent: true, dim: 1, label: "m — comprimento" },
+    { sym: "m²", name: "metro", suffix: " quadrado", accent: true, dim: 2, label: "m² — área" },
+    { sym: "m³", name: "metro", suffix: " cúbico", accent: true, dim: 3, label: "m³ — volume" },
+    { sym: "L", name: "litro", dim: 1, label: "L — capacidade" },
+    { sym: "g", name: "grama", dim: 1, label: "g — massa" },
+    { sym: "s", name: "segundo", dim: 1, label: "s — tempo" },
+    { sym: "N", name: "newton", dim: 1, label: "N — força" },
+    { sym: "J", name: "joule", dim: 1, label: "J — energia" },
+    { sym: "W", name: "watt", dim: 1, label: "W — potência" },
+    { sym: "Pa", name: "pascal", dim: 1, label: "Pa — pressão" },
+    { sym: "C", name: "coulomb", dim: 1, label: "C — carga elétrica" },
+    { sym: "A", name: "ampere", dim: 1, label: "A — corrente elétrica" },
+    { sym: "V", name: "volt", dim: 1, label: "V — tensão elétrica" },
+    { sym: "Ω", name: "ohm", hyphen: true, dim: 1, label: "Ω — resistência" },
+    { sym: "Hz", name: "hertz", dim: 1, label: "Hz — frequência" },
+    { sym: "mol", name: "mol", dim: 1, label: "mol — quantidade de matéria" }
+  ];
+
+  // Outras conversões. f = quanto vale 1 unidade na unidade de referência
+  // (ref, a unidade do SI). c = aparece no modo "Comum". Ordem: maior -> menor.
+  var KMH = 1000 / 3600;
+  var SPECIAL = {
+    tempo: { label: "Tempo", ref: "s", def: ["h", "min"], units: [
+      { sym: "séc", name: "século", f: 3153600000, note: "100 anos de 365 dias" },
+      { sym: "déc", name: "década", f: 315360000, note: "10 anos de 365 dias" },
+      { sym: "ano", name: "ano", f: 31536000, note: "ano de 365 dias" },
+      { sym: "mês", name: "mês", f: 2592000, note: "mês comercial de 30 dias" },
+      { sym: "sem", name: "semana", f: 604800 },
+      { sym: "d", name: "dia", f: 86400, c: 1 },
+      { sym: "h", name: "hora", f: 3600, c: 1 },
+      { sym: "min", name: "minuto", f: 60, c: 1 },
+      { sym: "s", name: "segundo", f: 1, c: 1 },
+      { sym: "ms", name: "milissegundo", f: 0.001 }
+    ] },
+    velocidade: { label: "Velocidade", ref: "m/s", def: ["km/h", "m/s"], units: [
+      { sym: "c", name: "velocidade da luz", f: 299792458, note: "no vácuo" },
+      { sym: "km/s", name: "quilômetro por segundo", f: 1000 },
+      { sym: "m/s", name: "metro por segundo", f: 1, c: 1 },
+      { sym: "nó", name: "nó", f: 1852 / 3600, c: 1, note: "1 milha náutica por hora" },
+      { sym: "mph", name: "milha por hora", f: 0.44704, c: 1 },
+      { sym: "ft/s", name: "pé por segundo", f: 0.3048 },
+      { sym: "km/h", name: "quilômetro por hora", f: KMH, c: 1 },
+      { sym: "cm/s", name: "centímetro por segundo", f: 0.01 }
+    ] },
+    aceleracao: { label: "Aceleração", ref: "m/s²", def: ["g", "m/s²"], units: [
+      { sym: "g", name: "aceleração da gravidade padrão", f: 9.80665, c: 1, note: "g₀ = 9,80665 m/s²" },
+      { sym: "m/s²", name: "metro por segundo ao quadrado", f: 1, c: 1 },
+      { sym: "ft/s²", name: "pé por segundo ao quadrado", f: 0.3048 },
+      { sym: "(km/h)/s", name: "quilômetro por hora por segundo", f: KMH, c: 1 },
+      { sym: "Gal", name: "gal (galileu)", f: 0.01, note: "1 Gal = 1 cm/s²" }
+    ] },
+    comprimento: { label: "Comprimento (outros sistemas)", ref: "m", def: ["mi", "km"], units: [
+      { sym: "ano-luz", name: "ano-luz", f: 9460730472580800, note: "distância que a luz percorre em 1 ano" },
+      { sym: "ua", name: "unidade astronômica", f: 149597870700, note: "distância média Terra–Sol" },
+      { sym: "nmi", name: "milha náutica", f: 1852 },
+      { sym: "mi", name: "milha", f: 1609.344, c: 1 },
+      { sym: "km", name: "quilômetro", f: 1000, c: 1 },
+      { sym: "m", name: "metro", f: 1, c: 1 },
+      { sym: "yd", name: "jarda", f: 0.9144, c: 1 },
+      { sym: "ft", name: "pé", f: 0.3048, c: 1 },
+      { sym: "in", name: "polegada", f: 0.0254, c: 1 },
+      { sym: "cm", name: "centímetro", f: 0.01 },
+      { sym: "mm", name: "milímetro", f: 0.001 },
+      { sym: "Å", name: "ångström", f: 1e-10, note: "usado para raios atômicos" }
+    ] },
+    massa: { label: "Massa (outros sistemas)", ref: "kg", def: ["lb", "kg"], units: [
+      { sym: "t", name: "tonelada", f: 1000, c: 1 },
+      { sym: "@", name: "arroba", f: 15, c: 1, note: "usada para gado no Brasil" },
+      { sym: "kg", name: "quilograma", f: 1, c: 1 },
+      { sym: "lb", name: "libra", f: 0.45359237, c: 1 },
+      { sym: "oz", name: "onça", f: 0.028349523125, c: 1 },
+      { sym: "g", name: "grama", f: 0.001, c: 1 },
+      { sym: "ct", name: "quilate", f: 0.0002, note: "usado para pedras preciosas" },
+      { sym: "u", name: "unidade de massa atômica", f: 1.66053906660e-27 }
+    ] },
+    area: { label: "Área", ref: "m²", def: ["ha", "m²"], units: [
+      { sym: "km²", name: "quilômetro quadrado", f: 1e6, c: 1 },
+      { sym: "alq", name: "alqueire paulista", f: 24200, note: "varia de região para região" },
+      { sym: "ha", name: "hectare", f: 1e4, c: 1, note: "1 ha = 1 hm²" },
+      { sym: "ac", name: "acre", f: 4046.8564224, c: 1 },
+      { sym: "a", name: "are", f: 100, note: "1 a = 1 dam²" },
+      { sym: "m²", name: "metro quadrado", f: 1, c: 1 },
+      { sym: "ft²", name: "pé quadrado", f: 0.09290304 },
+      { sym: "cm²", name: "centímetro quadrado", f: 1e-4, c: 1 },
+      { sym: "in²", name: "polegada quadrada", f: 0.00064516 }
+    ] },
+    volume: { label: "Volume", ref: "m³", def: ["gal", "L"], units: [
+      { sym: "m³", name: "metro cúbico", f: 1, c: 1 },
+      { sym: "bbl", name: "barril de petróleo", f: 0.158987294928 },
+      { sym: "ft³", name: "pé cúbico", f: 0.028316846592 },
+      { sym: "gal", name: "galão americano", f: 0.003785411784, c: 1 },
+      { sym: "L", name: "litro", f: 0.001, c: 1, note: "1 L = 1 dm³" },
+      { sym: "xíc", name: "xícara", f: 0.00024, note: "xícara de 240 mL" },
+      { sym: "in³", name: "polegada cúbica", f: 1.6387064e-5 },
+      { sym: "mL", name: "mililitro", f: 1e-6, c: 1, note: "1 mL = 1 cm³" }
+    ] },
+    temperatura: { label: "Temperatura", ref: "K", def: ["°C", "°F"], affine: true, units: [
+      { sym: "K", name: "kelvin", cap: "SI", c: 1, note: "água: congela a 273,15 e ferve a 373,15",
+        toK: function (v) { return v; }, fromK: function (k) { return k; } },
+      { sym: "°C", name: "grau Celsius", cap: "Celsius", c: 1, note: "água: congela a 0 e ferve a 100",
+        toK: function (v) { return v + 273.15; }, fromK: function (k) { return k - 273.15; } },
+      { sym: "°F", name: "grau Fahrenheit", cap: "Fahrenheit", c: 1, note: "água: congela a 32 e ferve a 212",
+        toK: function (v) { return (v - 32) / 1.8 + 273.15; }, fromK: function (k) { return (k - 273.15) * 1.8 + 32; } },
+      { sym: "°R", name: "grau Rankine", cap: "Rankine", note: "água: congela a 491,67 e ferve a 671,67",
+        toK: function (v) { return v / 1.8; }, fromK: function (k) { return k * 1.8; } }
+    ] },
+    pressao: { label: "Pressão", ref: "Pa", def: ["atm", "mmHg"], units: [
+      { sym: "atm", name: "atmosfera", f: 101325, c: 1, note: "pressão média ao nível do mar" },
+      { sym: "bar", name: "bar", f: 1e5, c: 1 },
+      { sym: "kgf/cm²", name: "quilograma-força por cm²", f: 98066.5 },
+      { sym: "mca", name: "metro de coluna d'água", f: 9806.65 },
+      { sym: "psi", name: "libra-força por polegada quadrada", f: 6894.757293168, c: 1, note: "usada para calibrar pneus" },
+      { sym: "kPa", name: "quilopascal", f: 1000 },
+      { sym: "cmHg", name: "centímetro de mercúrio", f: 1333.22387415 },
+      { sym: "mmHg", name: "milímetro de mercúrio", f: 133.322387415, c: 1 },
+      { sym: "Pa", name: "pascal", f: 1, c: 1 }
+    ] },
+    energia: { label: "Energia", ref: "J", def: ["kcal", "J"], units: [
+      { sym: "kWh", name: "quilowatt-hora", f: 3.6e6, c: 1, note: "unidade da conta de luz" },
+      { sym: "kcal", name: "quilocaloria", f: 4184, c: 1, note: "a \"caloria\" dos rótulos de alimentos" },
+      { sym: "BTU", name: "unidade térmica britânica", f: 1055.05585262 },
+      { sym: "kJ", name: "quilojoule", f: 1000 },
+      { sym: "cal", name: "caloria", f: 4.184, c: 1, note: "1 kcal = 1000 cal" },
+      { sym: "J", name: "joule", f: 1, c: 1 },
+      { sym: "erg", name: "erg", f: 1e-7 },
+      { sym: "eV", name: "elétron-volt", f: 1.602176634e-19 }
+    ] },
+    angulo: { label: "Ângulo", ref: "rad", def: ["°", "rad"], units: [
+      { sym: "volta", name: "volta completa", f: 2 * Math.PI, c: 1, note: "1 volta = 360°" },
+      { sym: "rad", name: "radiano", f: 1, c: 1 },
+      { sym: "°", name: "grau", f: Math.PI / 180, c: 1 },
+      { sym: "gon", name: "grado", f: Math.PI / 200, note: "1 volta = 400 gon" },
+      { sym: "′", name: "minuto de arco", f: Math.PI / 10800, note: "1° = 60′" },
+      { sym: "″", name: "segundo de arco", f: Math.PI / 648000, note: "1′ = 60″" }
+    ] }
+  };
+
+  var TEMP_FORMULAS = {
+    "°C>K": "K = °C + 273,15", "K>°C": "°C = K − 273,15",
+    "°C>°F": "°F = °C × 1,8 + 32", "°F>°C": "°C = (°F − 32) ÷ 1,8",
+    "K>°F": "°F = (K − 273,15) × 1,8 + 32", "°F>K": "K = (°F − 32) ÷ 1,8 + 273,15",
+    "K>°R": "°R = K × 1,8", "°R>K": "K = °R ÷ 1,8",
+    "°C>°R": "°R = (°C + 273,15) × 1,8", "°R>°C": "°C = °R ÷ 1,8 − 273,15",
+    "°F>°R": "°R = °F + 459,67", "°R>°F": "°F = °R − 459,67"
+  };
+
+  // ==========================================
+  // 2. ESTADO E ELEMENTOS
+  // ==========================================
+  var state = { cat: "decimal", mode: "comum", base: 0, origin: "e-2", target: "e2", preview: null };
+  var units = [];
+
+  var stage = LUF.stage.el;
+  var scroller = document.getElementById("uc-scroller");
+  var track = document.getElementById("uc-track");
+  var strip = document.getElementById("uc-strip");
+  var svg = document.getElementById("uc-arrows");
+  var valInput = document.getElementById("uc-val");
+  var outEl = document.getElementById("uc-out");
+  var uboxO = document.getElementById("uc-ubox-o");
+  var uboxT = document.getElementById("uc-ubox-t");
+  var swapBtn = document.getElementById("uc-swap");
+  var explainEl = document.getElementById("uc-explain");
+  var tip = document.getElementById("uc-tip");
+  var catSel = document.getElementById("uc-cat");
+  var modeSel = document.getElementById("uc-mode");
+
+  // ==========================================
+  // 3. NÚMEROS
+  // ==========================================
+  var SUP = { "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻" };
+  function sup(n) {
+    return String(n).split("").map(function (ch) { return SUP[ch] || ch; }).join("");
+  }
+
+  // Lê "1.234,5", "1234.5" ou "0,003" como decimal exato (strings de dígitos).
+  function parseDecimal(str) {
+    var s = String(str).trim().replace(/\s/g, "");
+    if (s.indexOf(",") !== -1) s = s.replace(/\./g, "").replace(",", ".");
+    var m = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(s);
+    if (!m || (m[2] + (m[3] || "")) === "") return null;
+    return { neg: m[1] === "-", int: m[2], frac: m[3] || "" };
+  }
+
+  // Desloca a vírgula n casas (n > 0: para a direita). Sem erro de arredondamento.
+  function shiftDecimal(d, n) {
+    var digits = d.int + d.frac;
+    var pos = d.int.length + n;
+    if (pos < 0) { digits = new Array(-pos + 1).join("0") + digits; pos = 0; }
+    if (pos > digits.length) digits += new Array(pos - digits.length + 1).join("0");
+    return { neg: d.neg, int: digits.slice(0, pos).replace(/^0+/, ""), frac: digits.slice(pos).replace(/0+$/, "") };
+  }
+
+  function isZero(d) { return !/[1-9]/.test(d.int + d.frac); }
+
+  function decToSci(d) {
+    if (isZero(d)) return "0";
+    var digits = d.int + d.frac;
+    var i = digits.search(/[1-9]/);
+    var exp = d.int.length - 1 - i;
+    var m = digits.slice(i).replace(/0+$/, "");
+    var mant = m[0] + (m.length > 1 ? "," + m.slice(1) : "");
+    return (d.neg ? "−" : "") + mant + (exp === 0 ? "" : " × 10" + sup(exp));
+  }
+
+  function decToPlain(d) {
+    if (isZero(d)) return "0";
+    var i = (d.int || "0").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return (d.neg ? "−" : "") + i + (d.frac ? "," + d.frac : "");
+  }
+
+  // Número muito longo vira notação científica (exata).
+  function decFormat(d) {
+    var leadZeros = d.int ? 0 : (d.frac.match(/^0*/)[0].length);
+    if (d.int.length > 15 || leadZeros > 8) return decToSci(d);
+    return decToPlain(d);
+  }
+
+  function fmtNum(x, sig) {
+    if (!isFinite(x)) return "—";
+    if (x === 0) return "0";
+    var ax = Math.abs(x);
+    // Sem ponto de milhar abaixo de 10.000: "4184" não se confunde com "4,184"
+    if (ax >= 1e-6 && ax < 1e15) return x.toLocaleString("pt-BR", { maximumSignificantDigits: sig, useGrouping: ax >= 10000 });
+    var e = Math.floor(Math.log10(ax));
+    var m = Number((x / Math.pow(10, e)).toPrecision(sig));
+    if (Math.abs(m) >= 10) { m /= 10; e++; }
+    return m.toLocaleString("pt-BR", { maximumSignificantDigits: sig }) + " × 10" + sup(e);
+  }
+
+  // ==========================================
+  // 4. MONTAGEM DA TABELA
+  // ==========================================
+  var ACCENT = { a: "â", o: "ô", i: "í" };
+
+  // quilo + metro = quilômetro; mili + segundo = milissegundo; quilo + ohm = quilo-ohm
+  function prefixedName(p, b) {
+    if (!p.n) return b.name + (b.suffix || "");
+    var pre = p.n, base = b.name;
+    if (b.accent) pre = pre.slice(0, -1) + (ACCENT[pre.slice(-1)] || pre.slice(-1));
+    else if (b.hyphen) pre += "-";
+    else if (/^[sr]/.test(base)) base = base[0] + base;
+    return pre + base + (b.suffix || "");
+  }
+
+  function buildUnits() {
+    if (state.cat === "decimal") {
+      var b = BASES[state.base];
+      return PREFIXES.filter(function (p) {
+        return state.mode === "todos" || (p.e >= -3 && p.e <= 3);
+      }).map(function (p) {
+        var pow = p.e * b.dim;
+        var one = decFormat(shiftDecimal(parseDecimal("1"), pow));
+        return {
+          key: "e" + p.e, pre: p.s, un: b.sym, sym: p.s + b.sym, exp: p.e, ref: p.e === 0,
+          name: prefixedName(p, b),
+          cap: p.e === 0 ? "" : "10" + sup(pow),
+          tip: p.e === 0 ? "unidade base" : "1 " + p.s + b.sym + " = " + one + " " + b.sym
+        };
+      });
+    }
+    var cat = SPECIAL[state.cat];
+    return cat.units.filter(function (u) {
+      return state.mode === "todos" || u.c;
+    }).map(function (u) {
+      var isRef = u.sym === cat.ref;
+      var cap, tipTxt;
+      if (cat.affine) { cap = u.cap; tipTxt = u.note; }
+      else {
+        cap = isRef ? "SI" : "= " + fmtNum(u.f, 4) + " " + cat.ref;
+        tipTxt = isRef ? "unidade do SI" + (u.note ? " · " + u.note : "") :
+          "1 " + u.sym + " = " + fmtNum(u.f, 10) + " " + cat.ref + (u.note ? " · " + u.note : "");
+      }
+      return { key: u.sym, pre: "", un: "", sym: u.sym, ref: isRef, name: u.name, cap: cap, tip: tipTxt, u: u };
+    });
+  }
+
+  function find(key) {
+    for (var i = 0; i < units.length; i++) if (units[i].key === key) return i;
+    return -1;
+  }
+
+  function buildLadder() {
+    units = buildUnits();
+    if (find(state.origin) < 0) state.origin = null;
+    if (find(state.target) < 0) state.target = null;
+    state.preview = null;
+
+    strip.className = "uc-strip";
+    scroller.classList.toggle("uc-all", state.cat === "decimal" && state.mode === "todos");
+    scroller.classList.toggle("uc-special", state.cat !== "decimal");
+    strip.innerHTML = "";
+
+    units.forEach(function (unit) {
+      var cell = document.createElement("div");
+      cell.className = "uc-cell" + (unit.ref ? " is-ref" : "");
+      cell.dataset.key = unit.key;
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "uc-unit";
+      btn.setAttribute("aria-label", unit.name + " (" + unit.sym + ")");
+      var symEl = document.createElement("span");
+      symEl.className = "uc-sym";
+      if (unit.pre) symEl.appendChild(document.createTextNode(unit.pre));
+      if (unit.un) {
+        var unEl = document.createElement("span");
+        unEl.className = "un";
+        unEl.textContent = unit.un;
+        symEl.appendChild(unEl);
+      } else if (!unit.pre) {
+        symEl.textContent = unit.sym;
+      }
+      btn.appendChild(symEl);
+      if (unit.cap) {
+        var capEl = document.createElement("span");
+        capEl.className = "uc-cap";
+        capEl.textContent = unit.cap;
+        btn.appendChild(capEl);
+      }
+      cell.appendChild(btn);
+
+      // Célula central da tabela decimal: escolhe a unidade base
+      if (state.cat === "decimal" && unit.ref) {
+        var pick = document.createElement("label");
+        pick.className = "uc-base-pick";
+        pick.textContent = "trocar ▾";
+        var sel = document.createElement("select");
+        sel.setAttribute("aria-label", "Unidade base da tabela");
+        BASES.forEach(function (b, i) {
+          var opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = b.label;
+          if (i === state.base) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener("change", function () {
+          state.base = Number(sel.value);
+          buildLadder();
+          var again = strip.querySelector(".uc-base-pick select");
+          if (again) again.focus();
+        });
+        pick.appendChild(sel);
+        cell.appendChild(pick);
+      }
+
+      btn.addEventListener("click", function () { pickUnit(unit.key); });
+      btn.addEventListener("mouseenter", function () { hover(unit.key, cell); });
+      btn.addEventListener("focus", function () { hover(unit.key, cell); });
+      btn.addEventListener("mouseleave", unhover);
+      btn.addEventListener("blur", unhover);
+
+      strip.appendChild(cell);
+    });
+
+    render();
+    centerRef();
+  }
+
+  // Deixa a unidade de referência visível no meio quando a tabela rola
+  function centerRef() {
+    var ref = strip.querySelector(".uc-cell.is-ref");
+    if (!ref || scroller.scrollWidth <= scroller.clientWidth) { scroller.scrollLeft = 0; return; }
+    scroller.scrollLeft = ref.offsetLeft - (scroller.clientWidth - ref.offsetWidth) / 2;
+  }
+
+  // ==========================================
+  // 5. INTERAÇÃO
+  // ==========================================
+  function pickUnit(key) {
+    if (state.origin === null || state.target !== null) {
+      state.origin = key; state.target = null;
+    } else if (key === state.origin) {
+      state.origin = null;
+    } else {
+      state.target = key;
+    }
+    state.preview = null;
+    render();
+  }
+
+  function hover(key, cell) {
+    var unit = units[find(key)];
+    tip.innerHTML = "";
+    var b = document.createElement("b");
+    b.textContent = unit.name;
+    tip.appendChild(b);
+    if (unit.tip) tip.appendChild(document.createTextNode(unit.tip));
+    tip.hidden = false;
+
+    var sr = stage.getBoundingClientRect();
+    var cr = cell.getBoundingClientRect();
+    var x = cr.left + cr.width / 2 - sr.left;
+    var half = tip.offsetWidth / 2;
+    x = Math.max(half + 8, Math.min(sr.width - half - 8, x));
+    var y = cr.bottom - sr.top + 10;
+    if (y + tip.offsetHeight > sr.height - 8) y = cr.top - sr.top - tip.offsetHeight - 10;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+
+    var p = state.origin !== null && state.target === null && key !== state.origin ? key : null;
+    if (p !== state.preview) { state.preview = p; drawArrows(); }
+  }
+
+  function unhover() {
+    tip.hidden = true;
+    if (state.preview !== null) { state.preview = null; drawArrows(); }
+  }
+
+  swapBtn.addEventListener("click", function () {
+    if (state.origin === null || state.target === null) return;
+    var o = state.origin; state.origin = state.target; state.target = o;
+    var r = currentResult();
+    if (r && r.raw !== null) valInput.value = r.raw;
+    render();
+  });
+
+  valInput.addEventListener("input", render);
+
+  catSel.addEventListener("change", function () {
+    state.cat = catSel.value;
+    var def = state.cat === "decimal" ? ["e-2", "e2"] : SPECIAL[state.cat].def;
+    state.origin = def[0]; state.target = def[1];
+    buildLadder();
+  });
+
+  modeSel.addEventListener("change", function () {
+    state.mode = modeSel.value;
+    buildLadder();
+  });
+
+  // ==========================================
+  // 6. CONVERSÃO E EXPLICAÇÃO
+  // ==========================================
+  function arrowLabel(o, t) {
+    if (state.cat === "decimal") {
+      var n = (o.exp - t.exp) * BASES[state.base].dim;
+      return (n > 0 ? "× 10" : "÷ 10") + sup(Math.abs(n));
+    }
+    if (SPECIAL[state.cat].affine) return "fórmula";
+    var r = o.u.f / t.u.f;
+    return r >= 1 ? "× " + fmtNum(r, 4) : "÷ " + fmtNum(1 / r, 4);
+  }
+
+  // Devolve { text, raw (valor para reaproveitar ao inverter), html }
+  function currentResult() {
+    var oi = find(state.origin), ti = find(state.target);
+    if (oi < 0 || ti < 0) return null;
+    var o = units[oi], t = units[ti];
+    var d = parseDecimal(valInput.value);
+    if (!d) return { text: "—", raw: null, html: "Digite um número válido no primeiro campo (ex.: 3 ou 2,5)." };
+    var vTxt = decFormat(d);
+    var oS = '<span class="o">' + o.sym + "</span>", tS = '<span class="t">' + t.sym + "</span>";
+
+    if (state.cat === "decimal") {
+      var b = BASES[state.base];
+      var n = (o.exp - t.exp) * b.dim;
+      var res = shiftDecimal(d, n);
+      var casas = Math.abs(n) + (Math.abs(n) === 1 ? " casa" : " casas");
+      var lado = n > 0 ? "direita" : "esquerda";
+      var pot = "10" + sup(Math.abs(n));
+      var plainPot = Math.abs(n) <= 9 ? " (" + decToPlain(shiftDecimal(parseDecimal("1"), Math.abs(n))) + ")" : "";
+      var html = "De " + oS + " para " + tS + " a vírgula anda <b>" + casas + " para a " + lado + "</b>: " +
+        (n > 0 ? "multiplique" : "divida") + " por <b>" + pot + plainPot + "</b>.";
+      if (b.dim > 1) html += '<span class="note">Em ' + b.sym + ", cada degrau da tabela vale " + b.dim + " casas.</span>";
+      if (state.mode === "todos" && (Math.abs(o.exp) > 3 || Math.abs(t.exp) > 3))
+        html += '<span class="note">Atenção: acima de k e abaixo de m os prefixos pulam de 3 em 3 casas.</span>';
+      var txt = decFormat(res);
+      var sci = decToSci(res);
+      html += '<span class="eq">' + vTxt + " " + o.sym + " = " + txt + " " + t.sym +
+        (sci !== txt ? " = " + sci + " " + t.sym : "") + "</span>";
+      var raw = decToPlain(res).replace(/\./g, "").replace("−", "-");
+      return { text: txt, raw: res.int.length > 15 ? null : raw, html: html };
+    }
+
+    var cat = SPECIAL[state.cat];
+    var v = Number((d.neg ? "-" : "") + (d.int || "0") + "." + (d.frac || "0"));
+    var r, h;
+    if (cat.affine) {
+      r = t.u.fromK(o.u.toK(v));
+      h = "Fórmula: <b>" + TEMP_FORMULAS[o.sym + ">" + t.sym] + "</b>";
+      if (t.sym === "K" && r < 0) h += '<span class="note">Abaixo de 0 K não existe: o zero absoluto é o menor valor possível.</span>';
+    } else {
+      var ratio = o.u.f / t.u.f;
+      h = "1 " + oS + " = <b>" + fmtNum(ratio, 7) + "</b> " + tS + ". Para ir de " + oS + " para " + tS + ", " +
+        (ratio >= 1 ? "multiplique por <b>" + fmtNum(ratio, 7) : "divida por <b>" + fmtNum(1 / ratio, 7)) + "</b>.";
+      r = v * ratio;
+      var notes = [o.u, t.u].filter(function (u) { return u.note; }).map(function (u) { return u.sym + ": " + u.note; });
+      if (notes.length) h += '<span class="note">' + notes.join(" · ") + "</span>";
+    }
+    var out = fmtNum(r, 10);
+    h += '<span class="eq">' + vTxt + " " + o.sym + " = " + out + " " + t.sym + "</span>";
+    return { text: out, raw: /×/.test(out) ? null : out.replace(/\./g, "").replace("−", "-"), html: h };
+  }
+
+  function render() {
+    var oi = find(state.origin), ti = find(state.target);
+    var lo = Math.min(oi, ti), hi = Math.max(oi, ti);
+    Array.prototype.forEach.call(strip.children, function (cell, i) {
+      cell.classList.toggle("is-origin", i === oi);
+      cell.classList.toggle("is-target", i === ti);
+      cell.classList.toggle("is-path", oi >= 0 && ti >= 0 && i > lo && i < hi);
+    });
+
+    var o = oi >= 0 ? units[oi] : null, t = ti >= 0 ? units[ti] : null;
+    uboxO.textContent = o ? o.sym : "?";
+    uboxO.classList.toggle("empty", !o);
+    uboxO.title = o ? o.name : "";
+    uboxT.textContent = t ? t.sym : "?";
+    uboxT.classList.toggle("empty", !t);
+    uboxT.title = t ? t.name : "";
+    swapBtn.disabled = !(o && t);
+    valInput.classList.toggle("is-bad", !parseDecimal(valInput.value) && valInput.value.trim() !== "");
+
+    if (!o) {
+      outEl.textContent = "—";
+      explainEl.innerHTML = "Clique em uma unidade da tabela para escolher a <span class=\"o\">origem</span>.";
+    } else if (!t) {
+      outEl.textContent = "—";
+      explainEl.innerHTML = "Origem: <span class=\"o\">" + o.sym + "</span>. Agora clique na unidade de <span class=\"t\">destino</span>.";
+    } else {
+      var r = currentResult();
+      outEl.textContent = r.text;
+      explainEl.innerHTML = r.html;
+    }
+    drawArrows();
+  }
+
+  // ==========================================
+  // 7. SETAS (SVG sobre a tabela)
+  // ==========================================
+  var NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function cellX(i) {
+    var c = strip.children[i];
+    return strip.offsetLeft + c.offsetLeft + c.offsetWidth / 2;
+  }
+
+  function arrow(x1, x2, yTop, label, preview) {
+    var yH = 16, dir = x2 > x1 ? 1 : -1, r = Math.min(9, Math.abs(x2 - x1) / 2);
+    var g = el("g", preview ? { opacity: ".5" } : {});
+    if (!preview) {
+      var grad = el("linearGradient", { id: "uc-grad", gradientUnits: "userSpaceOnUse", x1: x1, y1: 0, x2: x2, y2: 0 });
+      grad.appendChild(el("stop", { offset: "0", "stop-color": "#6fd3ff" }));
+      grad.appendChild(el("stop", { offset: "1", "stop-color": "#fcf3c8" }));
+      g.appendChild(grad);
+    }
+    var d = "M" + x1 + " " + (yTop - 3) + " V" + (yH + r) + " Q" + x1 + " " + yH + " " + (x1 + dir * r) + " " + yH +
+      " H" + (x2 - dir * r) + " Q" + x2 + " " + yH + " " + x2 + " " + (yH + r) + " V" + (yTop - 9);
+    g.appendChild(el("path", {
+      d: d, fill: "none", "stroke-width": 2.5, "stroke-linecap": "round", "stroke-linejoin": "round",
+      stroke: preview ? "#6fd3ff" : "url(#uc-grad)", "stroke-dasharray": preview ? "6 5" : "none"
+    }));
+    // ponta da seta
+    g.appendChild(el("path", {
+      d: "M" + (x2 - 6) + " " + (yTop - 11) + " L" + x2 + " " + (yTop - 2) + " L" + (x2 + 6) + " " + (yTop - 11) + " Z",
+      fill: preview ? "#6fd3ff" : "#fcf3c8"
+    }));
+    // ponto de origem
+    g.appendChild(el("circle", { cx: x1, cy: yTop - 3, r: 4.5, fill: "#6fd3ff" }));
+    // rótulo (× 10⁴, ÷ 3,6...)
+    var txt = el("text", {
+      x: (x1 + x2) / 2, y: yH, "text-anchor": "middle", "dominant-baseline": "central",
+      "font-size": 12.5, "font-weight": 700, fill: preview ? "#6fd3ff" : "#fcf3c8",
+      stroke: "#101d48", "stroke-width": 7, "paint-order": "stroke", "stroke-linejoin": "round"
+    });
+    txt.textContent = label;
+    g.appendChild(txt);
+    svg.appendChild(g);
+  }
+
+  function drawArrows() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var oi = find(state.origin);
+    if (oi < 0) return;
+    var yTop = strip.offsetTop;
+    var ti = find(state.target), pi = find(state.preview);
+    if (ti >= 0) arrow(cellX(oi), cellX(ti), yTop, arrowLabel(units[oi], units[ti]), false);
+    else if (pi >= 0) arrow(cellX(oi), cellX(pi), yTop, arrowLabel(units[oi], units[pi]), true);
+    else svg.appendChild(el("circle", { cx: cellX(oi), cy: yTop - 3, r: 4.5, fill: "#6fd3ff" }));
+  }
+
+  // ==========================================
+  // 8. INÍCIO
+  // ==========================================
+  var optDec = document.createElement("option");
+  optDec.value = "decimal";
+  optDec.textContent = "Decimal (prefixos do SI)";
+  catSel.appendChild(optDec);
+  Object.keys(SPECIAL).forEach(function (k) {
+    var opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = SPECIAL[k].label;
+    catSel.appendChild(opt);
+  });
+
+  scroller.addEventListener("scroll", function () { tip.hidden = true; });
+  LUF.stage.onResize(function () { drawArrows(); });
+
+  buildLadder();
+})();
+</script>
+</body>
+</html>
