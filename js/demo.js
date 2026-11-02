@@ -20,6 +20,7 @@
   const WHATSAPP = 'https://w.app/levelupfisapp'; // botão do Perfil
   const LEAD_KEY = 'lup.demo.lead';
   const PROG_KEY = 'lup.demo.progresso';
+  const AVAL_KEY = 'lup.demo.avaliacao'; // { pediu, rascunho, passo, enviada, pendente }
 
   // ================================================================
   // Utilidades (iguais às de js/app.js)
@@ -50,6 +51,8 @@
     phone: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm-5 21a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6zm5-4H7V4h10z"/></svg>',
     tag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.4 11.6l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .6.2 1.1.6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8zM6.5 8a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>',
     expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/><path d="M15 8h5v5"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8"/><path d="M12 8C10.5 4 7 4 7 6s2.5 2 5 2 5 0 5-2-3.5-2-5 2z"/></svg>',
   };
   const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus', video: 'playCircle', simulacao: 'atom' };
   const TIPO_NOME = { resumo: 'Resumo', fixacao: 'Fixação', extra: 'Exercícios', prova: 'Prova', curiosidade: 'Curiosidade', video: 'Vídeo', simulacao: 'Simulação' };
@@ -384,6 +387,8 @@
     let html = topBar();
     html += `<div class="card demo-aviso"><b>Bem-vindo à versão demonstração!</b>
       <span class="small muted">Explore a trilha à vontade. Aqui você não ganha Joules, Cargas nem Fótons — isso fica para a versão completa.</span></div>`;
+    // Convite da avaliação: só depois do 1º capítulo, para a pessoa já ter o que avaliar.
+    if (!avaliacao().enviada && capsFeitos() >= 1) html += conviteAvaliacao();
     if (areas.length > 1) {
       html += `<div class="modstrip">${areas.map((a, i) => `
         ${i > 0 ? `<span class="mod-link ${i <= idxAtual ? 'lit' : ''}" style="${temaVars(a.cor)}"></span>` : ''}
@@ -459,6 +464,7 @@
         };
       });
     });
+    pedirAvaliacao();
   }
 
   // ---------- Capítulo: abre a tela do tipo dele ----------
@@ -865,6 +871,7 @@
             ${q.explicacao ? `<div class="small muted" style="margin-top:6px;white-space:pre-wrap">${esc(q.explicacao)}</div>` : ''}</div></div>
           </div>`;
         }).join('')}</div>
+        ${avaliacao().enviada ? '' : `<div style="margin-top:18px;text-align:left">${conviteAvaliacao('Terminou a prova! Conte o que achou e ganhe vantagens no lançamento')}</div>`}
         <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>CONTINUAR</button></div>
       </div>`;
     $app.querySelector('[data-ok]').onclick = () => go('#/map');
@@ -876,6 +883,32 @@
     const PC = CFG.PLUS || {};
     const pct = Math.round((PC.AULA_DESCONTO_PLUS || 0) * 100);
     // Mesmos benefícios da página de venda em js/app.js (viewPlus).
+    // Destaque (largura toda): acompanhamento da evolução, com uma prévia
+    // ilustrativa do painel do aluno.
+    const evolucao = [
+      ['Estatística atual', 'Acertos, ritmo e pontos fortes em cada assunto.'],
+      ['Sua evolução', 'Semana a semana, para ver o quanto você já subiu.'],
+      ['Dicas para melhorar', 'O que revisar primeiro, a partir dos seus erros.'],
+      ['Acompanhamento personalizado', 'O professor acompanha você e ajusta o seu plano.'],
+    ];
+    const destaque = `
+      <div class="benefit evo">
+        <div class="evo-txt">
+          <div class="row" style="gap:12px;align-items:flex-start"><span class="ic">${ICON.chart}</span>
+            <div><div class="t">Acompanhamento da sua evolução de perto</div>
+            <div class="small muted">Você nunca estuda no escuro: sabe onde está, quanto evoluiu e o que fazer em seguida.</div></div></div>
+          <ul class="evo-lista">${evolucao.map(([t, d]) => `
+            <li><span class="ok">${ICON.check}</span><div><b>${esc(t)}</b><span class="small muted">${esc(d)}</span></div></li>`).join('')}
+          </ul>
+        </div>
+        <div class="evo-mock" aria-hidden="true">
+          <span class="evo-tag">Exemplo</span>
+          <div class="k">Seus acertos</div>
+          <div class="evo-num">78% <span>▲ 12 pts no mês</span></div>
+          <svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 46 L33 42 L66 44 L100 30 L133 26 L166 16 L200 10" fill="none" stroke="var(--gold)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+          <div class="evo-dica">${ICON.bulb}<span><b>Dica:</b> revise a componente vertical do lançamento oblíquo.</span></div>
+        </div>
+      </div>`;
     const beneficios = [
       ['phone', 'App com conteúdo e simulações', 'Tudo do LevelUp Fís: trilhas, resumos, exercícios e simulações físicas.'],
       ['chat', 'Comunidade de alunos', 'Grupo exclusivo no WhatsApp para trocar ideias, resoluções e se ajudar.'],
@@ -890,9 +923,9 @@
           <section class="plus-hero">
             <span class="plus-badge">${ICON.crown} LevelUp Plus</span>
             <h1>Física com acompanhamento de perto</h1>
-            <p>O app te leva pela trilha. No Plus, o professor caminha junto: dúvidas respondidas, plantões ao vivo e aulas particulares com desconto.</p>
+            <p>O app te leva pela trilha. No Plus, o professor caminha junto: acompanha a sua evolução, responde suas dúvidas, faz plantões ao vivo e dá aulas particulares com desconto.</p>
           </section>
-          <div class="benefits">${beneficios.map(([ic, t, d]) => `
+          <div class="benefits">${destaque}${beneficios.map(([ic, t, d]) => `
             <div class="benefit"><span class="ic">${ICON[ic]}</span><div><div class="t">${esc(t)}</div><div class="small muted">${esc(d)}</div></div></div>`).join('')}
           </div>
         </div>
@@ -904,9 +937,252 @@
               <p class="small muted">Os planos do LevelUp Plus abrem em breve. Fique de olho!</p>
             </div>
           </div>
+          ${avaliacao().enviada
+            ? `<div class="card aval-garantido">${ICON.trophy}<div><b>Vantagens de lançamento garantidas</b><span class="small muted">Obrigado por avaliar! Você será avisado primeiro.</span></div></div>`
+            : conviteAvaliacao('Avalie a demo e garanta vantagens quando o Plus abrir')}
         </aside>
       </div>
       ${bottomNav('plus')}`;
+  }
+
+  // ---------- Avaliação da demo (#/avaliar → tabela demo_avaliacoes, sql/029) ----------
+  // Uma pergunta por tela; nas de toque único a tela avança sozinha. Só a
+  // nota geral é obrigatória, o resto tem "Pular". Os ids viram as chaves de
+  // "respostas" no banco e o painel (aba Demo → Avaliações) lê pelos mesmos
+  // ids: ao trocar uma pergunta aqui, troque lá também (AVAL_PERGUNTAS).
+  // Aparelho, navegador, tela e progresso vão sozinhos em "meta".
+  const VANTAGENS = [
+    ['crown', 'Acesso antecipado', 'Você entra antes de todo mundo quando a versão completa abrir.'],
+    ['tag', 'Condição especial de lançamento', 'Um benefício exclusivo para quem ajudou a construir o LevelUp.'],
+    ['trophy', 'Selo de Testador Fundador', 'Um selo no seu perfil para sempre.'],
+  ];
+  const FACES = ['😣', '😕', '😐', '🙂', '😍'];
+  const PERGUNTAS = [
+    { id: 'nota', tipo: 'faces', titulo: 'Que nota você dá para a demo?', obrigatoria: true },
+    { id: 'perfil', tipo: 'um', titulo: 'Você é…', opcoes: ['Estudante do ensino médio', 'Vestibulando (ENEM e vestibulares)', 'Universitário', 'Professor(a)', 'Pai, mãe ou responsável', 'Outro'] },
+    { id: 'plataforma', tipo: 'um', titulo: 'Onde você testou?', sub: 'Já marcamos o que detectamos. Toque para confirmar.', opcoes: ['Celular Android', 'iPhone', 'Computador', 'Tablet / iPad'] },
+    { id: 'dificuldade', tipo: 'um', titulo: 'O nível do conteúdo foi…', opcoes: ['Muito fácil', 'Fácil', 'Na medida', 'Difícil', 'Muito difícil'] },
+    { id: 'notas', tipo: 'escalas', titulo: 'Uma nota rápida para cada parte', sub: 'De 1 (ruim) a 5 (ótimo). Deixe em branco o que não usou.',
+      itens: [['visual', 'Visual (cores e layout)'], ['leitura', 'Leitura (fonte e textos)'], ['navegacao', 'Facilidade de navegar'], ['simulacoes', 'Simulações'], ['exercicios', 'Exercícios'], ['resumos', 'Resumos']] },
+    { id: 'fonte', tipo: 'um', titulo: 'O tamanho da letra estava…', opcoes: ['Pequeno demais', 'Bom', 'Grande demais'] },
+    { id: 'gostou', tipo: 'varios', titulo: 'O que você mais curtiu?', sub: 'Marque quantos quiser.', opcoes: ['Simulações', 'Desafios das simulações', 'Resumos em cartões', 'Exercícios', 'Trilha / mapa', 'Prova final', 'Visual'] },
+    { id: 'melhorar', tipo: 'varios', titulo: 'O que podemos melhorar?', sub: 'Marque quantos quiser.', texto: 'Conte mais, se quiser (ex.: onde achou o erro)',
+      opcoes: ['Explicações mais claras', 'Mais exemplos resolvidos', 'Exercícios mais fáceis', 'Exercícios mais desafiadores', 'Simulações mais fáceis de usar', 'Carregar mais rápido', 'Funcionar melhor no celular', 'Encontrei um erro'] },
+    { id: 'plus', tipo: 'um', titulo: 'O LevelUp Plus te interessa?', sub: 'Acompanhamento da sua evolução, dúvidas com o professor, plantões ao vivo…', opcoes: ['Muito', 'Um pouco', 'Não'] },
+    { id: 'comentario', tipo: 'texto', titulo: 'Quer contar mais alguma coisa?', sub: 'Elogio, crítica, ideia… tudo nos ajuda antes do lançamento.', placeholder: 'Escreva aqui (opcional)' },
+  ];
+
+  const avaliacao = () => ler(AVAL_KEY, {});
+  const salvarAvaliacao = (mudar) => gravar(AVAL_KEY, Object.assign(avaliacao(), mudar));
+  const capsFeitos = () => Object.keys(prog().c).length;
+
+  function conviteAvaliacao(titulo = 'Avalie a demo e ganhe vantagens no lançamento') {
+    return `<a class="card aval-convite" href="#/avaliar">
+      <span class="ic">${ICON.gift}</span>
+      <span class="txt"><b>${esc(titulo)}</b><span class="small muted">Menos de 1 minuto · acesso antecipado e condição especial</span></span>
+      <span class="seta">›</span></a>`;
+  }
+  // Pede uma vez só, quando a pessoa já concluiu 2 capítulos.
+  async function pedirAvaliacao() {
+    const a = avaliacao();
+    if (a.enviada || a.pediu || capsFeitos() < 2) return;
+    salvarAvaliacao({ pediu: new Date().toISOString() });
+    const r = await modal({
+      title: 'Ajude a construir o LevelUp',
+      text: 'Responda uma pesquisa de menos de 1 minuto sobre a demo e garanta acesso antecipado e uma condição especial no lançamento.',
+      icon: ICON.gift,
+      buttons: [{ label: 'Depois', value: false }, { label: 'Avaliar agora', value: true, cls: 'btn-primary' }],
+    });
+    if (r) go('#/avaliar');
+  }
+
+  function detectarPlataforma() {
+    const ua = navigator.userAgent;
+    if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'Tablet / iPad';
+    if (/iPhone|iPod/.test(ua)) return 'iPhone';
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Celular Android' : 'Tablet / iPad';
+    return 'Computador';
+  }
+  function detectarNavegador() {
+    const ua = navigator.userAgent;
+    if (/Edg\//.test(ua)) return 'Edge';
+    if (/OPR\//.test(ua)) return 'Opera';
+    if (/SamsungBrowser/.test(ua)) return 'Samsung Internet';
+    if (/CriOS|Chrome\//.test(ua)) return 'Chrome';
+    if (/FxiOS|Firefox\//.test(ua)) return 'Firefox';
+    if (/Safari\//.test(ua)) return 'Safari';
+    return 'Outro';
+  }
+  function metaAvaliacao() {
+    const l = lead() || {};
+    const p = prog();
+    const caps = (S.areas || []).flatMap((a) => (a.blocos || []).flatMap((b) => b.capitulos || [])).filter((c) => !c.trancado);
+    return {
+      aparelho: detectarPlataforma(),
+      navegador: detectarNavegador(),
+      tela: `${screen.width}x${screen.height}`,
+      janela: `${innerWidth}x${innerHeight}`,
+      capitulos: Object.keys(p.c).length,
+      capitulos_total: caps.length || null,
+      desafios: Object.values(p.t).reduce((n, v) => n + (v || []).length, 0),
+      minutos: l.em ? Math.round((Date.now() - new Date(l.em)) / 60000) : null,
+      ua: navigator.userAgent.slice(0, 300),
+    };
+  }
+  async function enviarAvaliacao(corpo) {
+    await sb('demo_avaliacoes', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(corpo) });
+  }
+  // Se o envio falhou (sem internet), tenta de novo na próxima abertura.
+  async function reenviarPendente() {
+    const { pendente } = avaliacao();
+    if (!pendente) return;
+    try { await enviarAvaliacao(pendente); salvarAvaliacao({ pendente: null }); } catch { /* fica para a próxima */ }
+  }
+
+  function viewAvaliar() {
+    if (avaliacao().enviada) return viewAvaliacaoFim();
+    $app.className = 'app no-nav';
+    $app.innerHTML = pageHead('Avaliar a demo', '', '#/map') + `
+      <div class="aval">
+        <div class="aval-hero">
+          <div class="aval-gift">${ICON.gift}</div>
+          <h1>Responda e ganhe vantagens especiais no lançamento</h1>
+          <p class="muted">${PERGUNTAS.length} perguntas de um toque, menos de 1 minuto. Suas respostas vão direto para quem está construindo o LevelUp, antes do lançamento final.</p>
+        </div>
+        <div class="stack">${VANTAGENS.map(([ic, t, d]) => `
+          <div class="benefit"><span class="ic">${ICON[ic]}</span><div><div class="t">${esc(t)}</div><div class="small muted">${esc(d)}</div></div></div>`).join('')}
+        </div>
+        <div class="bottom-cta"><button class="btn btn-primary btn-block btn-lg" data-ok>${avaliacao().rascunho ? 'Continuar de onde parei' : 'Começar'}</button></div>
+      </div>`;
+    bindBack();
+    $app.querySelector('[data-ok]').onclick = () => avalPasso(Math.min(avaliacao().passo || 0, PERGUNTAS.length - 1));
+  }
+
+  function avalPasso(i) {
+    const r = avaliacao().rascunho || {};
+    const p = PERGUNTAS[i];
+    if (p.id === 'plataforma' && !r.plataforma) r.plataforma = detectarPlataforma();
+    salvarAvaliacao({ rascunho: r, passo: i });
+    const ultimo = i === PERGUNTAS.length - 1;
+    const sel = (o) => (p.tipo === 'varios' ? (r[p.id] || []).includes(o) : r[p.id] === o);
+
+    let corpo;
+    if (p.tipo === 'faces') {
+      corpo = `<div class="aval-faces">${FACES.map((f, k) => `
+        <button class="aval-face ${r.nota === k + 1 ? 'sel' : ''}" data-v="${k + 1}" aria-label="Nota ${k + 1} de 5"><span>${f}</span><small>${k + 1}</small></button>`).join('')}</div>`;
+    } else if (p.tipo === 'um' || p.tipo === 'varios') {
+      corpo = `<div class="aval-opcoes ${p.tipo}">${p.opcoes.map((o) => `
+        <button class="aval-op ${sel(o) ? 'sel' : ''}" data-v="${esc(o)}">${p.tipo === 'varios' ? `<span class="box">${ICON.check}</span>` : ''}${esc(o)}</button>`).join('')}</div>`
+        + (p.texto ? `<textarea class="aval-txt" rows="3" maxlength="1000" placeholder="${esc(p.texto)}">${esc(r[p.id + '_texto'] || '')}</textarea>` : '');
+    } else if (p.tipo === 'escalas') {
+      corpo = `<div class="aval-escalas">${p.itens.map(([k, t]) => `
+        <div class="aval-escala" data-k="${k}"><div class="t">${esc(t)}</div><div class="nums">${[1, 2, 3, 4, 5].map((n) => `
+          <button class="${(r.notas || {})[k] === n ? 'sel' : ''}" data-n="${n}" aria-label="${esc(t)}: ${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>`;
+    } else {
+      corpo = `<textarea class="aval-txt" rows="5" maxlength="2000" placeholder="${esc(p.placeholder || '')}">${esc(r[p.id] || '')}</textarea>`;
+    }
+
+    $app.className = 'app no-nav';
+    $app.innerHTML = `
+      <div class="pagehead aval-top">
+        <button class="back" data-voltar aria-label="Voltar">${ICON.back}</button>
+        <div class="aval-prog"><span style="width:${Math.round(((i + 1) / PERGUNTAS.length) * 100)}%"></span></div>
+        <span class="small muted">${i + 1}/${PERGUNTAS.length}</span>
+      </div>
+      <div class="aval aval-q">
+        <h2>${esc(p.titulo)}</h2>
+        ${p.sub ? `<p class="muted small">${esc(p.sub)}</p>` : ''}
+        ${corpo}
+        <div class="error-msg" data-err></div>
+        <div class="bottom-cta aval-nav">
+          ${p.obrigatoria ? '' : `<button class="btn btn-ghost" data-pular>Pular</button>`}
+          <button class="btn btn-primary" data-ok ${p.obrigatoria && !r[p.id] ? 'disabled' : ''}>${ultimo ? 'Enviar e garantir vantagens' : 'Continuar'}</button>
+        </div>
+      </div>`;
+    window.scrollTo(0, 0);
+
+    const ok = $app.querySelector('[data-ok]');
+    const txt = $app.querySelector('.aval-txt');
+    const guardar = () => {
+      if (txt) r[p.tipo === 'texto' ? p.id : p.id + '_texto'] = txt.value.trim();
+      salvarAvaliacao({ rascunho: r });
+    };
+    const avancar = () => {
+      guardar();
+      if (ultimo) return concluirAvaliacao(r, ok);
+      avalPasso(i + 1);
+    };
+    // Toque único: marca e avança sozinho (um respiro para ver a marcação).
+    const marcarEAvancar = (btn) => {
+      $app.querySelectorAll('[data-v]').forEach((b) => b.classList.toggle('sel', b === btn));
+      ok.disabled = false;
+      clearTimeout(avalPasso._t);
+      avalPasso._t = setTimeout(avancar, 280);
+    };
+
+    $app.querySelectorAll('[data-v]').forEach((b) => {
+      b.onclick = () => {
+        const v = b.dataset.v;
+        if (p.tipo === 'faces') { r.nota = +v; return marcarEAvancar(b); }
+        if (p.tipo === 'um') { r[p.id] = v; return marcarEAvancar(b); }
+        const lista = r[p.id] || [];
+        r[p.id] = lista.includes(v) ? lista.filter((x) => x !== v) : lista.concat(v);
+        b.classList.toggle('sel');
+        salvarAvaliacao({ rascunho: r });
+      };
+    });
+    $app.querySelectorAll('.aval-escala').forEach((linha) => {
+      linha.querySelectorAll('[data-n]').forEach((b) => {
+        b.onclick = () => {
+          const n = +b.dataset.n;
+          r.notas = Object.assign({}, r.notas);
+          if (r.notas[linha.dataset.k] === n) delete r.notas[linha.dataset.k]; else r.notas[linha.dataset.k] = n;
+          linha.querySelectorAll('[data-n]').forEach((x) => x.classList.toggle('sel', +x.dataset.n === r.notas[linha.dataset.k]));
+          salvarAvaliacao({ rascunho: r });
+        };
+      });
+    });
+    ok.onclick = avancar;
+    const pular = $app.querySelector('[data-pular]');
+    if (pular) pular.onclick = () => {
+      if (p.tipo === 'um' || p.tipo === 'faces') delete r[p.id];
+      if (ultimo) return avancar();
+      salvarAvaliacao({ rascunho: r });
+      avalPasso(i + 1);
+    };
+    $app.querySelector('[data-voltar]').onclick = () => { clearTimeout(avalPasso._t); guardar(); i ? avalPasso(i - 1) : viewAvaliar(); };
+  }
+
+  async function concluirAvaliacao(r, btn) {
+    if (!r.nota) return avalPasso(0);
+    btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
+    const l = lead() || {};
+    const { nota, ...respostas } = r;
+    const corpo = { nome: l.nome || null, email: l.email || null, telefone: l.telefone || null, nota, respostas, meta: metaAvaliacao() };
+    let pendente = null;
+    try { await enviarAvaliacao(corpo); } catch { pendente = corpo; }
+    salvarAvaliacao({ enviada: new Date().toISOString(), pendente, rascunho: null, passo: 0 });
+    viewAvaliacaoFim();
+  }
+
+  function viewAvaliacaoFim() {
+    const l = lead() || {};
+    const { pendente } = avaliacao();
+    $app.className = 'app no-nav';
+    $app.innerHTML = `
+      <div class="result aval-fim">
+        <div class="badge aval-selo">${ICON.trophy}</div>
+        <span class="demo-pill">Testador Fundador</span>
+        <h2>Valeu, ${esc((l.nome || '').split(' ')[0] || 'testador')}! Vantagens garantidas</h2>
+        <p class="muted">Sua opinião vai direto para a versão final. Quando o LevelUp Fís for lançado, você fica sabendo primeiro${l.email ? ` em <b>${esc(l.email)}</b>` : ''}${l.telefone ? ' e no WhatsApp' : ''}.</p>
+        <div class="stack" style="text-align:left;margin:18px 0">${VANTAGENS.map(([, t, d]) => `
+          <div class="benefit"><span class="ic green">${ICON.check}</span><div><div class="t">${esc(t)}</div><div class="small muted">${esc(d)}</div></div></div>`).join('')}
+        </div>
+        ${pendente ? `<p class="small muted">Sem conexão agora: suas respostas ficaram guardadas e serão enviadas assim que você voltar à demo com internet.</p>` : ''}
+        <div class="bottom-cta"><button class="btn btn-primary btn-block" data-ok>Continuar explorando</button></div>
+      </div>`;
+    $app.querySelector('[data-ok]').onclick = () => go('#/map');
+    window.scrollTo(0, 0);
   }
 
   // ---------- Perfil ----------
@@ -927,6 +1203,9 @@
         <b>Você está na versão demonstração</b>
         <span class="small muted">Aqui não tem Joules, Cargas nem Fótons, e o seu progresso fica salvo só neste navegador.${S.areas ? ` Capítulos concluídos: ${feitos} de ${caps.length}.` : ''}</span>
       </div>
+      ${avaliacao().enviada
+        ? `<div class="card aval-garantido" style="margin-top:14px">${ICON.trophy}<div><b>Testador Fundador</b><span class="small muted">Você avaliou a demo e garantiu as vantagens de lançamento.</span></div></div>`
+        : `<div style="margin-top:14px">${conviteAvaliacao()}</div>`}
       <a class="btn btn-primary btn-block btn-lg" style="margin-top:14px" href="${WHATSAPP}" target="_blank" rel="noopener">${ICON.chat} Falar no WhatsApp</a>
       <button class="btn btn-ghost btn-block" style="margin-top:10px" data-sair>Sair da demonstração</button>
       </div></div>
@@ -937,7 +1216,7 @@
         buttons: [{ label: 'Cancelar', value: false }, { label: 'Sair', value: true, cls: 'btn-primary' }],
       });
       if (!ok) return;
-      apagar(LEAD_KEY); apagar(PROG_KEY);
+      apagar(LEAD_KEY); apagar(PROG_KEY); apagar(AVAL_KEY);
       go('#/');
     };
   }
@@ -948,6 +1227,7 @@
   function render() {
     clearInterval(exTimer);
     clearInterval(tutTimer);
+    clearTimeout(avalPasso._t);
     document.body.classList.remove('sim-fs-on');
     if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     document.getElementById('modal-root').innerHTML = '';
@@ -960,6 +1240,7 @@
     switch (parts[0]) {
       case 'map': return viewMap();
       case 'plus': return viewPlus();
+      case 'avaliar': return viewAvaliar();
       case 'profile': return viewProfile();
       case 'c': return viewCapitulo(parts[1]);
       case 'q': return viewExercicio(parts[1], parts[2]);
@@ -1032,4 +1313,5 @@
   starfield();
   window.addEventListener('hashchange', render);
   render();
+  reenviarPendente();
 })();

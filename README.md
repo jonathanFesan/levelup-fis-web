@@ -97,6 +97,16 @@ e-mail e telefone → "Testar agora!" grava em `demo_leads` e abre o site com as
   velocidade para 50 m/s"…), que se marca sozinha lendo os controles da simulação, com um "i" que
   explica a variável e os extremos. Os desafios ficam em `js/demo-tutoriais.js`, pelo nome do arquivo
   da simulação.
+- **Avaliação da demo (`#/avaliar`):** pesquisa de 10 perguntas de um toque (nota geral, perfil,
+  plataforma, dificuldade, notas de visual/leitura/navegação/simulações/exercícios/resumos, tamanho
+  da letra, o que curtiu, o que melhorar, interesse no Plus, comentário) em troca de "vantagens no
+  lançamento" (acesso antecipado, condição especial, selo de Testador Fundador; textos em
+  `VANTAGENS` no `js/demo.js`). Convites: card no Mapa (depois do 1º capítulo), modal uma vez só
+  (depois de 2 capítulos), fim da prova, Plus e Perfil. Grava em `demo_avaliacoes`
+  (`backend/sql/029_demo_avaliacoes.sql`), com aparelho/navegador/tela/progresso detectados
+  sozinhos; sem internet, guarda e reenvia na próxima visita. Resumo, respostas e CSV no painel →
+  aba Demo → Avaliações. As perguntas ficam em `PERGUNTAS` (`js/demo.js`) e os mesmos ids em
+  `AVAL_PERGUNTAS`/`AVAL_NOTAS` no painel.
 - Simulação da demo = qualquer página do site (`/simulacoes/...`) ou link `https://`. Para
   versões limitadas, crie uma cópia (ex.: `simulacoes/simulations/fisica/x-demo.html`) e
   aponte o Capítulo para ela.
