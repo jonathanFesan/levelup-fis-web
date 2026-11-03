@@ -27,6 +27,21 @@ no navegador: o backend corrige as respostas e aplica as recompensas.
 | Perfil (nome, nível, comprar Carga) | `profile_screen` |
 | **LevelUp Plus** (venda, área do assinante, dúvidas, agendamento) | *só no site, por enquanto* |
 
+## Vestibulares
+
+Questões originais de vestibulares (`backend/sql/030_vestibulares.sql`). No painel, aba
+**Vestibulares**, você cadastra cada vestibular (nome, sigla, cor, logo, modelo visual, ordem,
+ativo). No Currículo, crie em cada Bloco um Capítulo do tipo **🎓 Vestibulares** e adicione as
+questões escolhendo vestibular, ano, fase e número (e, se quiser, uma imagem do enunciado).
+
+No site, esse Capítulo não entra na trilha: vira uma bolinha ao lado da Fixação (como os
+Exercícios extra), que abre um popup com uma bolinha para cada vestibular (`abrirVestibulares`
+em `js/app.js`). Vestibular sem questões aparece apagado ("em breve"). Rotas:
+`#/t/<tópico>/vest/<capítulo>/<vestibular>` (trilha) e `#/t/<tópico>/vq/<capítulo>/<vestibular>/<n>`
+(questão). A questão abre no **modelo de prova** (`css/vestibulares.css`): hoje todos usam o
+modelo `padrao`; para dar o visual da prova real a um vestibular, crie
+`.vprova[data-modelo="<nome>"]` no CSS e troque o modelo dele no painel.
+
 ## LevelUp Plus
 
 Aba **Plus** na barra inferior (`#/plus`). Arquivos: `js/plus.js` (dados), views em `js/app.js`

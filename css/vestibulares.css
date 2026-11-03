@@ -1,0 +1,128 @@
+/* =====================================================================
+   Vestibulares (backend/sql/030_vestibulares.sql)
+
+   1. Bolinha/logo de cada vestibular (popup do Mapa e cabeçalhos).
+   2. Tela de exercício no "modelo de prova".
+
+   MODELOS VISUAIS
+   Cada vestibular tem um `modelo` (painel → aba Vestibulares). Hoje todos
+   usam o modelo "padrao" abaixo. Para criar o visual de uma prova real:
+     a) escreva os estilos em .vprova[data-modelo="enem"] { ... } no fim
+        deste arquivo (só o que muda em relação ao padrão);
+     b) no painel, troque o modelo daquele vestibular para "enem".
+   A estrutura da questão (classes) é:
+     .vprova > .vprova-cab (logo + nome/ano/fase)
+             > .vprova-num ("QUESTÃO 42")
+             > .q-img (figura, opcional)
+             > .vprova-enun (texto)
+             > .vprova-opts > li > .vprova-opt (.letter + .txt; .sel = marcada)
+               ou .vprova-resp (dissertativa)
+             > .vprova-rodape (origem: "FUVEST · 2023 · 1ª fase")
+   A cor do vestibular chega como --vcor.
+   ===================================================================== */
+
+/* ---------- 1. Logo / bolinha ---------- */
+.vest-logo {
+  --vcor: #3A4A8A;
+  width: 64px; height: 64px; border-radius: 50%; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--vcor); color: #fff; overflow: hidden;
+  font-weight: 900; font-size: 12px; letter-spacing: .3px;
+  border: 3px solid rgba(255, 255, 255, .18);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .25);
+}
+.vest-logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.vest-logo span { padding: 0 4px; text-align: center; line-height: 1.05; }
+.vest-logo.longo { font-size: 9.5px; letter-spacing: 0; }
+
+.vest-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+  margin: 14px 0 18px;
+}
+.vest-bubble {
+  background: none; border: 0; padding: 8px 2px; border-radius: 14px; cursor: pointer; color: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: inherit;
+  transition: transform .12s, background .12s;
+}
+.vest-bubble:hover:not([disabled]) { transform: translateY(-2px); background: rgba(255, 255, 255, .04); }
+.vest-bubble b { font-size: 13px; font-weight: 900; }
+.vest-bubble small { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.vest-bubble.vazio { cursor: default; }
+.vest-bubble.vazio .vest-logo { filter: grayscale(1); opacity: .4; }
+@media (max-width: 380px) { .vest-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.vest-head { display: flex; align-items: center; gap: 14px; margin: 8px 0 4px; }
+.vest-head .vest-logo { width: 48px; height: 48px; font-size: 10px; }
+
+/* Figura do enunciado (qualquer questão com imagem_url) */
+.q-img { margin: 16px 0 4px; text-align: center; }
+.q-img img { max-width: 100%; max-height: 360px; border-radius: 10px; background: #fff; }
+
+/* ---------- 2. Modelo "padrao" da prova ---------- */
+.vprova {
+  --vcor: #3A4A8A;
+  --papel: #FFFEFA; --tinta: #1B1B1B; --linha: #D9D6CC; --suave: #6B6A64;
+  background: var(--papel); color: var(--tinta);
+  border-radius: 6px; margin: 6px 0 22px; padding: 0 0 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  overflow: hidden;
+}
+.vprova-cab {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border-bottom: 4px solid var(--vcor);
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+.vprova-cab .vest-logo { width: 40px; height: 40px; font-size: 9px; border-width: 2px; box-shadow: none; }
+.vprova-cab-txt { display: flex; flex-direction: column; line-height: 1.2; }
+.vprova-cab-txt b { font-size: 15px; font-weight: 900; letter-spacing: .4px; }
+.vprova-cab-txt span { font-size: 12px; color: var(--suave); }
+
+.vprova-num {
+  display: inline-block; margin: 18px 18px 0; padding: 3px 10px;
+  background: var(--vcor); color: #fff; border-radius: 3px;
+  font-family: 'Nunito', system-ui, sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 1px;
+}
+.vprova .q-img { margin: 14px 18px 0; }
+.vprova .q-img img { border-radius: 2px; border: 1px solid var(--linha); }
+.vprova-enun {
+  padding: 12px 18px 4px; font-size: 17px; line-height: 1.6;
+  text-align: justify; white-space: pre-wrap;
+}
+.vprova-opts { list-style: none; margin: 10px 0 0; padding: 0 12px; }
+.vprova-opts li { margin: 0; }
+.vprova-opt {
+  width: 100%; display: flex; gap: 12px; align-items: flex-start; text-align: left;
+  background: none; border: 1.5px solid transparent; border-radius: 6px;
+  padding: 8px 6px; cursor: pointer; color: inherit; font: inherit; font-size: 16px; line-height: 1.5;
+}
+.vprova-opt:hover { background: rgba(0, 0, 0, .035); }
+.vprova-opt .letter {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--tinta); display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Nunito', system-ui, sans-serif; font-weight: 900; font-size: 13px;
+}
+.vprova-opt .txt { padding-top: 2px; white-space: pre-wrap; }
+.vprova-opt.sel { border-color: var(--vcor); background: color-mix(in srgb, var(--vcor) 8%, transparent); }
+.vprova-opt.sel .letter { background: var(--tinta); color: var(--papel); }
+
+.vprova-resp { display: block; margin: 12px 18px 0; font-family: 'Nunito', system-ui, sans-serif; }
+.vprova-resp span { display: block; font-size: 12px; font-weight: 800; color: var(--suave); margin-bottom: 4px; }
+.vprova-resp input {
+  width: 100%; border: 0; border-bottom: 2px solid var(--tinta); background: transparent;
+  font: 17px 'Lora', Georgia, serif; color: var(--tinta); padding: 6px 2px; outline: none;
+}
+.vprova-rodape {
+  margin: 16px 18px 0; padding-top: 8px; border-top: 1px solid var(--linha);
+  font-family: 'Nunito', system-ui, sans-serif; font-size: 11.5px; color: var(--suave); text-align: right;
+}
+
+@media (min-width: 1024px) {
+  .vprova-enun { font-size: 18px; padding-left: 28px; padding-right: 28px; }
+  .vprova-opts { padding: 0 22px; }
+}
+
+/* ---------- Modelos próprios (escreva aqui) ----------
+.vprova[data-modelo="enem"] { ... }
+.vprova[data-modelo="fuvest"] { ... }
+------------------------------------------------------ */

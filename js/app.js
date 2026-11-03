@@ -50,6 +50,7 @@
     trophy: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5a2 2 0 0 0-2 2v1a5 5 0 0 0 4.4 5A5 5 0 0 0 11 15.9V19H7v2h10v-2h-4v-3.1a5 5 0 0 0 3.6-2.9A5 5 0 0 0 21 8V7a2 2 0 0 0-2-2zM5 8V7h2v3.8A3 3 0 0 1 5 8zm14 0a3 3 0 0 1-2 2.8V7h2z"/></svg>',
     bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4z"/></svg>',
+    vest: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 1 9l11 6 9-4.9V17h2V9zM5 13.2v4L12 21l7-3.8v-4L12 17z"/></svg>',
     pencil: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.2V21h3.8L17.8 9.9l-3.7-3.7zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.7 3.7z"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.7 7.9l1.5 1.5A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.7-7.9L4.8 8.6A8 8 0 0 0 12 20v3l4-4-4-4z"/></svg>',
     crown: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 7.5l5 4 4.5-7 4.5 7 5-4L19.5 18h-15zM4.5 19.5h15V21h-15z"/></svg>',
@@ -65,11 +66,14 @@
     atom: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></svg>',
   };
 
-  const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus', simulacao: 'atom' };
+  const TIPO_ICON = { resumo: 'book', fixacao: 'edit', prova: 'trophy', curiosidade: 'bulb', extra: 'plus', simulacao: 'atom', vestibular: 'vest' };
   const CATEGORIAS = {
     fixacao: { label: 'FIXAÇÃO', vazio: 'Nenhum exercício cadastrado ainda.' },
     extra: { label: 'EXERCÍCIOS', vazio: 'Nenhum exercício extra cadastrado ainda.' },
+    vestibular: { label: 'VESTIBULAR', vazio: 'Nenhuma questão deste vestibular cadastrada ainda.' },
   };
+  // Capítulos que não entram na trilha: viram bolinha ao lado da Fixação.
+  const LATERAIS = ['extra', 'vestibular'];
   const LETRAS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   function toast(msg, ms = 2800) {
@@ -708,13 +712,14 @@
         return !!cap[String(c.id)];
       };
       const todos = t.capitulos || [];
-      const seq = todos.filter((c) => c.tipo !== 'extra');
-      // Exercícios (opcionais) ficam ao lado do capítulo anterior a eles —
-      // de preferência a Fixação — e liberam quando ele é concluído.
+      const seq = todos.filter((c) => !LATERAIS.includes(c.tipo));
+      // Exercícios e Vestibulares (opcionais) ficam ao lado do capítulo
+      // anterior a eles — de preferência a Fixação — e liberam quando ele
+      // é concluído.
       const extrasPorNo = seq.map(() => []);
       todos.forEach((c, pos) => {
-        if (c.tipo !== 'extra' || !seq.length) return;
-        const antes = todos.slice(0, pos).filter((x) => x.tipo !== 'extra');
+        if (!LATERAIS.includes(c.tipo) || !seq.length) return;
+        const antes = todos.slice(0, pos).filter((x) => !LATERAIS.includes(x.tipo));
         const ancora = [...antes].reverse().find((x) => x.tipo === 'fixacao') || antes[antes.length - 1] || seq[0];
         extrasPorNo[seq.indexOf(ancora)].push(c);
       });
@@ -728,7 +733,7 @@
         icon: TIPO_ICON[c.tipo] || 'bulb',
         desbloqueado: livre || k === 0 || concluido(seq[k - 1]),
         concluido: concluido(c),
-        sideBadges: extrasPorNo[k].map((e) => ({ icon: 'plus', on: livre || concluido(c), title: e.titulo, cap: e })),
+        sideBadges: extrasPorNo[k].map((e) => ({ icon: TIPO_ICON[e.tipo] || 'plus', on: livre || concluido(c), title: e.titulo, cap: e, vest: e.tipo === 'vestibular' })),
       }));
       trilhas.push({ topico: t, seq, nodes });
       b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
@@ -769,11 +774,45 @@
           const [i, j] = b.dataset.badge.split(':').map(Number);
           const sb = tr.nodes[i].sideBadges[j];
           if (!sb.on) return toast(`Conclua "${tr.seq[i].titulo}" para desbloquear.`);
+          if (sb.vest) return abrirVestibulares(tr.topico, sb.cap);
           go(`#/t/${encodeURIComponent(tr.topico.id)}/trilha/${sb.cap.id}`);
         };
       });
     });
   }
+
+  // ---------- Vestibulares (popup) ----------
+  // Cada Capítulo 'vestibular' vem do backend com `vestibulares`: os
+  // ativos, com `total` de questões neste Capítulo (sql/030_vestibulares.sql).
+  function vestLogoHtml(v, cls = '') {
+    const sigla = (v.sigla || v.nome || '?').slice(0, 8);
+    const inner = v.logo_url ? `<img src="${esc(v.logo_url)}" alt="">` : `<span>${esc(sigla)}</span>`;
+    return `<span class="vest-logo ${cls} ${!v.logo_url && sigla.length > 5 ? 'longo' : ''}" style="--vcor:${esc(v.cor || '#3A4A8A')}">${inner}</span>`;
+  }
+  function vestDoCap(cap, vestId) { return (cap.vestibulares || []).find((v) => v.id === vestId); }
+  async function abrirVestibulares(topico, cap) {
+    const lista = cap.vestibulares || [];
+    const html = lista.length
+      ? `<div class="vest-grid">${lista.map((v) => `
+          <button class="vest-bubble ${v.total ? '' : 'vazio'}" ${v.total ? `data-custom="${esc(v.id)}"` : 'disabled'} title="${esc(v.descricao || v.nome)}">
+            ${vestLogoHtml(v)}
+            <b>${esc(v.nome)}</b>
+            <small>${v.total ? `${v.total} ${v.total === 1 ? 'questão' : 'questões'}` : 'em breve'}</small>
+          </button>`).join('')}</div>`
+      : `<p class="muted">Os vestibulares deste tópico estão chegando.</p>`;
+    const escolhido = await modal({
+      title: cap.titulo || 'Vestibulares',
+      text: lista.some((v) => v.total) ? 'Questões originais das provas. Escolha o vestibular:' : '',
+      icon: ICON.vest,
+      html,
+      buttons: [{ label: 'Fechar', value: undefined, cls: 'btn-ghost' }],
+    });
+    if (escolhido) go(`#/t/${encodeURIComponent(topico.id)}/vest/${cap.id}/${encodeURIComponent(escolhido)}`);
+  }
+  // Questões de um vestibular dentro do Capítulo (o backend manda todas as
+  // do Capítulo; aqui filtra mantendo a ordem do painel).
+  const questoesDoVest = (qs, vestId) => (vestId ? qs.filter((q) => q.vestibular_id === vestId) : qs);
+  const origemVest = (q, v) => [v?.nome || q.vestibular_id, q.vest_ano, q.vest_fase].filter(Boolean).join(' · ');
 
   function abrirCapitulo(topico, cap) {
     const t = encodeURIComponent(topico.id);
@@ -926,10 +965,10 @@
   }
 
   // ---------- Trilha de exercícios (Fixação / Exercícios extra) ----------
-  async function viewTrilha(topicoId, capRef) {
+  async function viewTrilha(topicoId, capRef, vestId = null) {
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs, livre, area, topico, cap, catInfo;
+    let qs, livre, area, topico, cap, catInfo, vest = null;
     try {
       await loadCurriculo();
       ({ area, topico } = findTopico(topicoId));
@@ -937,15 +976,26 @@
       if (!cap) return go('#/map');
       aplicarTema(area, topico);
       catInfo = CATEGORIAS[cap.tipo] || CATEGORIAS.fixacao;
-      qs = await getQuestions(topicoId, cap, true);
+      if (cap.tipo === 'vestibular') {
+        if (!vestId) return go('#/map');
+        vest = vestDoCap(cap, vestId) || { id: vestId, nome: vestId.toUpperCase() };
+      }
+      qs = questoesDoVest(await getQuestions(topicoId, cap, true), vest && vest.id);
       livre = await semTravas(await loadProfile());
     } catch {
       $app.innerHTML = pageHead('Exercícios', '', '#/map') + errorBox('Erro ao carregar o mapa.');
       bindBack(); return bindRetry();
     }
-    const titulo = cap.titulo || (cap.tipo === 'extra' ? 'Exercícios' : 'Fixação');
+    const titulo = vest ? vest.nome : (cap.titulo || (cap.tipo === 'extra' ? 'Exercícios' : 'Fixação'));
+    const qHash = (i) => vest
+      ? `#/t/${encodeURIComponent(topicoId)}/vq/${cap.id}/${encodeURIComponent(vest.id)}/${i}`
+      : `#/t/${encodeURIComponent(topicoId)}/q/${cap.id}/${i}`;
 
     let html = pageHead(titulo, [area?.titulo, topico?.titulo].filter(Boolean).join(' · '), '#/map');
+    if (vest) {
+      html += `<div class="card vest-head">${vestLogoHtml(vest)}<div><b>${esc(vest.nome)}</b>
+        <div class="small muted">${esc(vest.descricao || 'Questões originais da prova')}</div></div></div>`;
+    }
     if (!qs.length) {
       html += `<div class="card muted" style="margin-top:20px">${catInfo.vazio}</div>`;
       $app.innerHTML = html; return bindBack();
@@ -961,7 +1011,7 @@
           : `${comSim} de ${qs.length} fases usam uma simulação: ela aparece junto da questão.`}</span></div>`;
     }
     const nodes = qs.map((q, i) => ({
-      titulo: `Fase ${i + 1}`,
+      titulo: vest ? ([q.vest_ano, q.vest_numero ? `Q${q.vest_numero}` : ''].filter(Boolean).join(' · ') || `Questão ${i + 1}`) : `Fase ${i + 1}`,
       icon: 'play',
       concluido: !!q.respondida_corretamente,
       desbloqueado: livre || i === 0 || !!qs[i - 1].respondida_corretamente || !!q.respondida_corretamente,
@@ -974,7 +1024,7 @@
       b.onclick = () => {
         const i = +b.dataset.node;
         if (!nodes[i].desbloqueado) return toast('Conclua a fase anterior para desbloquear.');
-        go(`#/t/${encodeURIComponent(topicoId)}/q/${cap.id}/${i}`);
+        go(qHash(i));
       };
     });
     const atual = nodes.findIndex((n) => !n.concluido);
@@ -986,24 +1036,30 @@
 
   // ---------- Exercício ----------
   let exTimer = null;
-  async function viewExercicio(topicoId, capRef, idx) {
+  async function viewExercicio(topicoId, capRef, idx, vestId = null) {
     idx = +idx;
     $app.className = 'app no-nav';
     $app.innerHTML = loading();
-    let qs, livre, area, topico, cap;
+    let qs, livre, area, topico, cap, vest = null;
     try {
       await Promise.all([loadCurriculo(), loadProfile()]);
       ({ area, topico } = findTopico(topicoId));
       cap = findCapitulo(topico, capRef, 'fixacao');
       if (!cap) return go('#/map');
       aplicarTema(area, topico);
-      qs = await getQuestions(topicoId, cap);
+      if (cap.tipo === 'vestibular') {
+        if (!vestId) return go('#/map');
+        vest = vestDoCap(cap, vestId) || { id: vestId, nome: vestId.toUpperCase() };
+      }
+      qs = questoesDoVest(await getQuestions(topicoId, cap), vest && vest.id);
       livre = await semTravas(S.profile);
     } catch {
       $app.innerHTML = errorBox('Erro ao carregar a questão.'); return bindRetry();
     }
     const q = qs[idx];
-    const trilhaHash = `#/t/${encodeURIComponent(topicoId)}/trilha/${cap.id}`;
+    const trilhaHash = vest
+      ? `#/t/${encodeURIComponent(topicoId)}/vest/${cap.id}/${encodeURIComponent(vest.id)}`
+      : `#/t/${encodeURIComponent(topicoId)}/trilha/${cap.id}`;
     if (!q) return go(trilhaHash);
     if (!livre && idx > 0 && !qs[idx - 1].respondida_corretamente && !q.respondida_corretamente) return go(trilhaHash);
 
@@ -1016,8 +1072,10 @@
     };
 
     const isMC = q.tipo === 'multipla_escolha' && Array.isArray(q.opcoes);
-    const sim = simDaQuestao(q, cap);
-    $app.innerHTML = `
+    const sim = vest ? null : simDaQuestao(q, cap);
+    const imgHtml = q.imagem_url ? `<figure class="q-img"><img src="${esc(q.imagem_url)}" alt="Figura da questão" loading="lazy"></figure>` : '';
+    if (vest) $app.classList.add('vest-on');
+    $app.innerHTML = vest ? vestProvaHtml() : `
       <div class="ex-top">
         <button class="back" data-back="${trilhaHash}" aria-label="Sair">${ICON.close}</button>
         <div class="title"><div class="k">${esc(area?.icone || '')} ${esc(area?.titulo || '')}</div>${esc(topico?.titulo || topicoId)} · Fase ${idx + 1}</div>
@@ -1025,6 +1083,7 @@
         ${cargasHtml()}
       </div>
       ${sim ? simNaQuestaoHtml(sim, `Fase ${idx + 1}`, q) : ''}
+      ${imgHtml}
       <div class="enunciado">${esc(q.enunciado)}</div>
       ${isMC
         ? `<div class="opts">${q.opcoes.map((o, i) => `
@@ -1032,6 +1091,37 @@
         : `<label class="field"><span>Sua resposta</span><input type="text" data-text autocomplete="off"></label>`}
       <div class="bottom-cta"><button class="btn btn-primary btn-block" data-send>RESPONDER</button></div>`;
     bindBack();
+
+    // Tela no modelo da prova do vestibular (css/vestibulares.css). O
+    // data-modelo vem do painel (vestibulares.modelo); hoje todos 'padrao'.
+    function vestProvaHtml() {
+      const modelo = /^[a-z0-9_-]+$/.test(vest.modelo || '') ? vest.modelo : 'padrao';
+      return `
+      <div class="ex-top">
+        <button class="back" data-back="${trilhaHash}" aria-label="Sair">${ICON.close}</button>
+        <div class="title"><div class="k">${esc(topico?.titulo || topicoId)}</div>${esc(vest.nome)} · Questão ${idx + 1} de ${qs.length}</div>
+        <span class="timer" data-timer>00:00</span>
+        ${cargasHtml()}
+      </div>
+      <article class="vprova" data-modelo="${modelo}" data-vest="${esc(vest.id)}" style="--vcor:${esc(vest.cor || '#3A4A8A')}">
+        <header class="vprova-cab">
+          ${vestLogoHtml(vest, 'cab')}
+          <div class="vprova-cab-txt">
+            <b>${esc(vest.nome)}${q.vest_ano ? ` ${esc(q.vest_ano)}` : ''}</b>
+            <span>${esc([vest.descricao, q.vest_fase].filter(Boolean).join(' · '))}</span>
+          </div>
+        </header>
+        <div class="vprova-num">QUESTÃO ${esc(q.vest_numero || String(idx + 1).padStart(2, '0'))}</div>
+        ${imgHtml}
+        <div class="vprova-enun">${esc(q.enunciado)}</div>
+        ${isMC
+          ? `<ol class="vprova-opts">${q.opcoes.map((o, i) => `
+              <li><button class="vprova-opt" data-opt="${i}"><span class="letter">${LETRAS[i] || i + 1}</span><span class="txt">${esc(o)}</span></button></li>`).join('')}</ol>`
+          : `<label class="vprova-resp"><span>Resposta</span><input type="text" data-text autocomplete="off"></label>`}
+        <footer class="vprova-rodape">${esc(origemVest(q, vest))}</footer>
+      </article>
+      <div class="bottom-cta"><button class="btn btn-primary btn-block" data-send>RESPONDER</button></div>`;
+    }
 
     clearInterval(exTimer);
     const tEl = $app.querySelector('[data-timer]');
@@ -2124,6 +2214,9 @@
         if (kind === 'sim') return viewSimulacao(topico, a);
         if (kind === 'trilha') return viewTrilha(topico, a);
         if (kind === 'q') return viewExercicio(topico, a, b);
+        // Vestibulares: #/t/<tópico>/vest/<capítulo>/<vestibular> e /vq/.../<fase>
+        if (kind === 'vest') return viewTrilha(topico, a, b);
+        if (kind === 'vq') return viewExercicio(topico, a, c, b);
         // Links antigos sem o id do Capítulo (#/t/x/prova/run/facil) abrem a primeira Prova.
         if (kind === 'prova' && a === 'run') return viewProvaRun(topico, null, b === 'dificil' ? 'dificil' : 'facil');
         if (kind === 'prova' && b === 'run') return viewProvaRun(topico, a, c === 'dificil' ? 'dificil' : 'facil');
