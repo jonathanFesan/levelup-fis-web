@@ -479,14 +479,21 @@
   function trailHtml(nodes) {
     const ROW = 170, PAD = 20;
     const X = [50, 72, 50, 28];
+    // Nó com bolinhas dos dois lados (Teste com Exercícios + Vestibulares)
+    // vai para o centro, para caberem as duas.
+    const xs = nodes.map((n, i) => ((n.sideBadges || []).some((b) => b.lado) ? 50 : X[i % 4]));
     const h = PAD + nodes.length * ROW;
     const items = nodes.map((n, i) => {
-      const x = X[i % 4], top = PAD + i * ROW;
+      const x = xs[i], top = PAD + i * ROW;
       const cls = n.concluido ? 'done' : n.desbloqueado ? 'current' : 'locked';
       const iconSvg = n.concluido ? ICON[n.icon] : n.desbloqueado ? (n.playIcon ? ICON.play : ICON[n.icon]) : ICON.lock;
       const bx = x >= 50 ? x - 30 : x + 30;
-      const badge = (n.sideBadges || []).map((sb, j) =>
-        `<button class="side-badge ${sb.on ? 'on' : ''}" style="left:${bx}%;top:${top + 24 + j * 58}px" data-badge="${i}:${j}" title="${esc(sb.title || '')}">${sb.on ? ICON[sb.icon] : ICON.lock}</button>`).join('');
+      const badge = (n.sideBadges || []).map((sb, j) => {
+        const pos = sb.lado === 'esq' ? `left:calc(${x}% - 83px);top:${top + 23}px`
+          : sb.lado === 'dir' ? `left:calc(${x}% + 83px);top:${top + 23}px`
+          : `left:${bx}%;top:${top + 24 + j * 58}px`;
+        return `<button class="side-badge ${sb.on ? 'on' : ''} ${sb.vest ? 'vest' : ''}" style="${pos}" data-badge="${i}:${j}" title="${esc(sb.title || '')}">${sb.on ? ICON[sb.icon] : ICON.lock}</button>`;
+      }).join('');
       return `
         <button class="tnode ${cls}" style="left:${x}%;top:${top}px" data-node="${i}">
           <span style="width:96px;height:96px;display:flex;align-items:center;justify-content:center">
@@ -495,7 +502,7 @@
           <span class="label">${esc(n.titulo)}</span>
         </button>${badge}`;
     }).join('');
-    return `<div class="trail" data-trail='${JSON.stringify({ X, ROW, PAD, n: nodes.length })}' style="height:${h}px">
+    return `<div class="trail" data-trail='${JSON.stringify({ X: xs, ROW, PAD, n: nodes.length })}' style="height:${h}px">
       <svg class="path"></svg>${items}</div>`;
   }
   function drawTrails() {
@@ -505,7 +512,7 @@
       const svg = t.querySelector('svg.path');
       let d = '';
       for (let i = 0; i < n - 1; i++) {
-        const x1 = (X[i % 4] / 100) * w, x2 = (X[(i + 1) % 4] / 100) * w;
+        const x1 = (X[i % X.length] / 100) * w, x2 = (X[(i + 1) % X.length] / 100) * w;
         const y1 = PAD + i * ROW + 128, y2 = PAD + (i + 1) * ROW + 4;
         const my = (y1 + y2) / 2;
         d += `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2} `;
@@ -713,16 +720,19 @@
       };
       const todos = t.capitulos || [];
       const seq = todos.filter((c) => !LATERAIS.includes(c.tipo));
-      // Exercícios e Vestibulares (opcionais) ficam ao lado do capítulo
-      // anterior a eles — de preferência a Fixação — e liberam quando ele
-      // é concluído.
+      // Um Exercícios (à esquerda) e um Vestibulares (à direita) por tópico,
+      // ao lado do Teste (última Prova; sem Prova, o último capítulo). Os
+      // dois liberam quando o Teste é finalizado. Se o painel tiver mais de
+      // um de cada, vale o primeiro.
       const extrasPorNo = seq.map(() => []);
-      todos.forEach((c, pos) => {
-        if (!LATERAIS.includes(c.tipo) || !seq.length) return;
-        const antes = todos.slice(0, pos).filter((x) => !LATERAIS.includes(x.tipo));
-        const ancora = [...antes].reverse().find((x) => x.tipo === 'fixacao') || antes[antes.length - 1] || seq[0];
-        extrasPorNo[seq.indexOf(ancora)].push(c);
-      });
+      if (seq.length) {
+        const ancora = [...seq].reverse().find((x) => x.tipo === 'prova') || seq[seq.length - 1];
+        const k = seq.indexOf(ancora);
+        const extra = todos.find((c) => c.tipo === 'extra');
+        const vest = todos.find((c) => c.tipo === 'vestibular');
+        if (extra) extrasPorNo[k].push({ cap: extra, lado: 'esq' });
+        if (vest) extrasPorNo[k].push({ cap: vest, lado: 'dir' });
+      }
 
       if (!seq.length) {
         b += `<div class="card muted" style="margin:8px 0 20px">O conteúdo deste tópico ainda está sendo preparado.</div>`;
@@ -733,7 +743,7 @@
         icon: TIPO_ICON[c.tipo] || 'bulb',
         desbloqueado: livre || k === 0 || concluido(seq[k - 1]),
         concluido: concluido(c),
-        sideBadges: extrasPorNo[k].map((e) => ({ icon: TIPO_ICON[e.tipo] || 'plus', on: livre || concluido(c), title: e.titulo, cap: e, vest: e.tipo === 'vestibular' })),
+        sideBadges: extrasPorNo[k].map(({ cap: e, lado }) => ({ icon: TIPO_ICON[e.tipo] || 'plus', on: livre || concluido(c), title: e.titulo, cap: e, lado, vest: e.tipo === 'vestibular' })),
       }));
       trilhas.push({ topico: t, seq, nodes });
       b += `<div data-trilha="${trilhas.length - 1}">${trailHtml(nodes)}</div>`;
@@ -773,7 +783,7 @@
         b.onclick = () => {
           const [i, j] = b.dataset.badge.split(':').map(Number);
           const sb = tr.nodes[i].sideBadges[j];
-          if (!sb.on) return toast(`Conclua "${tr.seq[i].titulo}" para desbloquear.`);
+          if (!sb.on) return toast(tr.seq[i].tipo === 'prova' ? `Finalize "${tr.seq[i].titulo}" para desbloquear.` : `Conclua "${tr.seq[i].titulo}" para desbloquear.`);
           if (sb.vest) return abrirVestibulares(tr.topico, sb.cap);
           go(`#/t/${encodeURIComponent(tr.topico.id)}/trilha/${sb.cap.id}`);
         };

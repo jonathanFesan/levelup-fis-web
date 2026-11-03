@@ -34,8 +34,10 @@ Questões originais de vestibulares (`backend/sql/030_vestibulares.sql`). No pai
 ativo). No Currículo, crie em cada Bloco um Capítulo do tipo **🎓 Vestibulares** e adicione as
 questões escolhendo vestibular, ano, fase e número (e, se quiser, uma imagem do enunciado).
 
-No site, esse Capítulo não entra na trilha: vira uma bolinha ao lado da Fixação (como os
-Exercícios extra), que abre um popup com uma bolinha para cada vestibular (`abrirVestibulares`
+No site, esse Capítulo não entra na trilha. Cada tópico tem **um** Exercícios extra e **um**
+Vestibulares, como bolinhas ao lado do **Teste** (a última Prova do tópico): Exercícios à
+esquerda, Vestibulares à direita, os dois liberados quando o Teste é finalizado. A bolinha de
+Vestibulares abre um popup com uma bolinha para cada vestibular (`abrirVestibulares`
 em `js/app.js`). Vestibular sem questões aparece apagado ("em breve"). Rotas:
 `#/t/<tópico>/vest/<capítulo>/<vestibular>` (trilha) e `#/t/<tópico>/vq/<capítulo>/<vestibular>/<n>`
 (questão). A questão abre no **modelo de prova** (`css/vestibulares.css`): hoje todos usam o
