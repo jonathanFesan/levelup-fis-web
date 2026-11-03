@@ -329,7 +329,7 @@
         <form class="stack" novalidate>
           <label class="field"><span>Nome</span><input type="text" name="nome" autocomplete="name" maxlength="120" required></label>
           <label class="field"><span>E-mail</span><input type="email" name="email" autocomplete="email" maxlength="200" required></label>
-          <label class="field"><span>Telefone (WhatsApp)</span><input type="tel" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(11) 91234-5678" required></label>
+          <label class="field"><span>Telefone (WhatsApp)</span><input type="tel" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(00) 91234-5678" required></label>
           <div class="error-msg" data-err></div>
           <button class="btn btn-primary btn-block btn-lg" type="submit">Testar agora!</button>
         </form>
