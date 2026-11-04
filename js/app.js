@@ -322,6 +322,8 @@
         marcado: (id) => !!(doc.getElementById(id) || {}).checked,
         ativo: (sel) => !!doc.querySelector(sel + '.active'),
         clicou: (sel) => !!(clique && clique.closest && clique.closest(sel)),
+        valor: (sel) => { const el = doc.querySelector(sel); return el ? String(el.value).trim() : ''; },
+        existe: (sel) => !!doc.querySelector(sel),
       });
       const checar = (clique) => {
         if (!document.body.contains(fr)) return clearInterval(tutTimer);

@@ -1,4 +1,10 @@
-// Tutoriais das simulações na versão demo (capítulo "Simulação").
+// Tutoriais das simulações (capítulo "Simulação", no site e na demo).
+//
+// REGRA: toda simulação que entra na trilha como Capítulo 🧪 Simulação
+// ganha desafios aqui, cobrindo TODOS os controles dela (cada slider,
+// botão, modo e opção de exibição), para o aluno sair sabendo usar tudo.
+// Simulação usada só dentro de um exercício não precisa: o aluno já
+// aprendeu no Capítulo Simulação. O painel avisa quando falta tutorial.
 //
 // Chave = nome do arquivo da simulação, sem .html (o mesmo do link do
 // Capítulo, ex.: /simulacoes/simulations/fisica/lancamento-obliquo.html).
@@ -11,6 +17,8 @@
 //   s.marcado(id)   checkbox marcado?
 //   s.ativo(sel)    existe um elemento sel com a classe .active?
 //   s.clicou(sel)   o clique que disparou esta checagem foi em sel?
+//   s.valor(sel)    value (texto) do elemento sel — select, input de texto
+//   s.existe(sel)   existe algum elemento sel? (ex.: '.uc-cell.is-origin')
 window.LUP_TUTORIAIS = {
   'lancamento-obliquo': [
     {
@@ -207,6 +215,245 @@ window.LUP_TUTORIAIS = {
         texto: 'Olhando na direção do campo B, qualquer trajetória (círculo ou hélice) aparece como um círculo — é a parte que gira. Nas vistas de lado dá para ver o avanço ao longo de B.',
         min: 'Vista "Eixo B": só o giro aparece.',
         max: 'Vista "3D": gire a câmera com o mouse/dedo e veja a hélice completa.',
+      },
+    },
+  ],
+
+  'polias-engrenagens-eixos': [
+    {
+      titulo: 'No modo ⚙️ Livre, com Engrenagens, deixe os dois discos com 20 cm de raio',
+      ok: (s) => s.ativo('[data-mode="livre"]') && s.ativo('[data-coupling="gear"]') && s.num('in-r1') === 20 && s.num('in-r2') === 20,
+      info: {
+        titulo: 'Engrenagens',
+        texto: 'Os dentes de uma empurram os da outra, então a borda das duas anda com a mesma velocidade v (v₁ = v₂ → f₁·R₁ = f₂·R₂). A menor gira mais rápido, e os sentidos de rotação se invertem. Use os ponteiros para contar as voltas.',
+        min: 'R₁ = 10 e R₂ = 30: enquanto o disco 1 dá 3 voltas, o disco 2 dá só 1.',
+        max: 'Raios iguais: os dois giram na mesma frequência, em sentidos opostos.',
+      },
+    },
+    {
+      titulo: 'Troque para Correia cruzada e compare com a Correia direta',
+      ok: (s) => s.ativo('[data-coupling="cross"]'),
+      info: {
+        titulo: 'Correia direta × cruzada',
+        texto: 'Toda a correia anda com a mesma velocidade, então as bordas dos discos também (f₁·R₁ = f₂·R₂, igual às engrenagens). A diferença está no sentido: correia direta mantém o sentido de rotação, correia cruzada inverte.',
+        min: 'Correia direta: os dois discos giram no mesmo sentido.',
+        max: 'Correia cruzada: sentidos opostos, como nas engrenagens.',
+      },
+    },
+    {
+      titulo: 'Escolha Eixo comum e compare a velocidade v dos dois discos',
+      ok: (s) => s.ativo('[data-coupling="axle"]'),
+      info: {
+        titulo: 'Eixo comum',
+        texto: 'Discos presos no mesmo eixo dão o mesmo número de voltas: mesma ω e mesma frequência. Mas a borda do disco maior percorre um caminho maior em cada volta, então anda mais rápido (v = ω·R).',
+        min: 'Raios iguais: mesma ω e mesma v.',
+        max: 'R₃ = 30 e R₁ = 5: a borda do disco 3 anda 6 vezes mais rápido que a do 1.',
+      },
+    },
+    {
+      titulo: 'Volte para Engrenagens e ligue "Disco 3 no eixo do disco 1"',
+      ok: (s) => s.marcado('chk-d3'),
+      info: {
+        titulo: 'Sistema misto',
+        texto: 'O disco 3 está no mesmo eixo do disco 1 (mesma ω), enquanto o disco 2 está ligado ao 1 pela borda (mesma v). É assim que as provas montam problemas com vários discos: resolva um acoplamento por vez.',
+        min: 'R₃ pequeno: o disco 3 gira junto do 1, mas com v de borda pequena.',
+        max: 'R₃ grande: mesma ω do disco 1 e v de borda bem maior.',
+      },
+    },
+    {
+      titulo: 'Leve a frequência do motor f₁ ao máximo (3 Hz)',
+      ok: (s) => s.num('in-f1') >= 3,
+      info: {
+        titulo: 'Frequência do motor (f₁)',
+        texto: 'É quantas voltas por segundo o disco 1 dá. Todo o resto do sistema é proporcional a ela: dobrar f₁ dobra a frequência, a ω e a v de todos os discos. A ω vale 2π·f.',
+        min: '0 Hz: motor desligado, nada gira.',
+        max: '3 Hz: 3 voltas por segundo, ω₁ ≈ 18,8 rad/s.',
+      },
+    },
+    {
+      titulo: 'Inverta o sentido do motor (↺) e ligue a câmera 🐢 Lenta',
+      ok: (s) => s.ativo('#btn-slow'),
+      info: {
+        titulo: 'Sentido e câmera lenta',
+        texto: 'Inverter o motor inverte o sentido de todos os discos, mas não muda nenhum valor de f, ω ou v. A câmera lenta só deixa a animação mais devagar para você contar as voltas; as leituras continuam as mesmas.',
+        min: 'Câmera normal: o movimento real.',
+        max: 'Câmera lenta: boa para conferir os sentidos de rotação e contar voltas.',
+      },
+    },
+    {
+      titulo: 'Desligue os vetores velocidade e mude a câmera para 3D',
+      ok: (s) => !s.marcado('chk-vec') && s.clicou('#btn-3d'),
+      info: {
+        titulo: 'Exibir',
+        texto: 'Os vetores mostram a velocidade v na borda de cada disco (sempre tangente). Os ponteiros ajudam a contar voltas, e o botão "voltas" zera a contagem. Os rótulos mostram os valores de cada disco. A vista 3D mostra o eixo comum de lado; arraste para girar a câmera.',
+        min: 'Tudo desligado: só os discos girando.',
+        max: 'Tudo ligado: vetores, ponteiros e rótulos ajudam a conferir as contas.',
+      },
+    },
+    {
+      titulo: 'No modo 🚲 Bicicleta, use a coroa de 12 cm e a marcha 6 (catraca de 4 cm)',
+      ok: (s) => s.ativo('[data-mode="bike"]') && s.ativo('[data-catraca="4"]') && s.ativo('[data-coroa="12"]'),
+      info: {
+        titulo: 'Marchas da bicicleta',
+        texto: 'Coroa e catraca são ligadas pela corrente (mesma v), e catraca e roda estão no mesmo eixo (mesma ω). Por isso, a cada pedalada a roda dá R_coroa/R_catraca voltas.',
+        min: 'Coroa de 8 cm e catraca de 9 cm (marcha 1): a roda dá menos de 1 volta por pedalada. É lenta, mas leve, boa para subida.',
+        max: 'Coroa de 12 cm e catraca de 4 cm (marcha 6): 3 voltas da roda por pedalada. É rápida, mas pesada.',
+      },
+    },
+    {
+      titulo: 'No modo 🏭 Redutor, aumente a potência do motor para 200 W',
+      ok: (s) => s.ativo('[data-mode="red"]') && s.num('in-pow') >= 200,
+      info: {
+        titulo: 'Redutor: potência e torque',
+        texto: 'Num redutor, um pinhão pequeno move uma coroa grande: a saída gira mais devagar e com mais torque. A potência é a mesma dos dois lados (P = τ·ω, sem contar as perdas). Mais potência aumenta o torque nos dois eixos.',
+        min: 'Pinhão de 5 cm e coroa de 30 cm: redução de 6 vezes. A saída gira 6 vezes mais devagar, com 6 vezes mais torque.',
+        max: 'Coroa menor que o pinhão: vira um multiplicador, com mais rotação e menos torque.',
+      },
+    },
+  ],
+
+  'coordenadas-esfericas': [
+    {
+      titulo: 'Aumente o raio r para 10',
+      ok: (s) => s.num('r') >= 10,
+      info: {
+        titulo: 'Raio (r)',
+        texto: 'É a distância do ponto até a origem. Mudar só o r leva o ponto para longe ou para perto da origem, sempre na mesma direção.',
+        min: 'r = 1: o ponto fica bem perto da origem.',
+        max: 'r = 10: o ponto fica 10 vezes mais longe, na mesma direção.',
+      },
+    },
+    {
+      titulo: 'Coloque o ângulo zenital φ em 0° e mexa no θ',
+      ok: (s) => s.num('phi') === 0,
+      info: {
+        titulo: 'Ângulo zenital (φ)',
+        texto: 'É o ângulo medido a partir do eixo Z (azul, para cima). Ele diz se o ponto está "no alto", "no meio" ou "embaixo": z = r·cos φ.',
+        min: 'φ = 0°: o ponto fica no eixo Z (polo norte), e o θ não muda nada.',
+        max: 'φ = 180°: o ponto fica embaixo, no polo sul.',
+      },
+    },
+    {
+      titulo: 'Coloque φ em 90° para o ponto ir para o plano XY',
+      ok: (s) => s.num('phi') === 90,
+      info: {
+        titulo: 'φ = 90°: o "equador"',
+        texto: 'Com φ = 90°, cos φ = 0, então z = 0: o ponto fica no plano XY, a uma distância r da origem. Nesse caso as coordenadas esféricas viram coordenadas polares (r, θ).',
+        min: 'φ um pouco menor que 90°: o ponto sobe acima do plano XY.',
+        max: 'φ um pouco maior que 90°: o ponto desce abaixo do plano XY.',
+      },
+    },
+    {
+      titulo: 'Com φ = 90°, coloque o ângulo azimutal θ em 90° (o ponto vai para o eixo Y)',
+      ok: (s) => s.num('phi') === 90 && s.num('theta') === 90,
+      info: {
+        titulo: 'Ângulo azimutal (θ)',
+        texto: 'É o giro em volta do eixo Z, medido a partir do eixo X (vermelho). Com x = r·sen φ·cos θ e y = r·sen φ·sen θ, ele diz para que lado o ponto aponta no "chão".',
+        min: 'θ = 0°: o ponto fica sobre o eixo X.',
+        max: 'θ = 360°: uma volta completa, o ponto volta ao eixo X.',
+      },
+    },
+    {
+      titulo: 'Leve φ até 180° (polo sul)',
+      ok: (s) => s.num('phi') === 180,
+      info: {
+        titulo: 'Polo sul',
+        texto: 'Com φ = 180°, cos φ = −1: z = −r, e o ponto fica embaixo da origem, no eixo Z. Como sen φ = 0, x e y valem zero para qualquer θ.',
+        min: 'φ = 0°: z = +r (polo norte).',
+        max: 'φ = 180°: z = −r (polo sul).',
+      },
+    },
+    {
+      titulo: 'Clique em ▶ Rotacionar e Formar Esfera',
+      ok: (s) => s.clicou('#btn-playpause'),
+      info: {
+        titulo: 'Formar a esfera',
+        texto: 'A animação mantém o r fixo e varre todos os θ (de 0° a 360°) para cada φ (de 0° a 180°). Juntando todos esses pontos com o mesmo r, aparece uma esfera de raio r. Por isso a equação r = constante descreve uma esfera.',
+        min: 'Raio pequeno: esfera pequena.',
+        max: 'Raio grande: esfera grande. Mude o r antes de começar.',
+      },
+    },
+    {
+      titulo: 'Use ↺ Recomeçar para formar a esfera de novo',
+      ok: (s) => s.clicou('#btn-restart'),
+      info: {
+        titulo: 'Pausar e recomeçar',
+        texto: 'Durante a animação, o mesmo botão pausa e continua, e os sliders ficam travados. "Recomeçar" apaga a esfera e começa de novo pelo polo norte. Arraste a tela para girar a câmera e use o scroll para dar zoom.',
+        min: 'Pausado: dá para girar a câmera e ver um anel de cada vez.',
+        max: 'Até o fim: a esfera completa.',
+      },
+    },
+  ],
+
+  'unidades-de-medida': [
+    {
+      titulo: 'Clique em km (origem) e depois em m (destino)',
+      ok: (s) => s.existe('.uc-cell.is-origin[data-key="e3"]') && s.existe('.uc-cell.is-target[data-key="e0"]'),
+      info: {
+        titulo: 'Origem e destino',
+        texto: 'O primeiro clique escolhe a unidade de origem, e o segundo, a de destino. As setas mostram os degraus da tabela: cada degrau para a direita multiplica por 10, e cada degrau para a esquerda divide por 10.',
+        min: 'Clicar de novo na origem desmarca a seleção.',
+        max: 'Depois de escolher as duas, um novo clique começa outra conversão.',
+      },
+    },
+    {
+      titulo: 'Digite 2,5 no valor',
+      ok: (s) => s.valor('#uc-val').replace(',', '.') === '2.5',
+      info: {
+        titulo: 'Valor',
+        texto: 'Aceita vírgula ou ponto. O resultado aparece na hora, junto com a explicação de quantas casas a vírgula andou e para que lado.',
+        min: '2,5 km → m: são 3 degraus para a direita, então a vírgula anda 3 casas: 2 500 m.',
+        max: 'Valor inválido: a caixa fica vermelha.',
+      },
+    },
+    {
+      titulo: 'Inverta a conversão com ⇄',
+      ok: (s) => s.clicou('#uc-swap'),
+      info: {
+        titulo: 'Inverter',
+        texto: 'Troca origem e destino e usa o resultado como novo valor. Serve para conferir a conta: ir e voltar tem que dar o número do começo.',
+        min: 'km → m: multiplica por 1 000.',
+        max: 'm → km: divide por 1 000.',
+      },
+    },
+    {
+      titulo: 'Troque a unidade base para m² (em "trocar ▾", no meio da tabela)',
+      ok: (s) => s.valor('.uc-base-pick select') === '1',
+      info: {
+        titulo: 'Área e volume',
+        texto: 'Em área, cada degrau vale 2 casas (×100), porque as duas dimensões mudam. Em volume, vale 3 casas (×1 000). É o erro mais comum de conversão nas provas.',
+        min: 'm: 1 km = 1 000 m (3 casas).',
+        max: 'm³: 1 km³ = 1 000 000 000 m³ (9 casas). E 1 m³ = 1 000 L.',
+      },
+    },
+    {
+      titulo: 'Em "Unidades", escolha Todos para ver todos os prefixos do SI',
+      ok: (s) => s.valor('#uc-mode') === 'todos',
+      info: {
+        titulo: 'Prefixos do SI',
+        texto: '"Comum" mostra só de quilo até mili (k, h, da, base, d, c, m). "Todos" mostra todos os prefixos, de quecto (10⁻³⁰) a quetta (10³⁰), incluindo micro (µ), nano (n), mega (M) e giga (G).',
+        min: 'Nano (n) = 10⁻⁹, micro (µ) = 10⁻⁶, mili (m) = 10⁻³.',
+        max: 'Quilo (k) = 10³, mega (M) = 10⁶, giga (G) = 10⁹.',
+      },
+    },
+    {
+      titulo: 'Em "Conversão", escolha Velocidade e converta 72 km/h para m/s',
+      ok: (s) => s.valor('#uc-cat') === 'velocidade' && s.existe('.uc-cell.is-origin[data-key="km/h"]') && s.existe('.uc-cell.is-target[data-key="m/s"]') && s.valor('#uc-val').replace(',', '.') === '72',
+      info: {
+        titulo: 'km/h ↔ m/s',
+        texto: 'Unidades que não são só um prefixo usam um fator de conversão. De km/h para m/s, divida por 3,6; de m/s para km/h, multiplique por 3,6.',
+        min: '72 km/h = 20 m/s.',
+        max: '20 m/s = 72 km/h.',
+      },
+    },
+    {
+      titulo: 'Escolha Temperatura e converta 100 °C para °F',
+      ok: (s) => s.valor('#uc-cat') === 'temperatura' && s.existe('.uc-cell.is-origin[data-key="°C"]') && s.existe('.uc-cell.is-target[data-key="°F"]') && s.valor('#uc-val').replace(',', '.') === '100',
+      info: {
+        titulo: 'Escalas de temperatura',
+        texto: 'Temperatura não muda só por um fator, porque o zero de cada escala fica num lugar diferente. Por isso usamos a relação °C/5 = (°F − 32)/9 = (K − 273)/5.',
+        min: 'A água congela a 0 °C = 32 °F = 273,15 K.',
+        max: 'A água ferve a 100 °C = 212 °F = 373,15 K.',
       },
     },
   ],
