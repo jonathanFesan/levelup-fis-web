@@ -931,8 +931,8 @@
     const btn = $app.querySelector('[data-ok]');
     btn.onclick = async () => {
       btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
-      try { await API.concluirCapitulo(cap.id); go('#/map'); } catch {
-        $app.querySelector('[data-err]').textContent = 'Não foi possível continuar agora. Tente de novo.';
+      try { await API.concluirCapitulo(cap.id); go('#/map'); } catch (e) {
+        $app.querySelector('[data-err]').textContent = 'Não foi possível continuar agora. Tente de novo.' + (e && e.message ? ' (' + e.message + ')' : '');
         btn.disabled = false; btn.textContent = 'CONTINUAR';
       }
     };
@@ -969,8 +969,8 @@
     const btn = $app.querySelector('[data-ok]');
     btn.onclick = async () => {
       btn.disabled = true; btn.innerHTML = '<span class="spinner small"></span>';
-      try { await API.concluirCapitulo(cap.id); go('#/map'); } catch {
-        $app.querySelector('[data-err]').textContent = 'Não foi possível continuar agora. Tente de novo.';
+      try { await API.concluirCapitulo(cap.id); go('#/map'); } catch (e) {
+        $app.querySelector('[data-err]').textContent = 'Não foi possível continuar agora. Tente de novo.' + (e && e.message ? ' (' + e.message + ')' : '');
         btn.disabled = false; btn.textContent = 'CONTINUAR';
       }
     };
